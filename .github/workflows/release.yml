@@ -57,5 +57,5 @@ jobs:
     uses: ./.github/workflows/reusable-release.yml
     secrets: inherit
     with:
-      tag-name: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
-      publish-pypi: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_pypi || false }}
+      tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
+      publish_pypi: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_pypi || false }}

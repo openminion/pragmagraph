@@ -74,7 +74,7 @@ Expected smoke result:
 ## Publish Sequence
 
 Publishing mirrors the Sophiagraph package flow: the top-level release workflow
-delegates publishing to `./.github/workflows/_reusable/release.yml`, which uses
+delegates publishing to a reusable release workflow that uses
 `pypa/gh-action-pypi-publish@release/v1`. Local Twine is used only for
 `twine check` inside `scripts/release_check.py`; do not use local Twine upload
 for normal releases.
@@ -87,8 +87,8 @@ After validation is green:
 3. Set `release_tag` to the tag being released.
 4. Enable `publish_pypi` for the production PyPI release.
 
-The workflow expects the GitHub secret `pypi-token`, matching the Sophiagraph
-release workflow secret name.
+The callable workflow expects the GitHub secret `pypi_token`; configure it with
+the same PyPI token used by the Sophiagraph release workflow.
 
 Manual build/check remains available for local validation:
 
