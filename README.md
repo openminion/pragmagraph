@@ -41,11 +41,6 @@ future OpenMinion adapter work.
 - **Graphify** remains the first third-brain adapter. PragmaGraph is the future
   native package, not a relabeling of Graphify.
 
-The boundary discussion lives in the host repository at
-`docs/discussions/sophiagraph-pragmagraph-boundary-2026-05-27.md`.
-The shortest future-agent reference is
-`docs/reference/second-vs-third-brain-quick-reference.md`.
-
 Practical rule: if a parser, static analyzer, doc walker, git reader, or shell
 command can reproduce the fact without an LLM, it belongs in PragmaGraph. If it
 depends on a preference, operator pin, summary, design judgment, or memory
