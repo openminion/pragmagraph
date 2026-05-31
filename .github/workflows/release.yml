@@ -54,6 +54,9 @@ jobs:
   release:
     name: Publish Release
     needs: build-package
+    permissions:
+      contents: write
+      id-token: write
     uses: ./.github/workflows/reusable-release.yml
     secrets: inherit
     with:
