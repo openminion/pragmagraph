@@ -73,32 +73,21 @@ Expected smoke result:
 
 ## Publish Sequence
 
-Publishing mirrors the Sophiagraph package flow: the top-level release workflow
-delegates publishing to a reusable release workflow that uses
-`pypa/gh-action-pypi-publish@release/v1`. Local Twine is used only for
-`twine check` inside `scripts/release_check.py`; do not use local Twine upload
-for normal releases.
+This package intentionally mirrors Sophiagraph's package-local setup: the
+package directory owns build, check, metadata, and release-smoke validation. It
+does not own a package-local GitHub Release workflow.
 
-After validation is green:
-
-1. Push the release tag, for example `v0.0.1`.
-2. Run the GitHub Actions workflow `Release Pipeline` from the PragmaGraph
-   repository.
-3. Set `release_tag` to the tag being released.
-4. Enable `publish_pypi` for the production PyPI release.
-
-The callable workflow expects the GitHub secret `pypi_token`; configure it with
-the same PyPI token used by the Sophiagraph release workflow.
-
-Manual build/check remains available for local validation:
+After validation is green, publish through the same external PyPI release
+process used for Sophiagraph, using the artifacts produced by
+`scripts/release_check.py`.
 
 ```bash
 rm -rf build dist src/*.egg-info
 python3.11 scripts/release_check.py
 ```
 
-After a production upload, the project name `pragmagraph` is owned by the
-publishing PyPI account/organization for future releases.
+After a production upload, the project name `pragmagraph` is owned by the PyPI
+account/organization used for the release.
 
 ## Notes
 
