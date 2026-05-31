@@ -7,16 +7,11 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: "Release tag (example: v0.0.1)"
+        description: "Release tag (example: v0.1.0)"
         required: true
         type: string
-      publish_testpypi:
-        description: "Publish wheel and sdist to TestPyPI"
-        required: false
-        default: false
-        type: boolean
       publish_pypi:
-        description: "Publish wheel and sdist to PyPI"
+        description: "Publish wheels to PyPI"
         required: false
         default: false
         type: boolean
@@ -59,42 +54,8 @@ jobs:
   release:
     name: Publish Release
     needs: build-package
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
-    steps:
-      - name: Download package artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: package-artifacts
-          path: release-assets
-
-      - name: Verify release assets
-        run: |
-          ls -la release-assets
-
-      - name: Publish GitHub release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
-          files: |
-            release-assets/*.whl
-            release-assets/*.tar.gz
-
-      - name: Publish package to TestPyPI (optional)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_testpypi }}
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.test-pypi-token }}
-          repository-url: https://test.pypi.org/legacy/
-          packages-dir: release-assets
-
-      - name: Publish package to PyPI (optional)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_pypi }}
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.pypi-token }}
-          packages-dir: release-assets
+    uses: ./.github/workflows/_reusable/release.yml
+    secrets: inherit
+    with:
+      tag-name: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
+      publish-pypi: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_pypi || false }}

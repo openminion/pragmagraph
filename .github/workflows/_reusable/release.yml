@@ -1,0 +1,53 @@
+name: Reusable - Release
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        type: string
+        required: false
+        default: "ubuntu-latest"
+      tag-name:
+        type: string
+        required: true
+      publish-pypi:
+        type: boolean
+        required: false
+        default: false
+    secrets:
+      pypi-token:
+        required: false
+
+jobs:
+  publish:
+    runs-on: ${{ inputs.runner }}
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Download all artifacts from this workflow run
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Verify release assets
+        run: |
+          ls -la release-assets || true
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag-name }}
+          files: |
+            release-assets/**/*.whl
+            release-assets/**/bundle-manifest.json
+            release-assets/**/README.txt
+
+      - name: Publish wheels to PyPI (optional)
+        if: ${{ inputs.publish-pypi }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.pypi-token }}
+          packages-dir: release-assets

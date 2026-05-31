@@ -73,10 +73,11 @@ Expected smoke result:
 
 ## Publish Sequence
 
-Publishing mirrors the Sophiagraph package flow: GitHub Actions publishes
-release artifacts with `pypa/gh-action-pypi-publish@release/v1`. Local Twine is
-used only for `twine check` inside `scripts/release_check.py`; do not use local
-Twine upload for normal releases.
+Publishing mirrors the Sophiagraph package flow: the top-level release workflow
+delegates publishing to `./.github/workflows/_reusable/release.yml`, which uses
+`pypa/gh-action-pypi-publish@release/v1`. Local Twine is used only for
+`twine check` inside `scripts/release_check.py`; do not use local Twine upload
+for normal releases.
 
 After validation is green:
 
@@ -84,15 +85,10 @@ After validation is green:
 2. Run the GitHub Actions workflow `Release Pipeline` from the PragmaGraph
    repository.
 3. Set `release_tag` to the tag being released.
-4. Enable `publish_testpypi` for a TestPyPI dry run.
-5. Enable `publish_pypi` for the production PyPI release.
+4. Enable `publish_pypi` for the production PyPI release.
 
-The workflow expects these GitHub secrets:
-
-- `pypi-token` for production PyPI, matching the Sophiagraph release workflow
-  secret name.
-- `test-pypi-token` for TestPyPI. TestPyPI is a separate service and cannot use
-  a production PyPI project-scoped token.
+The workflow expects the GitHub secret `pypi-token`, matching the Sophiagraph
+release workflow secret name.
 
 Manual build/check remains available for local validation:
 
