@@ -33,12 +33,12 @@ def test_package_readme_mentions_policy_and_quickstart() -> None:
     assert "pragmagraph index" in readme
 
 
-def test_package_metadata_omits_unclaimed_public_urls() -> None:
+def test_package_metadata_declares_public_urls() -> None:
     pyproject = tomllib.loads(
         (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text()
     )
-    readme = (Path(__file__).resolve().parents[1] / "README.md").read_text()
 
-    assert "urls" not in pyproject["project"]
-    assert "https://github.com/openminion/pragmagraph" not in readme
-    assert "https://pypi.org/project/pragmagraph" not in readme
+    assert pyproject["project"]["urls"] == {
+        "Repository": "https://github.com/openminion/pragmagraph",
+        "Download": "https://pypi.org/project/pragmagraph/",
+    }

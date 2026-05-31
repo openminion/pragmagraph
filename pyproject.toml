@@ -24,6 +24,10 @@ classifiers = [
 ]
 dependencies = []
 
+[project.urls]
+Repository = "https://github.com/openminion/pragmagraph"
+Download = "https://pypi.org/project/pragmagraph/"
+
 [project.optional-dependencies]
 dev = [
   "build>=1,<2",
@@ -43,4 +47,3 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib"
-

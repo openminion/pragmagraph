@@ -73,45 +73,41 @@ Expected smoke result:
 
 ## Publish Sequence
 
-Example sequence once validation is green:
+Publishing mirrors the Sophiagraph package flow: GitHub Actions publishes
+release artifacts with `pypa/gh-action-pypi-publish@release/v1`. Local Twine is
+used only for `twine check` inside `scripts/release_check.py`; do not use local
+Twine upload for normal releases.
 
-```bash
-python3.11 -m build
-python3.11 -m twine check dist/*
-python3.11 -m twine upload dist/*
-```
+After validation is green:
 
-TestPyPI dry run:
+1. Push the release tag, for example `v0.0.1`.
+2. Run the GitHub Actions workflow `Release Pipeline` from the PragmaGraph
+   repository.
+3. Set `release_tag` to the tag being released.
+4. Enable `publish_testpypi` for a TestPyPI dry run.
+5. Enable `publish_pypi` for the production PyPI release.
+
+The workflow expects these GitHub secrets:
+
+- `pypi-token` for production PyPI, matching the Sophiagraph release workflow
+  secret name.
+- `test-pypi-token` for TestPyPI. TestPyPI is a separate service and cannot use
+  a production PyPI project-scoped token.
+
+Manual build/check remains available for local validation:
 
 ```bash
 rm -rf build dist src/*.egg-info
 python3.11 scripts/release_check.py
-python3.11 -m twine upload --repository testpypi dist/*
-python3.11 -m venv /tmp/pragmagraph-testpypi-venv
-/tmp/pragmagraph-testpypi-venv/bin/pip install \
-  --index-url https://test.pypi.org/simple/ \
-  --extra-index-url https://pypi.org/simple/ \
-  pragmagraph==<version>
-/tmp/pragmagraph-testpypi-venv/bin/pragmagraph-smoke --json
 ```
 
-Production PyPI upload:
-
-```bash
-rm -rf build dist src/*.egg-info
-python3.11 scripts/release_check.py
-python3.11 -m twine upload dist/*
-```
-
-Use PyPI API tokens through `TWINE_USERNAME=__token__` and
-`TWINE_PASSWORD=...` or a local `.pypirc`; do not commit credentials. After a
-production upload, the project name `pragmagraph` is owned by the publishing
-PyPI account/organization for future releases.
+After a production upload, the project name `pragmagraph` is owned by the
+publishing PyPI account/organization for future releases.
 
 ## Notes
 
-1. This package intentionally omits repository/homepage metadata until the
-   canonical public release URLs are locked.
+1. Repository and PyPI project URLs are package metadata once the GitHub
+   repository is created.
 2. `pragmagraph` may be published independently; host frameworks consume it as
    an observed-fact graph substrate.
 3. Generated caches and `*.egg-info` directories are build artifacts and should
