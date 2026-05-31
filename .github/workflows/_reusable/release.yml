@@ -7,15 +7,15 @@ on:
         type: string
         required: false
         default: "ubuntu-latest"
-      tag-name:
+      tag_name:
         type: string
         required: true
-      publish-pypi:
+      publish_pypi:
         type: boolean
         required: false
         default: false
     secrets:
-      pypi-token:
+      pypi_token:
         required: false
 
 jobs:
@@ -38,16 +38,16 @@ jobs:
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.tag-name }}
+          tag_name: ${{ inputs.tag_name }}
           files: |
             release-assets/**/*.whl
             release-assets/**/bundle-manifest.json
             release-assets/**/README.txt
 
       - name: Publish wheels to PyPI (optional)
-        if: ${{ inputs.publish-pypi }}
+        if: ${{ inputs.publish_pypi }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
-          password: ${{ secrets.pypi-token }}
+          password: ${{ secrets.pypi_token }}
           packages-dir: release-assets
