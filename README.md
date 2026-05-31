@@ -28,7 +28,7 @@ deed, matter, fact, or thing done; in this package it frames the third brain as
 a graph of reproducible structure: files, symbols, document sections, artifacts,
 references, commits, and other facts an indexer can recover from source.
 
-This `0.0.1` semantic alpha provides a small local source-graph MVP:
+This semantic alpha provides a small local source-graph MVP:
 deterministic DTOs, JSON snapshots, a local code/document indexer, lexical and
 structural query helpers, CLI commands, and fixture handoff artifacts for
 future OpenMinion adapter work.
@@ -40,11 +40,6 @@ future OpenMinion adapter work.
   deeds.
 - **Graphify** remains the first third-brain adapter. PragmaGraph is the future
   native package, not a relabeling of Graphify.
-
-The boundary discussion lives in the host repository at
-`docs/discussions/sophiagraph-pragmagraph-boundary-2026-05-27.md`.
-The shortest future-agent reference is
-`docs/reference/second-vs-third-brain-quick-reference.md`.
 
 Practical rule: if a parser, static analyzer, doc walker, git reader, or shell
 command can reproduce the fact without an LLM, it belongs in PragmaGraph. If it
