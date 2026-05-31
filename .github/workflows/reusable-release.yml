@@ -38,16 +38,16 @@ jobs:
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.tag-name }}
+          tag_name: ${{ inputs['tag-name'] }}
           files: |
             release-assets/**/*.whl
             release-assets/**/bundle-manifest.json
             release-assets/**/README.txt
 
       - name: Publish wheels to PyPI (optional)
-        if: ${{ inputs.publish-pypi }}
+        if: ${{ inputs['publish-pypi'] }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
-          password: ${{ secrets.pypi-token }}
+          password: ${{ secrets['pypi-token'] }}
           packages-dir: release-assets
