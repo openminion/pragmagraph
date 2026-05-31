@@ -1,12 +1,28 @@
-# PragmaGraph
+<h1 align="center">PragmaGraph</h1>
 
-**Standalone observed-fact graph substrate for code and document structure.**
+<p align="center">
+  <strong>Standalone observed-fact graph substrate for code and document structure.</strong>
+</p>
 
-`pragmagraph` is the future native third-brain package for OpenMinion-style
-code and document graphs. The name comes from Greek `pragma`, meaning a deed,
-matter, or thing done. In this package, the name frames the third brain as the
-place for observed structure: files, symbols, documents, artifacts, references,
-commits, and other reproducible facts.
+<p align="center">
+  <a href="https://github.com/openminion/pragmagraph">GitHub</a>
+  · <a href="https://pypi.org/project/pragmagraph/">PyPI</a>
+  · <a href="https://www.openminion.com">Website</a>
+  · <a href="https://x.com/OpenMinion">X</a>
+</p>
+
+<p align="center">
+  <a href="https://pypi.org/project/pragmagraph/"><img alt="PyPI" src="https://img.shields.io/pypi/v/pragmagraph?color=3775A9"></a>
+  <a href="https://pypi.org/project/pragmagraph/"><img alt="Python" src="https://img.shields.io/pypi/pyversions/pragmagraph"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
+  <img alt="Status" src="https://img.shields.io/badge/status-semantic--alpha-5B8DEF">
+</p>
+
+`pragmagraph` is a standalone observed-fact graph substrate for code and
+document structure. The name comes from Greek `pragma` (`πρᾶγμα`), meaning a
+deed, matter, fact, or thing done; in this package it frames the third brain as
+a graph of reproducible structure: files, symbols, document sections, artifacts,
+references, commits, and other facts an indexer can recover from source.
 
 This `0.0.1` semantic alpha provides a small local source-graph MVP:
 deterministic DTOs, JSON snapshots, a local code/document indexer, lexical and
@@ -34,6 +50,11 @@ PragmaGraph with `pragma://...` evidence references; PragmaGraph never stores
 Sophiagraph's judgments.
 
 ## Trust and Brand Safety
+
+- Official GitHub: `https://github.com/openminion/pragmagraph`
+- Official PyPI: `https://pypi.org/project/pragmagraph/`
+- Official website: `https://www.openminion.com`
+- Official X account: `https://x.com/OpenMinion`
 
 `pragmagraph` has no official token, coin, NFT, airdrop, staking program,
 treasury product, or investment offering. Any claim otherwise is unauthorized
@@ -92,6 +113,12 @@ Those features belong to follow-on releases or to OpenMinion's provider
 adapter layer.
 
 ## Install
+
+Install from PyPI:
+
+```bash
+python3.11 -m pip install pragmagraph
+```
 
 Editable install during local development:
 
