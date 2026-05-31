@@ -28,7 +28,7 @@ deed, matter, fact, or thing done; in this package it frames the third brain as
 a graph of reproducible structure: files, symbols, document sections, artifacts,
 references, commits, and other facts an indexer can recover from source.
 
-This `0.0.1` semantic alpha provides a small local source-graph MVP:
+This semantic alpha provides a small local source-graph MVP:
 deterministic DTOs, JSON snapshots, a local code/document indexer, lexical and
 structural query helpers, CLI commands, and fixture handoff artifacts for
 future OpenMinion adapter work.
