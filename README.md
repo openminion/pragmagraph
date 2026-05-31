@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://www.openminion.com/brand/openminion-logo.png" alt="OpenMinion logo" width="128" />
+</p>
+
 <h1 align="center">PragmaGraph</h1>
 
 <p align="center">
@@ -15,7 +19,7 @@
   <a href="https://pypi.org/project/pragmagraph/"><img alt="PyPI" src="https://img.shields.io/pypi/v/pragmagraph?color=3775A9"></a>
   <a href="https://pypi.org/project/pragmagraph/"><img alt="Python" src="https://img.shields.io/pypi/pyversions/pragmagraph"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
-  <img alt="Status" src="https://img.shields.io/badge/status-semantic--alpha-5B8DEF">
+  <img alt="Status" src="https://img.shields.io/badge/status-published%20alpha-5B8DEF">
 </p>
 
 `pragmagraph` is a standalone observed-fact graph substrate for code and

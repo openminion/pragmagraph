@@ -14,6 +14,12 @@ Current canonical planning docs live in the host repository:
 - `docs/specs/pragmagraph-package-baseline-spec.md`
 - `docs/trackers/qa/pragmagraph-package-baseline-tracker.md`
 
+Package-local reusable docs:
+
+- `docs/public-package-readme-template.md` records the public README header,
+  trust, and brand-use format used by PragmaGraph and sibling standalone
+  packages.
+
 The `0.0.1` semantic alpha defines the first narrow graph-facing contracts:
 immutable DTOs, JSON snapshots, local indexing, deterministic query/traversal,
 CLI commands, and OpenMinion handoff fixtures.
