@@ -54,7 +54,7 @@ jobs:
   release:
     name: Publish Release
     needs: build-package
-    uses: ./.github/workflows/_reusable/release.yml
+    uses: ./.github/workflows/reusable-release.yml
     secrets: inherit
     with:
       tag-name: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
