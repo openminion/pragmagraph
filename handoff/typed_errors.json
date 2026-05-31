@@ -1,0 +1,17 @@
+{
+  "errors": [
+    {
+      "code": "SNAPSHOT_NOT_FOUND",
+      "message": "snapshot file not found"
+    },
+    {
+      "code": "UNSUPPORTED_SCHEMA_VERSION",
+      "message": "unsupported PragmaGraph snapshot schema"
+    },
+    {
+      "code": "INVALID_SNAPSHOT",
+      "message": "snapshot JSON root must be an object"
+    }
+  ],
+  "package": "pragmagraph"
+}

@@ -1,0 +1,10 @@
+include LICENSE
+recursive-include scripts *.py
+recursive-include examples *.py
+recursive-include fixtures *.md *.py
+recursive-include handoff *.json
+include API_COMPATIBILITY.md
+include README.md
+include RELEASING.md
+recursive-exclude * __pycache__ *.py[cod]
+prune src/*.egg-info

@@ -1,0 +1,19 @@
+{
+  "capabilities": [
+    "query",
+    "neighborhood",
+    "path",
+    "health",
+    "refresh",
+    "citations",
+    "provenance"
+  ],
+  "layer": "third_brain",
+  "provider": "pragmagraph",
+  "semantic_contract": true,
+  "snapshot_schema_version": "pragmagraph.snapshot.v1alpha1",
+  "tags": [
+    "code_graph",
+    "document_graph"
+  ]
+}

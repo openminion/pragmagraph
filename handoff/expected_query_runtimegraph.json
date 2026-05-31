@@ -1,0 +1,10 @@
+{
+  "expected": {
+    "first_hit_kind": "python_symbol",
+    "first_hit_label": "RuntimeGraph",
+    "first_hit_path": "src/app.py",
+    "query": "RuntimeGraph"
+  },
+  "fixture_root": "fixtures/tiny_repo",
+  "package": "pragmagraph"
+}
