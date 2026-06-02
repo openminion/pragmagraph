@@ -22,6 +22,7 @@ External consumers should treat these import roots as the supported public API:
 - `pragmagraph.adapters`
 - `pragmagraph.portability`
 - `pragmagraph.parsers`
+- `pragmagraph.export`
 - `pragmagraph.report`
 - `pragmagraph.refresh`
 - `pragmagraph.security`
@@ -40,6 +41,8 @@ The following top-level exports are part of the current public contract:
   `SourceRef`, `QueryRequest`, and `QueryResult`
 - snapshot helpers `load_snapshot`, `save_snapshot`, and `stable_dumps`
 - local indexer helper `index_path`
+- graph export helpers `render_dot`, `render_mermaid`, and
+  `render_graph_export`
 - structural report helpers `build_report` and `render_markdown_report`
 - refresh helper `refresh_snapshot`
 - parser/scope DTOs such as `ParserDiagnostic`, `ParserResult`,
@@ -91,7 +94,8 @@ Public-contract confidence should be enforced by tests that cover:
 4. package independence from OpenMinion imports,
 5. semantic smoke behavior,
 6. release/install smoke for built artifacts,
-7. deterministic report JSON/Markdown behavior over fixture snapshots.
+7. deterministic report JSON/Markdown behavior over fixture snapshots,
+8. deterministic DOT/Mermaid export behavior over fixture snapshots.
 
 ## Non-goals
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pragmagraph.adapters import index_path
 from pragmagraph.contracts import CAPABILITIES, INDEXER_VERSION, SCHEMA_VERSION
+from pragmagraph.export import render_dot, render_graph_export, render_mermaid
 from pragmagraph.models import (
     GraphEdge,
     GraphNode,
@@ -47,6 +48,7 @@ STABLE_IMPORT_ROOTS = (
     "pragmagraph.adapters",
     "pragmagraph.portability",
     "pragmagraph.parsers",
+    "pragmagraph.export",
     "pragmagraph.report",
     "pragmagraph.refresh",
     "pragmagraph.security",
@@ -84,6 +86,9 @@ __all__ = [
     "build_report",
     "index_path",
     "load_snapshot",
+    "render_dot",
+    "render_graph_export",
+    "render_mermaid",
     "render_markdown_report",
     "refresh_snapshot",
     "save_snapshot",

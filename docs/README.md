@@ -25,6 +25,7 @@ Package-local reusable docs:
   trust, and brand-use format used by PragmaGraph and sibling standalone
   packages.
 - `docs/report-mode.md` records the structural report contract and CLI shape.
+- `docs/export-mode.md` records DOT/Mermaid text export contracts and CLI shape.
 - `docs/certification-readiness-matrix.md` records the current standalone and
   OpenMinion proof targets for the public package surface.
 

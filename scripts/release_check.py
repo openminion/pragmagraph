@@ -53,6 +53,7 @@ def _assert_smoke_payload(stdout: str) -> None:
         "pragmagraph.adapters",
         "pragmagraph.portability",
         "pragmagraph.parsers",
+        "pragmagraph.export",
         "pragmagraph.report",
         "pragmagraph.refresh",
         "pragmagraph.security",
@@ -119,7 +120,11 @@ def main(argv: list[str] | None = None) -> int:
                 [
                     str(venv_dir / "bin" / "python"),
                     "-c",
-                    "from pragmagraph.report import build_report, render_markdown_report",
+                    (
+                        "from pragmagraph.export import render_dot, render_mermaid; "
+                        "from pragmagraph.report import build_report, "
+                        "render_markdown_report"
+                    ),
                 ],
                 cwd=root,
             )

@@ -87,6 +87,7 @@ The package currently provides:
   - `pragmagraph.adapters`
   - `pragmagraph.portability`
   - `pragmagraph.parsers`
+  - `pragmagraph.export`
   - `pragmagraph.report`
   - `pragmagraph.refresh`
   - `pragmagraph.security`
@@ -101,11 +102,13 @@ The package currently provides:
 - deterministic structural report helpers with JSON and Markdown output for
   repo summaries, unresolved facts, top nodes, dependency declarations, and
   agent-oriented follow-up queries
+- deterministic DOT and Mermaid export helpers for lightweight graph viewing
+  and downstream tooling
 - content-hash refresh manifests for deterministic changed/unchanged/removed
   path reporting
 - scope/security policy for gitignore-aware, size-bounded, binary/symlink-safe
   local indexing
-- CLI commands for `index`, `refresh`, `query`, `explain`, `report`,
+- CLI commands for `index`, `refresh`, `query`, `explain`, `report`, `export`,
   `neighborhood`, `path`, and `health`
 - a semantic smoke entrypoint for install validation
 - package-local tests, lint, and release-check workflow
@@ -216,6 +219,14 @@ pragmagraph report .pragmagraph/snapshot.json
 pragmagraph report .pragmagraph/snapshot.json --json
 ```
 
+Export graph text:
+
+```bash
+pragmagraph export .pragmagraph/snapshot.json --format dot
+
+pragmagraph export .pragmagraph/snapshot.json --format mermaid
+```
+
 ## External Consumer Quickstart
 
 Minimal standalone flow for another framework or service:
@@ -236,6 +247,7 @@ python3.11 -m pragmagraph --json
 
 See [API_COMPATIBILITY.md](API_COMPATIBILITY.md) for the public import-root
 policy, [docs/report-mode.md](docs/report-mode.md) for the structural report
-contract, [docs/certification-readiness-matrix.md](docs/certification-readiness-matrix.md)
+contract, [docs/export-mode.md](docs/export-mode.md) for deterministic graph
+exports, [docs/certification-readiness-matrix.md](docs/certification-readiness-matrix.md)
 for package/OpenMinion proof coverage, and [RELEASING.md](RELEASING.md) for
 package-local release checks.

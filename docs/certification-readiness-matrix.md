@@ -17,7 +17,8 @@ This matrix does not cover:
 
 1. hosted graph services,
 2. OpenMinion memory behavior,
-3. future Graphify interop or visualization lanes not yet implemented.
+3. future Graphify interop, hosted visualization, or browser rendering lanes not
+   yet implemented.
 
 ## Success criteria
 
@@ -31,6 +32,7 @@ target that exercises only the public package surface.
 | Semantic MVP | `pragmagraph/tests/test_semantic_mvp.py` | `openminion/tests/knowledge_graphs/test_pragmagraph_adapter.py` |
 | Graphify-parity package expansion | `pragmagraph/tests/test_graphify_parity_expansion.py` | `openminion/tests/knowledge_graphs/test_pragmagraph_provider_swap.py` |
 | Structural report mode | `pragmagraph/tests/test_report.py` | `n/a` |
+| Graph text export mode | `pragmagraph/tests/test_export.py` | `n/a` |
 | Release and smoke contract | `pragmagraph/tests/test_standalone_smoke.py`, `pragmagraph/scripts/release_check.py` | `openminion/tests/runtime/test_bootstrap_memory_retrieve_di.py` |
 
 ## Run-the-suite commands
@@ -56,7 +58,7 @@ make lint
 Every row in this matrix exercises typed structural surfaces only:
 
 1. snapshot DTOs,
-2. query/path/neighborhood/report helpers,
+2. query/path/neighborhood/report/export helpers,
 3. refresh and health contracts,
 4. OpenMinion adapter behavior over public `pragmagraph` imports.
 

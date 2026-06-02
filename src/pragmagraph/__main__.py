@@ -7,6 +7,7 @@ import json
 
 from pragmagraph import PACKAGE_STATUS, STABLE_IMPORT_ROOTS, __version__
 from pragmagraph.adapters import index_path
+from pragmagraph.export import render_graph_export
 from pragmagraph.models import QueryRequest
 from pragmagraph.query import health, neighborhood, path, query
 from pragmagraph.report import build_report, render_markdown_report
@@ -67,6 +68,17 @@ def main(argv: list[str] | None = None) -> int:
     report_parser.add_argument("--top-n", type=int, default=10)
     report_parser.add_argument("--json", action="store_true", help="emit JSON output")
 
+    export_parser = subparsers.add_parser(
+        "export", help="export a snapshot as graph text"
+    )
+    export_parser.add_argument("snapshot")
+    export_parser.add_argument(
+        "--format",
+        choices=("dot", "mermaid"),
+        default="dot",
+        help="graph text format",
+    )
+
     refresh_parser = subparsers.add_parser("refresh", help="refresh a local root")
     refresh_parser.add_argument("root")
     refresh_parser.add_argument("--out", required=True)
@@ -126,6 +138,9 @@ def main(argv: list[str] | None = None) -> int:
             _print_payload(report.to_dict(), as_json=True)
         else:
             print(render_markdown_report(report), end="")
+    elif args.command == "export":
+        snapshot = load_snapshot(args.snapshot)
+        print(render_graph_export(snapshot, format=args.format), end="")
     elif args.command == "refresh":
         previous_manifest = (
             load_manifest(args.manifest_in) if args.manifest_in else None
