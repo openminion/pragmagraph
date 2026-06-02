@@ -179,6 +179,14 @@ pragmagraph-smoke --json
 Expected output is deterministic JSON with the package name, version, status,
 stable import roots, and `semantic_contract: true`.
 
+## Package-local docs and release
+
+- `docs/README.md` summarizes the package-local docs contract.
+- `API_COMPATIBILITY.md` records the supported public import roots and
+  top-level export policy.
+- `RELEASING.md` records the package-local release and PyPI publish flow.
+- `scripts/release_check.py` is the canonical release smoke entrypoint.
+
 ## CLI Quickstart
 
 Index a local code/docs root into a deterministic JSON snapshot:
@@ -216,12 +224,6 @@ Check health:
 
 ```bash
 pragmagraph health .pragmagraph/snapshot.json --json
-```
-
-Package-local example:
-
-```bash
-PYTHONPATH=src python3.11 examples/basic_usage.py
 ```
 
 Build a structural report:
