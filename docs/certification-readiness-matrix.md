@@ -33,6 +33,7 @@ target that exercises only the public package surface.
 | Graphify-parity package expansion | `pragmagraph/tests/test_graphify_parity_expansion.py` | `openminion/tests/knowledge_graphs/test_pragmagraph_provider_swap.py` |
 | Structural report mode | `pragmagraph/tests/test_report.py` | `n/a` |
 | Graph text export mode | `pragmagraph/tests/test_export.py` | `n/a` |
+| Graphify-shaped JSON interop | `pragmagraph/tests/test_graphify_interop.py` | `n/a` |
 | Release and smoke contract | `pragmagraph/tests/test_standalone_smoke.py`, `pragmagraph/scripts/release_check.py` | `openminion/tests/runtime/test_bootstrap_memory_retrieve_di.py` |
 
 ## Run-the-suite commands
@@ -58,7 +59,7 @@ make lint
 Every row in this matrix exercises typed structural surfaces only:
 
 1. snapshot DTOs,
-2. query/path/neighborhood/report/export helpers,
+2. query/path/neighborhood/report/export/interop helpers,
 3. refresh and health contracts,
 4. OpenMinion adapter behavior over public `pragmagraph` imports.
 

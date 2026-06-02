@@ -9,6 +9,7 @@ def test_pragmagraph_package_imports() -> None:
     import pragmagraph.adapters
     import pragmagraph.contracts
     import pragmagraph.export
+    import pragmagraph.graphify
     import pragmagraph.models
     import pragmagraph.parsers
     import pragmagraph.portability
@@ -22,8 +23,10 @@ def test_pragmagraph_package_imports() -> None:
     assert pragmagraph.PACKAGE_STATUS == "semantic-alpha"
     assert "pragmagraph.models" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.export" in pragmagraph.STABLE_IMPORT_ROOTS
+    assert "pragmagraph.graphify" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.report" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "render_dot" in pragmagraph.export.__all__
+    assert "to_graphify_payload" in pragmagraph.graphify.__all__
     assert "GraphNode" in pragmagraph.models.__all__
     assert "query" in pragmagraph.query.__all__
     assert "build_report" in pragmagraph.report.__all__
@@ -50,6 +53,7 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "GraphReportNode",
         "GraphReportSummary",
         "GraphSnapshot",
+        "GRAPHIFY_INTEROP_FORMAT",
         "HealthSummary",
         "INDEXER_VERSION",
         "OmittedDiagnostic",
@@ -75,7 +79,9 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "render_markdown_report",
         "refresh_snapshot",
         "save_snapshot",
+        "snapshot_from_graphify_payload",
         "stable_dumps",
+        "to_graphify_payload",
     }
     assert all(
         not (name.startswith("_") and not name.endswith("__"))
@@ -87,6 +93,7 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     import pragmagraph.adapters as adapters
     import pragmagraph.contracts as contracts
     import pragmagraph.export as export
+    import pragmagraph.graphify as graphify
     import pragmagraph.models as models
     import pragmagraph.parsers as parsers
     import pragmagraph.portability as portability
@@ -99,6 +106,7 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     assert "index_path" in adapters.__all__
     assert "SCHEMA_VERSION" in contracts.__all__
     assert "render_mermaid" in export.__all__
+    assert "snapshot_from_graphify_payload" in graphify.__all__
     assert "GraphSnapshot" in models.__all__
     assert "get_default_registry" in parsers.__all__
     assert "pragma_uri" in portability.__all__

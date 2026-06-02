@@ -28,6 +28,7 @@ def test_python_m_pragmagraph_smoke() -> None:
             "pragmagraph.portability",
             "pragmagraph.parsers",
             "pragmagraph.export",
+            "pragmagraph.graphify",
             "pragmagraph.report",
             "pragmagraph.refresh",
             "pragmagraph.security",

@@ -88,6 +88,7 @@ The package currently provides:
   - `pragmagraph.portability`
   - `pragmagraph.parsers`
   - `pragmagraph.export`
+  - `pragmagraph.graphify`
   - `pragmagraph.report`
   - `pragmagraph.refresh`
   - `pragmagraph.security`
@@ -104,12 +105,14 @@ The package currently provides:
   agent-oriented follow-up queries
 - deterministic DOT and Mermaid export helpers for lightweight graph viewing
   and downstream tooling
+- deterministic Graphify-shaped JSON import/export helpers for backend
+  interchange tests and handoff artifacts
 - content-hash refresh manifests for deterministic changed/unchanged/removed
   path reporting
 - scope/security policy for gitignore-aware, size-bounded, binary/symlink-safe
   local indexing
 - CLI commands for `index`, `refresh`, `query`, `explain`, `report`, `export`,
-  `neighborhood`, `path`, and `health`
+  `graphify-export`, `graphify-import`, `neighborhood`, `path`, and `health`
 - a semantic smoke entrypoint for install validation
 - package-local tests, lint, and release-check workflow
 - API compatibility and release docs
@@ -227,6 +230,14 @@ pragmagraph export .pragmagraph/snapshot.json --format dot
 pragmagraph export .pragmagraph/snapshot.json --format mermaid
 ```
 
+Export and import Graphify-shaped JSON:
+
+```bash
+pragmagraph graphify-export .pragmagraph/snapshot.json > graphify.json
+
+pragmagraph graphify-import graphify.json --out .pragmagraph/imported.json
+```
+
 ## External Consumer Quickstart
 
 Minimal standalone flow for another framework or service:
@@ -248,6 +259,7 @@ python3.11 -m pragmagraph --json
 See [API_COMPATIBILITY.md](API_COMPATIBILITY.md) for the public import-root
 policy, [docs/report-mode.md](docs/report-mode.md) for the structural report
 contract, [docs/export-mode.md](docs/export-mode.md) for deterministic graph
-exports, [docs/certification-readiness-matrix.md](docs/certification-readiness-matrix.md)
+exports, [docs/graphify-interop.md](docs/graphify-interop.md) for Graphify-shaped
+JSON interchange, [docs/certification-readiness-matrix.md](docs/certification-readiness-matrix.md)
 for package/OpenMinion proof coverage, and [RELEASING.md](RELEASING.md) for
 package-local release checks.

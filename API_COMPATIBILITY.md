@@ -23,6 +23,7 @@ External consumers should treat these import roots as the supported public API:
 - `pragmagraph.portability`
 - `pragmagraph.parsers`
 - `pragmagraph.export`
+- `pragmagraph.graphify`
 - `pragmagraph.report`
 - `pragmagraph.refresh`
 - `pragmagraph.security`
@@ -43,6 +44,8 @@ The following top-level exports are part of the current public contract:
 - local indexer helper `index_path`
 - graph export helpers `render_dot`, `render_mermaid`, and
   `render_graph_export`
+- Graphify-shaped JSON interop helpers `to_graphify_payload`,
+  `snapshot_from_graphify_payload`, and `GRAPHIFY_INTEROP_FORMAT`
 - structural report helpers `build_report` and `render_markdown_report`
 - refresh helper `refresh_snapshot`
 - parser/scope DTOs such as `ParserDiagnostic`, `ParserResult`,
@@ -95,7 +98,8 @@ Public-contract confidence should be enforced by tests that cover:
 5. semantic smoke behavior,
 6. release/install smoke for built artifacts,
 7. deterministic report JSON/Markdown behavior over fixture snapshots,
-8. deterministic DOT/Mermaid export behavior over fixture snapshots.
+8. deterministic DOT/Mermaid export behavior over fixture snapshots,
+9. Graphify-shaped JSON import/export behavior over fixture snapshots.
 
 ## Non-goals
 
@@ -103,6 +107,6 @@ This policy does not promise:
 
 1. host-framework orchestration semantics,
 2. graph-database storage behavior,
-3. Graphify artifact mapping,
+3. Graphify runtime API wrapping or hosted Graphify artifact mapping,
 4. semantic inference of facts, labels, relations, or summaries from prose,
 5. compatibility for undocumented import paths.

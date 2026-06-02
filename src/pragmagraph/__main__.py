@@ -8,6 +8,10 @@ import json
 from pragmagraph import PACKAGE_STATUS, STABLE_IMPORT_ROOTS, __version__
 from pragmagraph.adapters import index_path
 from pragmagraph.export import render_graph_export
+from pragmagraph.graphify import (
+    snapshot_from_graphify_payload,
+    to_graphify_payload,
+)
 from pragmagraph.models import QueryRequest
 from pragmagraph.query import health, neighborhood, path, query
 from pragmagraph.report import build_report, render_markdown_report
@@ -79,6 +83,19 @@ def main(argv: list[str] | None = None) -> int:
         help="graph text format",
     )
 
+    graphify_export_parser = subparsers.add_parser(
+        "graphify-export", help="export a snapshot as Graphify-shaped JSON"
+    )
+    graphify_export_parser.add_argument("snapshot")
+
+    graphify_import_parser = subparsers.add_parser(
+        "graphify-import", help="import supported Graphify-shaped JSON"
+    )
+    graphify_import_parser.add_argument("payload")
+    graphify_import_parser.add_argument("--out", required=True)
+    graphify_import_parser.add_argument("--namespace", default="graphify")
+    graphify_import_parser.add_argument("--root-path", default="")
+
     refresh_parser = subparsers.add_parser("refresh", help="refresh a local root")
     refresh_parser.add_argument("root")
     refresh_parser.add_argument("--out", required=True)
@@ -141,6 +158,19 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "export":
         snapshot = load_snapshot(args.snapshot)
         print(render_graph_export(snapshot, format=args.format), end="")
+    elif args.command == "graphify-export":
+        snapshot = load_snapshot(args.snapshot)
+        _print_payload(to_graphify_payload(snapshot), as_json=True)
+    elif args.command == "graphify-import":
+        with open(args.payload, encoding="utf-8") as graphify_payload:
+            payload = json.load(graphify_payload)
+        snapshot = snapshot_from_graphify_payload(
+            payload,
+            namespace=args.namespace,
+            root_path=args.root_path,
+        )
+        save_snapshot(snapshot, args.out)
+        _print_payload(health(snapshot), as_json=True)
     elif args.command == "refresh":
         previous_manifest = (
             load_manifest(args.manifest_in) if args.manifest_in else None
