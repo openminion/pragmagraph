@@ -218,6 +218,12 @@ Check health:
 pragmagraph health .pragmagraph/snapshot.json --json
 ```
 
+Package-local example:
+
+```bash
+PYTHONPATH=src python3.11 examples/basic_usage.py
+```
+
 Build a structural report:
 
 ```bash

@@ -23,6 +23,7 @@ def test_package_policy_and_release_automation_docs_exist() -> None:
     root = Path(__file__).resolve().parents[1]
     assert (root / "API_COMPATIBILITY.md").is_file()
     assert (root / "scripts" / "release_check.py").is_file()
+    assert (root / "examples" / "basic_usage.py").is_file()
     assert (root / "docs" / "README.md").is_file()
     assert (root / "docs" / "report-mode.md").is_file()
     assert (root / "docs" / "export-mode.md").is_file()
