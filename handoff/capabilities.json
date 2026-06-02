@@ -6,7 +6,9 @@
     "health",
     "refresh",
     "citations",
-    "provenance"
+    "provenance",
+    "explain",
+    "security_policy"
   ],
   "layer": "third_brain",
   "provider": "pragmagraph",

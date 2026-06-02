@@ -2,9 +2,9 @@
   "expected": {
     "first_hit_kind": "python_class",
     "first_hit_label": "RuntimeGraph",
-    "first_hit_path": "src/app.py",
-    "query": "RuntimeGraph"
+    "query": "RuntimeGraph",
+    "requires_explanation": true
   },
-  "fixture_root": "fixtures/tiny_repo",
+  "fixture_root": "fixtures/mixed_repo",
   "package": "pragmagraph"
 }

@@ -52,6 +52,10 @@ def _assert_smoke_payload(stdout: str) -> None:
         "pragmagraph.storage",
         "pragmagraph.adapters",
         "pragmagraph.portability",
+        "pragmagraph.parsers",
+        "pragmagraph.report",
+        "pragmagraph.refresh",
+        "pragmagraph.security",
     ]
     if payload.get("package") != "pragmagraph":
         raise RuntimeError(f"unexpected smoke package: {payload!r}")
@@ -111,6 +115,14 @@ def main(argv: list[str] | None = None) -> int:
             smoke = venv_dir / "bin" / "pragmagraph-smoke"
             wheel = sorted((root / "dist").glob("pragmagraph-*.whl"))[-1]
             _run([str(pip), "install", str(wheel)], cwd=root)
+            _run(
+                [
+                    str(venv_dir / "bin" / "python"),
+                    "-c",
+                    "from pragmagraph.report import build_report, render_markdown_report",
+                ],
+                cwd=root,
+            )
             stdout = _run_capture([str(smoke), "--json"], cwd=root)
             _assert_smoke_payload(stdout)
     return 0

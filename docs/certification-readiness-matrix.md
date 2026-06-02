@@ -1,0 +1,64 @@
+# PragmaGraph Standalone + OpenMinion Certification Readiness Matrix
+
+## Purpose
+
+Single map of the current public PragmaGraph surface, the standalone package
+proof for each lane, and the OpenMinion direct-library proof where one exists.
+
+## Scope
+
+The matrix below lists each shipped PragmaGraph package lane, the exact package
+test target that proves the standalone surface works, and the exact OpenMinion
+test target that proves the runtime can consume the public package contract.
+
+## Non-goals
+
+This matrix does not cover:
+
+1. hosted graph services,
+2. OpenMinion memory behavior,
+3. future Graphify interop or visualization lanes not yet implemented.
+
+## Success criteria
+
+Every row that is not `n/a` points to a passing standalone or OpenMinion test
+target that exercises only the public package surface.
+
+## Matrix
+
+| Lane | Standalone proof | OpenMinion direct-library proof |
+| --- | --- | --- |
+| Semantic MVP | `pragmagraph/tests/test_semantic_mvp.py` | `openminion/tests/knowledge_graphs/test_pragmagraph_adapter.py` |
+| Graphify-parity package expansion | `pragmagraph/tests/test_graphify_parity_expansion.py` | `openminion/tests/knowledge_graphs/test_pragmagraph_provider_swap.py` |
+| Structural report mode | `pragmagraph/tests/test_report.py` | `n/a` |
+| Release and smoke contract | `pragmagraph/tests/test_standalone_smoke.py`, `pragmagraph/scripts/release_check.py` | `openminion/tests/runtime/test_bootstrap_memory_retrieve_di.py` |
+
+## Run-the-suite commands
+
+```bash
+cd pragmagraph
+make check
+python3.11 scripts/release_check.py
+```
+
+```bash
+cd openminion
+PYTHONPATH=src:../pragmagraph/src .venv/bin/python3.11 -m pytest -q \
+  tests/knowledge_graphs/test_pragmagraph_adapter.py \
+  tests/knowledge_graphs/test_pragmagraph_provider_swap.py \
+  tests/runtime/test_bootstrap_memory_retrieve_di.py
+.venv/bin/python3.11 -m ruff check .
+make lint
+```
+
+## Anti-LLM boundary
+
+Every row in this matrix exercises typed structural surfaces only:
+
+1. snapshot DTOs,
+2. query/path/neighborhood/report helpers,
+3. refresh and health contracts,
+4. OpenMinion adapter behavior over public `pragmagraph` imports.
+
+No row depends on freeform model output or internal OpenMinion-only package
+imports.

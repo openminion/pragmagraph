@@ -12,6 +12,8 @@ CAPABILITY_HEALTH = "health"
 CAPABILITY_REFRESH = "refresh"
 CAPABILITY_CITATIONS = "citations"
 CAPABILITY_PROVENANCE = "provenance"
+CAPABILITY_EXPLAIN = "explain"
+CAPABILITY_SECURITY_POLICY = "security_policy"
 
 CAPABILITIES = frozenset(
     {
@@ -22,6 +24,8 @@ CAPABILITIES = frozenset(
         CAPABILITY_REFRESH,
         CAPABILITY_CITATIONS,
         CAPABILITY_PROVENANCE,
+        CAPABILITY_EXPLAIN,
+        CAPABILITY_SECURITY_POLICY,
     }
 )
 
@@ -30,6 +34,13 @@ NODE_DIRECTORY = "directory"
 NODE_FILE = "file"
 NODE_DOC_SECTION = "doc_section"
 NODE_PYTHON_SYMBOL = "python_symbol"
+NODE_PYTHON_MODULE = "python_module"
+NODE_PYTHON_CLASS = "python_class"
+NODE_PYTHON_FUNCTION = "python_function"
+NODE_PYTHON_METHOD = "python_method"
+NODE_IMPORT = "import"
+NODE_CONFIG = "config"
+NODE_CONFIG_KEY = "config_key"
 
 NODE_KINDS = frozenset(
     {
@@ -38,6 +49,13 @@ NODE_KINDS = frozenset(
         NODE_FILE,
         NODE_DOC_SECTION,
         NODE_PYTHON_SYMBOL,
+        NODE_PYTHON_MODULE,
+        NODE_PYTHON_CLASS,
+        NODE_PYTHON_FUNCTION,
+        NODE_PYTHON_METHOD,
+        NODE_IMPORT,
+        NODE_CONFIG,
+        NODE_CONFIG_KEY,
     }
 )
 
@@ -46,6 +64,12 @@ EDGE_DEFINES = "defines"
 EDGE_IMPORTS = "imports"
 EDGE_MENTIONS = "mentions"
 EDGE_REFERENCES_SECTION = "references_section"
+EDGE_CALLS = "calls"
+EDGE_INHERITS = "inherits"
+EDGE_PARENT_SYMBOL = "parent_symbol"
+EDGE_REFERENCES_DOC = "references_doc"
+EDGE_HAS_KEY = "has_key"
+EDGE_DEPENDS_ON = "depends_on"
 
 EDGE_KINDS = frozenset(
     {
@@ -54,30 +78,51 @@ EDGE_KINDS = frozenset(
         EDGE_IMPORTS,
         EDGE_MENTIONS,
         EDGE_REFERENCES_SECTION,
+        EDGE_CALLS,
+        EDGE_INHERITS,
+        EDGE_PARENT_SYMBOL,
+        EDGE_REFERENCES_DOC,
+        EDGE_HAS_KEY,
+        EDGE_DEPENDS_ON,
     }
 )
 
 __all__ = [
     "CAPABILITIES",
     "CAPABILITY_CITATIONS",
+    "CAPABILITY_EXPLAIN",
     "CAPABILITY_HEALTH",
     "CAPABILITY_NEIGHBORHOOD",
     "CAPABILITY_PATH",
     "CAPABILITY_PROVENANCE",
     "CAPABILITY_QUERY",
     "CAPABILITY_REFRESH",
+    "CAPABILITY_SECURITY_POLICY",
+    "EDGE_CALLS",
     "EDGE_CONTAINS",
+    "EDGE_DEPENDS_ON",
     "EDGE_DEFINES",
+    "EDGE_HAS_KEY",
+    "EDGE_INHERITS",
     "EDGE_IMPORTS",
     "EDGE_KINDS",
     "EDGE_MENTIONS",
+    "EDGE_PARENT_SYMBOL",
+    "EDGE_REFERENCES_DOC",
     "EDGE_REFERENCES_SECTION",
     "INDEXER_VERSION",
+    "NODE_CONFIG",
+    "NODE_CONFIG_KEY",
     "NODE_DIRECTORY",
     "NODE_DOC_SECTION",
     "NODE_FILE",
+    "NODE_IMPORT",
     "NODE_KINDS",
     "NODE_PROJECT",
+    "NODE_PYTHON_CLASS",
+    "NODE_PYTHON_FUNCTION",
+    "NODE_PYTHON_METHOD",
+    "NODE_PYTHON_MODULE",
     "NODE_PYTHON_SYMBOL",
     "SCHEMA_VERSION",
 ]

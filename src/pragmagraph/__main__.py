@@ -9,6 +9,8 @@ from pragmagraph import PACKAGE_STATUS, STABLE_IMPORT_ROOTS, __version__
 from pragmagraph.adapters import index_path
 from pragmagraph.models import QueryRequest
 from pragmagraph.query import health, neighborhood, path, query
+from pragmagraph.report import build_report, render_markdown_report
+from pragmagraph.refresh import load_manifest, refresh_snapshot, save_manifest
 from pragmagraph.storage import load_snapshot, save_snapshot
 
 
@@ -50,6 +52,29 @@ def main(argv: list[str] | None = None) -> int:
     query_parser.add_argument("--max-results", type=int, default=10)
     query_parser.add_argument("--json", action="store_true", help="emit JSON output")
 
+    explain_parser = subparsers.add_parser(
+        "explain", help="query with score explanations"
+    )
+    explain_parser.add_argument("snapshot")
+    explain_parser.add_argument("query")
+    explain_parser.add_argument("--max-results", type=int, default=10)
+    explain_parser.add_argument("--json", action="store_true", help="emit JSON output")
+
+    report_parser = subparsers.add_parser(
+        "report", help="build a deterministic structural report"
+    )
+    report_parser.add_argument("snapshot")
+    report_parser.add_argument("--top-n", type=int, default=10)
+    report_parser.add_argument("--json", action="store_true", help="emit JSON output")
+
+    refresh_parser = subparsers.add_parser("refresh", help="refresh a local root")
+    refresh_parser.add_argument("root")
+    refresh_parser.add_argument("--out", required=True)
+    refresh_parser.add_argument("--manifest-in")
+    refresh_parser.add_argument("--manifest-out", required=True)
+    refresh_parser.add_argument("--namespace", default="default")
+    refresh_parser.add_argument("--json", action="store_true", help="emit JSON output")
+
     neighborhood_parser = subparsers.add_parser(
         "neighborhood", help="show nodes around a snapshot node"
     )
@@ -86,6 +111,40 @@ def main(argv: list[str] | None = None) -> int:
                 QueryRequest(query=args.query, max_results=args.max_results),
             ).to_dict(),
             as_json=True,
+        )
+    elif args.command == "explain":
+        snapshot = load_snapshot(args.snapshot)
+        result = query(
+            snapshot,
+            QueryRequest(query=args.query, max_results=args.max_results),
+        )
+        _print_payload(result.to_dict(), as_json=True)
+    elif args.command == "report":
+        snapshot = load_snapshot(args.snapshot)
+        report = build_report(snapshot, top_n=args.top_n)
+        if args.json:
+            _print_payload(report.to_dict(), as_json=True)
+        else:
+            print(render_markdown_report(report), end="")
+    elif args.command == "refresh":
+        previous_manifest = (
+            load_manifest(args.manifest_in) if args.manifest_in else None
+        )
+        result = refresh_snapshot(
+            args.root,
+            namespace=args.namespace,
+            previous_manifest=previous_manifest,
+        )
+        save_snapshot(result.snapshot, args.out)
+        save_manifest(result.manifest, args.manifest_out)
+        _print_payload(
+            {
+                "changed_paths": list(result.changed_paths),
+                "unchanged_paths": list(result.unchanged_paths),
+                "removed_paths": list(result.removed_paths),
+                "health": health(result.snapshot).to_dict(),
+            },
+            as_json=args.json,
         )
     elif args.command == "neighborhood":
         snapshot = load_snapshot(args.snapshot)
