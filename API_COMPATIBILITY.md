@@ -21,6 +21,10 @@ External consumers should treat these import roots as the supported public API:
 - `pragmagraph.storage`
 - `pragmagraph.adapters`
 - `pragmagraph.portability`
+- `pragmagraph.parsers`
+- `pragmagraph.report`
+- `pragmagraph.refresh`
+- `pragmagraph.security`
 
 The top-level `pragmagraph` package is the preferred entrypoint for package
 metadata and smoke validation.
@@ -36,6 +40,12 @@ The following top-level exports are part of the current public contract:
   `SourceRef`, `QueryRequest`, and `QueryResult`
 - snapshot helpers `load_snapshot`, `save_snapshot`, and `stable_dumps`
 - local indexer helper `index_path`
+- structural report helpers `build_report` and `render_markdown_report`
+- refresh helper `refresh_snapshot`
+- parser/scope DTOs such as `ParserDiagnostic`, `ParserResult`,
+  `RefreshManifest`, `RefreshResult`, and `QueryExplanation`
+- report DTOs such as `GraphReport`, `GraphReportSummary`,
+  `GraphReportNode`, `GraphReportFinding`, and `GraphReportDependency`
 
 Query helpers live under `pragmagraph.query`; they are intentionally not
 re-exported as top-level names so the `pragmagraph.query` import root remains a
@@ -80,7 +90,8 @@ Public-contract confidence should be enforced by tests that cover:
 3. version agreement between `pyproject.toml` and `pragmagraph.__version__`,
 4. package independence from OpenMinion imports,
 5. semantic smoke behavior,
-6. release/install smoke for built artifacts.
+6. release/install smoke for built artifacts,
+7. deterministic report JSON/Markdown behavior over fixture snapshots.
 
 ## Non-goals
 
@@ -89,5 +100,5 @@ This policy does not promise:
 1. host-framework orchestration semantics,
 2. graph-database storage behavior,
 3. Graphify artifact mapping,
-6. semantic inference of facts, labels, relations, or summaries from prose,
-7. compatibility for undocumented import paths.
+4. semantic inference of facts, labels, relations, or summaries from prose,
+5. compatibility for undocumented import paths.

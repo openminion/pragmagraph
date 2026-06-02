@@ -9,16 +9,24 @@ Current canonical planning docs live in the host repository:
 - `docs/discussions/pragmagraph-third-brain-market-research-2026-05-31.md`
 - `docs/specs/pragmagraph-mvp-openminion-usability-spec.md`
 - `docs/trackers/qa/pragmagraph-mvp-openminion-usability-tracker.md`
+- `docs/discussions/pragmagraph-graphify-gap-research-2026-05-31.md`
+- `docs/specs/pragmagraph-graphify-parity-expansion-spec.md`
+- `docs/trackers/archive/2026/pragmagraph-graphify-parity-expansion-tracker.md`
 - `docs/specs/openminion-third-brain-provider-abstraction-readiness-spec.md`
 - `docs/trackers/qa/openminion-third-brain-provider-abstraction-readiness-tracker.md`
+- `docs/specs/openminion-pragmagraph-provider-adapter-swapability-spec.md`
+- `docs/trackers/archive/2026/openminion-pragmagraph-provider-adapter-swapability-tracker.md`
 - `docs/specs/pragmagraph-package-baseline-spec.md`
-- `docs/trackers/qa/pragmagraph-package-baseline-tracker.md`
+- `docs/trackers/archive/2026/pragmagraph-package-baseline-tracker.md`
 
 Package-local reusable docs:
 
 - `docs/public-package-readme-template.md` records the public README header,
   trust, and brand-use format used by PragmaGraph and sibling standalone
   packages.
+- `docs/report-mode.md` records the structural report contract and CLI shape.
+- `docs/certification-readiness-matrix.md` records the current standalone and
+  OpenMinion proof targets for the public package surface.
 
 The `0.0.1` semantic alpha defines the first narrow graph-facing contracts:
 immutable DTOs, JSON snapshots, local indexing, deterministic query/traversal,

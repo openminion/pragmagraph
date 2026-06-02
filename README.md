@@ -30,16 +30,17 @@ references, commits, and other facts an indexer can recover from source.
 
 This semantic alpha provides a small local source-graph MVP:
 deterministic DTOs, JSON snapshots, a local code/document indexer, lexical and
-structural query helpers, CLI commands, and fixture handoff artifacts for
-future OpenMinion adapter work.
+structural query helpers, deterministic graph reports, CLI commands, and
+fixture handoff artifacts for OpenMinion consumption.
 
 ## Boundary
 
 - **Sophiagraph** owns inferred, judged, lossy durable memory.
 - **PragmaGraph** owns observed, indexer-extracted, reproducible facts and
   deeds.
-- **Graphify** remains the first third-brain adapter. PragmaGraph is the future
-  native package, not a relabeling of Graphify.
+- **Graphify** remains a third-brain adapter. **PragmaGraph** is the native
+  package surface for OpenMinion's observed-fact graph lane, not a relabeling
+  of Graphify.
 
 Practical rule: if a parser, static analyzer, doc walker, git reader, or shell
 command can reproduce the fact without an LLM, it belongs in PragmaGraph. If it
@@ -85,13 +86,27 @@ The package currently provides:
   - `pragmagraph.storage`
   - `pragmagraph.adapters`
   - `pragmagraph.portability`
+  - `pragmagraph.parsers`
+  - `pragmagraph.report`
+  - `pragmagraph.refresh`
+  - `pragmagraph.security`
 - immutable DTOs for source refs, graph nodes, graph edges, snapshots, query
   hits, omitted diagnostics, path results, and health summaries
 - deterministic JSON snapshot load/save helpers
-- a local indexer for directories, files, Markdown headings, Python AST
-  definitions/imports, and lexical snippets
-- query, neighborhood, path, and health helpers over loaded snapshots
-- CLI commands for `index`, `query`, `neighborhood`, `path`, and `health`
+- a local indexer for directories, files, Markdown headings and references,
+  Python AST modules/classes/functions/methods/imports/calls/inheritance, selected
+  JSON/TOML/YAML config metadata, and lexical snippets
+- query, explain, neighborhood, path, refresh, and health helpers over loaded
+  snapshots
+- deterministic structural report helpers with JSON and Markdown output for
+  repo summaries, unresolved facts, top nodes, dependency declarations, and
+  agent-oriented follow-up queries
+- content-hash refresh manifests for deterministic changed/unchanged/removed
+  path reporting
+- scope/security policy for gitignore-aware, size-bounded, binary/symlink-safe
+  local indexing
+- CLI commands for `index`, `refresh`, `query`, `explain`, `report`,
+  `neighborhood`, `path`, and `health`
 - a semantic smoke entrypoint for install validation
 - package-local tests, lint, and release-check workflow
 - API compatibility and release docs
@@ -168,6 +183,18 @@ Query the snapshot:
 pragmagraph query .pragmagraph/snapshot.json "RuntimeGraph" --json
 ```
 
+Refresh and explain with deterministic metadata:
+
+```bash
+pragmagraph refresh . \
+  --out .pragmagraph/snapshot.json \
+  --manifest-out .pragmagraph/manifest.json \
+  --namespace my-project \
+  --json
+
+pragmagraph explain .pragmagraph/snapshot.json "RuntimeGraph" --json
+```
+
 Inspect nearby graph facts:
 
 ```bash
@@ -179,6 +206,14 @@ Check health:
 
 ```bash
 pragmagraph health .pragmagraph/snapshot.json --json
+```
+
+Build a structural report:
+
+```bash
+pragmagraph report .pragmagraph/snapshot.json
+
+pragmagraph report .pragmagraph/snapshot.json --json
 ```
 
 ## External Consumer Quickstart
@@ -200,4 +235,7 @@ python3.11 -m pragmagraph --json
 ```
 
 See [API_COMPATIBILITY.md](API_COMPATIBILITY.md) for the public import-root
-policy and [RELEASING.md](RELEASING.md) for package-local release checks.
+policy, [docs/report-mode.md](docs/report-mode.md) for the structural report
+contract, [docs/certification-readiness-matrix.md](docs/certification-readiness-matrix.md)
+for package/OpenMinion proof coverage, and [RELEASING.md](RELEASING.md) for
+package-local release checks.

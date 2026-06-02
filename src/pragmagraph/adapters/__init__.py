@@ -2,23 +2,28 @@
 
 from __future__ import annotations
 
-import ast
-import hashlib
+import json
 import re
+import tomllib
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Iterable
 
 from pragmagraph.contracts import (
     EDGE_CONTAINS,
     EDGE_DEFINES,
+    EDGE_DEPENDS_ON,
+    EDGE_HAS_KEY,
     EDGE_IMPORTS,
+    EDGE_REFERENCES_DOC,
     EDGE_REFERENCES_SECTION,
     INDEXER_VERSION,
+    NODE_CONFIG,
+    NODE_CONFIG_KEY,
     NODE_DIRECTORY,
     NODE_DOC_SECTION,
     NODE_FILE,
+    NODE_IMPORT,
     NODE_PROJECT,
-    NODE_PYTHON_SYMBOL,
     SCHEMA_VERSION,
 )
 from pragmagraph.models import (
@@ -28,23 +33,19 @@ from pragmagraph.models import (
     OmittedDiagnostic,
     SourceRef,
 )
+from pragmagraph.parsers import ParserRegistry, get_default_registry
 from pragmagraph.portability import edge_id, node_id, normalize_relative_path
-
-DEFAULT_IGNORES = frozenset(
-    {
-        ".git",
-        ".mypy_cache",
-        ".pytest_cache",
-        ".ruff_cache",
-        ".venv",
-        "__pycache__",
-        "build",
-        "dist",
-        "node_modules",
-    }
+from pragmagraph.security import (
+    DEFAULT_IGNORES,
+    TEXT_SUFFIXES,
+    ScopePolicy,
+    escape_label,
+    load_gitignore,
+    should_index_path,
 )
 
-TEXT_SUFFIXES = frozenset({".md", ".py", ".txt", ".rst"})
+CONFIG_NAMES = frozenset({"package.json", "pyproject.toml"})
+CONFIG_SUFFIXES = frozenset({".json", ".toml", ".yaml", ".yml"})
 
 
 def _read_text(path: Path) -> str:
@@ -52,10 +53,6 @@ def _read_text(path: Path) -> str:
         return path.read_text(encoding="utf-8")
     except UnicodeDecodeError:
         return path.read_text(encoding="utf-8", errors="replace")
-
-
-def _content_hash(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _rel(path: Path, root: Path) -> str:
@@ -80,11 +77,28 @@ def _add_edge(edges: dict[str, GraphEdge], edge: GraphEdge) -> None:
     edges.setdefault(edge.id, edge)
 
 
-def _iter_paths(root: Path, ignore_names: frozenset[str]) -> Iterable[Path]:
+def _iter_paths(
+    root: Path, policy: ScopePolicy
+) -> Iterable[tuple[Path, OmittedDiagnostic | None]]:
+    gitignore_patterns = load_gitignore(root) if policy.respect_gitignore else ()
     for path in sorted(root.rglob("*")):
-        if any(part in ignore_names for part in path.relative_to(root).parts):
-            continue
-        yield path
+        allowed, diagnostic = should_index_path(
+            path,
+            root,
+            policy,
+            gitignore_patterns=gitignore_patterns,
+        )
+        if diagnostic is not None:
+            yield (
+                path,
+                OmittedDiagnostic(
+                    reason=diagnostic.code,
+                    item_id=diagnostic.path,
+                    details=diagnostic.to_dict(),
+                ),
+            )
+        if allowed:
+            yield path, None
 
 
 def index_path(
@@ -93,9 +107,13 @@ def index_path(
     namespace: str = "default",
     ignore_names: frozenset[str] = DEFAULT_IGNORES,
     created_at: str = "",
+    policy: ScopePolicy | None = None,
+    parser_registry: ParserRegistry | None = None,
 ) -> GraphSnapshot:
     """Index a local code/docs root into a deterministic snapshot."""
     root = Path(root_path).resolve()
+    scope = policy or ScopePolicy(ignore_names=ignore_names)
+    registry = parser_registry or get_default_registry()
     nodes: dict[str, GraphNode] = {}
     edges: dict[str, GraphEdge] = {}
     omitted: list[OmittedDiagnostic] = []
@@ -113,7 +131,10 @@ def index_path(
     )
 
     parent_by_path: dict[str, str] = {"": project_id}
-    for path in _iter_paths(root, ignore_names):
+    for path, diagnostic in _iter_paths(root, scope):
+        if diagnostic is not None:
+            omitted.append(diagnostic)
+            continue
         rel = _rel(path, root)
         parent_rel = normalize_relative_path(Path(rel).parent)
         parent_id = parent_by_path.get(parent_rel, project_id)
@@ -125,7 +146,7 @@ def index_path(
                 GraphNode(
                     id=current_id,
                     kind=NODE_DIRECTORY,
-                    label=path.name,
+                    label=escape_label(path.name),
                     source_ref=SourceRef(path=rel),
                 ),
             )
@@ -149,7 +170,7 @@ def index_path(
             GraphNode(
                 id=file_id,
                 kind=NODE_FILE,
-                label=path.name,
+                label=escape_label(path.name),
                 source_ref=SourceRef(path=rel),
                 text=_snippet(text),
                 metadata={
@@ -168,31 +189,26 @@ def index_path(
                 source_ref=SourceRef(path=rel),
             ),
         )
-        if path.suffix.lower() == ".md":
-            _index_markdown(
-                namespace=namespace,
-                rel=rel,
-                file_id=file_id,
-                text=text,
-                nodes=nodes,
-                edges=edges,
-            )
-        elif path.suffix.lower() == ".py":
-            _index_python(
-                namespace=namespace,
-                rel=rel,
-                file_id=file_id,
-                text=text,
-                nodes=nodes,
-                edges=edges,
-                omitted=omitted,
-            )
+        _index_file(
+            namespace=namespace,
+            rel=rel,
+            path=path,
+            file_id=file_id,
+            text=text,
+            registry=registry,
+            nodes=nodes,
+            edges=edges,
+            omitted=omitted,
+        )
 
+    _resolve_local_imports(namespace, nodes, edges, omitted)
     stats = {
         "edge_count": len(edges),
         "node_count": len(nodes),
         "omitted_count": len(omitted),
         "root_exists": root.exists(),
+        "parser_count": len(registry.parsers),
+        "scope_max_file_bytes": scope.max_file_bytes,
     }
     return GraphSnapshot(
         namespace=namespace,
@@ -207,21 +223,103 @@ def index_path(
     )
 
 
-def _index_markdown(
+def _resolve_local_imports(
+    namespace: str,
+    nodes: dict[str, GraphNode],
+    edges: dict[str, GraphEdge],
+    omitted: list[OmittedDiagnostic],
+) -> None:
+    modules = {
+        str(node.metadata.get("module_name")): node.id
+        for node in nodes.values()
+        if node.kind == "python_module" and node.metadata.get("module_name")
+    }
+    for node in tuple(nodes.values()):
+        if node.kind != NODE_IMPORT:
+            continue
+        target_id = modules.get(node.label)
+        if target_id:
+            _add_edge(
+                edges,
+                GraphEdge(
+                    id=edge_id(namespace, node.id, EDGE_IMPORTS, target_id),
+                    kind=EDGE_IMPORTS,
+                    source_id=node.id,
+                    target_id=target_id,
+                    source_ref=node.source_ref,
+                    metadata={"resolved": True},
+                ),
+            )
+        elif "." in node.label:
+            omitted.append(
+                OmittedDiagnostic(
+                    reason="unresolved_local_import",
+                    item_id=node.label,
+                    details={"source_path": node.source_ref.path},
+                )
+            )
+
+
+def _content_hash(path: Path) -> str:
+    import hashlib
+
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _index_file(
     *,
+    namespace: str,
+    rel: str,
+    path: Path,
+    file_id: str,
+    text: str,
+    registry: ParserRegistry,
+    nodes: dict[str, GraphNode],
+    edges: dict[str, GraphEdge],
+    omitted: list[OmittedDiagnostic],
+) -> None:
+    if path.suffix.lower() == ".md":
+        _index_markdown(namespace, rel, file_id, text, nodes, edges, omitted)
+    if path.name in CONFIG_NAMES or path.suffix.lower() in CONFIG_SUFFIXES:
+        _index_config(namespace, rel, file_id, text, nodes, edges, omitted)
+    parser = registry.parser_for(path)
+    if parser is None:
+        return
+    result = parser.parse(namespace=namespace, rel=rel, file_id=file_id, text=text)
+    for node in result.nodes:
+        _add_node(nodes, node)
+    for edge in result.edges:
+        _add_edge(edges, edge)
+    for diagnostic in result.diagnostics:
+        omitted.append(
+            OmittedDiagnostic(
+                reason=diagnostic.code,
+                item_id=diagnostic.path or rel,
+                details=diagnostic.to_dict(),
+            )
+        )
+
+
+def _index_markdown(
     namespace: str,
     rel: str,
     file_id: str,
     text: str,
     nodes: dict[str, GraphNode],
     edges: dict[str, GraphEdge],
+    omitted: list[OmittedDiagnostic],
 ) -> None:
-    previous_section_id = ""
+    previous_by_level: dict[int, str] = {}
+    section_by_slug: dict[str, str] = {}
     for number, line in enumerate(text.splitlines(), start=1):
         match = re.match(r"^(#{1,6})\s+(.+?)\s*$", line)
         if not match:
+            _index_markdown_links(
+                namespace, rel, file_id, line, number, nodes, edges, omitted
+            )
             continue
-        heading = match.group(2).strip()
+        level = len(match.group(1))
+        heading = escape_label(match.group(2))
         slug = _markdown_slug(heading)
         section_id = node_id(namespace, NODE_DOC_SECTION, f"{rel}#{slug}")
         source_ref = SourceRef(path=rel, line=number, section=heading)
@@ -233,7 +331,7 @@ def _index_markdown(
                 label=heading,
                 source_ref=source_ref,
                 text=heading,
-                metadata={"level": len(match.group(1)), "slug": slug},
+                metadata={"level": level, "slug": slug, "anchor": f"#{slug}"},
             ),
         )
         _add_edge(
@@ -246,27 +344,141 @@ def _index_markdown(
                 source_ref=source_ref,
             ),
         )
-        if previous_section_id:
+        parent_id = _nearest_parent_section(previous_by_level, level)
+        if parent_id:
             _add_edge(
                 edges,
                 GraphEdge(
                     id=edge_id(
-                        namespace,
-                        previous_section_id,
-                        EDGE_REFERENCES_SECTION,
-                        section_id,
+                        namespace, parent_id, EDGE_REFERENCES_SECTION, section_id
                     ),
                     kind=EDGE_REFERENCES_SECTION,
-                    source_id=previous_section_id,
+                    source_id=parent_id,
                     target_id=section_id,
                     source_ref=source_ref,
                 ),
             )
-        previous_section_id = section_id
+        previous_by_level[level] = section_id
+        section_by_slug[slug] = section_id
+    _index_local_anchor_links(
+        namespace, rel, text, section_by_slug, file_id, edges, omitted
+    )
 
 
-def _index_python(
-    *,
+def _nearest_parent_section(previous_by_level: dict[int, str], level: int) -> str:
+    for candidate in range(level - 1, 0, -1):
+        if candidate in previous_by_level:
+            return previous_by_level[candidate]
+    return ""
+
+
+def _index_markdown_links(
+    namespace: str,
+    rel: str,
+    file_id: str,
+    line: str,
+    number: int,
+    nodes: dict[str, GraphNode],
+    edges: dict[str, GraphEdge],
+    omitted: list[OmittedDiagnostic],
+) -> None:
+    for target in re.findall(r"\[[^\]]+\]\(([^)]+)\)", line):
+        _add_doc_reference(
+            namespace, rel, file_id, target, number, nodes, edges, omitted
+        )
+    for target in re.findall(r"\[\[([^\]]+)\]\]", line):
+        _add_doc_reference(
+            namespace, rel, file_id, target, number, nodes, edges, omitted
+        )
+
+
+def _add_doc_reference(
+    namespace: str,
+    rel: str,
+    file_id: str,
+    target: str,
+    line: int,
+    nodes: dict[str, GraphNode],
+    edges: dict[str, GraphEdge],
+    omitted: list[OmittedDiagnostic],
+) -> None:
+    if target.startswith(("http://", "https://", "mailto:")):
+        return
+    normalized = target.replace("\\", "/").lstrip("./")
+    if "#" in normalized:
+        path_part, anchor = normalized.split("#", 1)
+        slug = _markdown_slug(anchor)
+        target_key = f"{path_part or rel}#{slug}"
+    else:
+        target_key = normalized
+    if not target_key:
+        return
+    target_id = node_id(namespace, NODE_DOC_SECTION, target_key)
+    _add_node(
+        nodes,
+        GraphNode(
+            id=target_id,
+            kind=NODE_DOC_SECTION,
+            label=target_key,
+            source_ref=SourceRef(path=target_key.split("#", 1)[0]),
+            metadata={"unresolved": True},
+        ),
+    )
+    _add_edge(
+        edges,
+        GraphEdge(
+            id=edge_id(namespace, file_id, EDGE_REFERENCES_DOC, target_id),
+            kind=EDGE_REFERENCES_DOC,
+            source_id=file_id,
+            target_id=target_id,
+            source_ref=SourceRef(path=rel, line=line),
+            metadata={"target": target},
+        ),
+    )
+    omitted.append(
+        OmittedDiagnostic(
+            reason="unresolved_markdown_reference",
+            item_id=target_key,
+            details={"source_path": rel, "line": line, "target": target},
+        )
+    )
+
+
+def _index_local_anchor_links(
+    namespace: str,
+    rel: str,
+    text: str,
+    section_by_slug: dict[str, str],
+    file_id: str,
+    edges: dict[str, GraphEdge],
+    omitted: list[OmittedDiagnostic],
+) -> None:
+    for number, line in enumerate(text.splitlines(), start=1):
+        for target in re.findall(r"\[[^\]]+\]\(#([^)]+)\)", line):
+            slug = _markdown_slug(target)
+            target_id = section_by_slug.get(slug)
+            if not target_id:
+                omitted.append(
+                    OmittedDiagnostic(
+                        reason="unresolved_markdown_anchor",
+                        item_id=f"{rel}#{slug}",
+                        details={"source_path": rel, "line": number},
+                    )
+                )
+                continue
+            _add_edge(
+                edges,
+                GraphEdge(
+                    id=edge_id(namespace, file_id, EDGE_REFERENCES_DOC, target_id),
+                    kind=EDGE_REFERENCES_DOC,
+                    source_id=file_id,
+                    target_id=target_id,
+                    source_ref=SourceRef(path=rel, line=number),
+                ),
+            )
+
+
+def _index_config(
     namespace: str,
     rel: str,
     file_id: str,
@@ -275,103 +487,143 @@ def _index_python(
     edges: dict[str, GraphEdge],
     omitted: list[OmittedDiagnostic],
 ) -> None:
-    try:
-        tree = ast.parse(text)
-    except SyntaxError as exc:
-        omitted.append(
-            OmittedDiagnostic(
-                reason="python_syntax_error",
-                item_id=rel,
-                details={"line": exc.lineno, "message": exc.msg},
-            )
-        )
-        return
-
-    for item in ast.walk(tree):
-        if isinstance(item, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
-            symbol_key = f"{rel}:{item.name}"
-            symbol_id = node_id(namespace, NODE_PYTHON_SYMBOL, symbol_key)
-            source_ref = SourceRef(path=rel, line=getattr(item, "lineno", None))
-            _add_node(
-                nodes,
-                GraphNode(
-                    id=symbol_id,
-                    kind=NODE_PYTHON_SYMBOL,
-                    label=item.name,
-                    source_ref=source_ref,
-                    text=item.name,
-                    metadata={"symbol_type": type(item).__name__},
-                ),
-            )
-            _add_edge(
-                edges,
-                GraphEdge(
-                    id=edge_id(namespace, file_id, EDGE_DEFINES, symbol_id),
-                    kind=EDGE_DEFINES,
-                    source_id=file_id,
-                    target_id=symbol_id,
-                    source_ref=source_ref,
-                ),
-            )
-        elif isinstance(item, ast.Import):
-            for alias in item.names:
-                _add_import_edge(
-                    namespace=namespace,
-                    rel=rel,
-                    file_id=file_id,
-                    module=alias.name,
-                    line=getattr(item, "lineno", None),
-                    nodes=nodes,
-                    edges=edges,
-                )
-        elif isinstance(item, ast.ImportFrom) and item.module:
-            _add_import_edge(
-                namespace=namespace,
-                rel=rel,
-                file_id=file_id,
-                module=item.module,
-                line=getattr(item, "lineno", None),
-                nodes=nodes,
-                edges=edges,
-            )
-
-
-def _add_import_edge(
-    *,
-    namespace: str,
-    rel: str,
-    file_id: str,
-    module: str,
-    line: int | None,
-    nodes: dict[str, GraphNode],
-    edges: dict[str, GraphEdge],
-) -> None:
-    import_id = node_id(namespace, NODE_PYTHON_SYMBOL, f"import:{module}")
-    source_ref = SourceRef(path=rel, line=line)
+    config_id = node_id(namespace, NODE_CONFIG, rel)
     _add_node(
         nodes,
         GraphNode(
-            id=import_id,
-            kind=NODE_PYTHON_SYMBOL,
-            label=module,
-            source_ref=SourceRef(path=rel, line=line),
-            text=module,
-            metadata={"external": True, "symbol_type": "import"},
+            id=config_id,
+            kind=NODE_CONFIG,
+            label=Path(rel).name,
+            source_ref=SourceRef(path=rel),
+            metadata={"format": Path(rel).suffix.lower().lstrip(".")},
         ),
     )
     _add_edge(
         edges,
         GraphEdge(
-            id=edge_id(namespace, file_id, EDGE_IMPORTS, import_id),
-            kind=EDGE_IMPORTS,
+            id=edge_id(namespace, file_id, EDGE_DEFINES, config_id),
+            kind=EDGE_DEFINES,
             source_id=file_id,
-            target_id=import_id,
-            source_ref=source_ref,
+            target_id=config_id,
+            source_ref=SourceRef(path=rel),
         ),
     )
+    for key, value in _config_items(rel, text, omitted):
+        key_id = node_id(namespace, NODE_CONFIG_KEY, f"{rel}:{key}")
+        _add_node(
+            nodes,
+            GraphNode(
+                id=key_id,
+                kind=NODE_CONFIG_KEY,
+                label=key,
+                source_ref=SourceRef(path=rel),
+                text=str(value)[:180],
+                metadata={"value_type": type(value).__name__},
+            ),
+        )
+        _add_edge(
+            edges,
+            GraphEdge(
+                id=edge_id(namespace, config_id, EDGE_HAS_KEY, key_id),
+                kind=EDGE_HAS_KEY,
+                source_id=config_id,
+                target_id=key_id,
+                source_ref=SourceRef(path=rel),
+            ),
+        )
+        for dependency in _dependency_values(key, value):
+            dependency_id = node_id(
+                namespace, NODE_CONFIG_KEY, f"dependency:{dependency}"
+            )
+            _add_node(
+                nodes,
+                GraphNode(
+                    id=dependency_id,
+                    kind=NODE_CONFIG_KEY,
+                    label=dependency,
+                    source_ref=SourceRef(path=rel),
+                    metadata={"dependency": True},
+                ),
+            )
+            _add_edge(
+                edges,
+                GraphEdge(
+                    id=edge_id(namespace, config_id, EDGE_DEPENDS_ON, dependency_id),
+                    kind=EDGE_DEPENDS_ON,
+                    source_id=config_id,
+                    target_id=dependency_id,
+                    source_ref=SourceRef(path=rel),
+                ),
+            )
+
+
+def _config_items(
+    rel: str,
+    text: str,
+    omitted: list[OmittedDiagnostic],
+) -> tuple[tuple[str, Any], ...]:
+    try:
+        if rel.endswith(".json"):
+            data = json.loads(text)
+        elif rel.endswith(".toml"):
+            data = tomllib.loads(text)
+        elif rel.endswith((".yaml", ".yml")):
+            data = _parse_simple_yaml(text)
+        else:
+            return ()
+    except (json.JSONDecodeError, tomllib.TOMLDecodeError, ValueError) as exc:
+        omitted.append(
+            OmittedDiagnostic(
+                reason="config_parse_error",
+                item_id=rel,
+                details={"message": str(exc)},
+            )
+        )
+        return ()
+    return tuple(_flatten_mapping(data))
+
+
+def _flatten_mapping(value: object, prefix: str = "") -> Iterable[tuple[str, Any]]:
+    if isinstance(value, dict):
+        for key, item in sorted(value.items()):
+            child = f"{prefix}.{key}" if prefix else str(key)
+            yield from _flatten_mapping(item, child)
+    else:
+        yield prefix, value
+
+
+def _dependency_values(key: str, value: object) -> tuple[str, ...]:
+    key_parts = set(key.split("."))
+    if (
+        not {
+            "dependencies",
+            "devDependencies",
+            "optionalDependencies",
+            "requires-python",
+        }
+        & key_parts
+    ):
+        return ()
+    if isinstance(value, list):
+        return tuple(str(item) for item in value)
+    if isinstance(value, str):
+        return (value,)
+    return ()
+
+
+def _parse_simple_yaml(text: str) -> dict[str, str]:
+    data: dict[str, str] = {}
+    for line in text.splitlines():
+        if ":" not in line or line.lstrip().startswith("#"):
+            continue
+        key, value = line.split(":", 1)
+        data[key.strip()] = value.strip().strip("'\"")
+    return data
 
 
 __all__ = [
+    "CONFIG_NAMES",
+    "CONFIG_SUFFIXES",
     "DEFAULT_IGNORES",
     "TEXT_SUFFIXES",
     "index_path",

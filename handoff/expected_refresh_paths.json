@@ -1,0 +1,9 @@
+{
+  "expected": {
+    "changed_path": "README.md",
+    "removed_path": "package.json",
+    "unchanged_path": "src/app.py"
+  },
+  "fixture_root": "fixtures/mixed_repo",
+  "package": "pragmagraph"
+}

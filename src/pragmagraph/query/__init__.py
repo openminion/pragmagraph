@@ -12,6 +12,7 @@ from pragmagraph.models import (
     HealthSummary,
     OmittedDiagnostic,
     PathResult,
+    QueryExplanation,
     QueryHit,
     QueryRequest,
     QueryResult,
@@ -44,27 +45,54 @@ def _incident_edges(snapshot: GraphSnapshot, node_id: str) -> tuple[GraphEdge, .
     )
 
 
-def _score_node(node: GraphNode, request: QueryRequest) -> float:
+def _score_node(
+    node: GraphNode, request: QueryRequest
+) -> tuple[float, QueryExplanation]:
+    score_parts: dict[str, float] = {}
+    matched_fields: list[str] = []
+    exact_match = ""
     if node.id in request.node_ids:
-        return 1000.0
+        score_parts["requested_node_id"] = 1000.0
+        matched_fields.append("id")
+        exact_match = "id"
     query = request.query.strip().lower()
     if not query:
-        return 0.0
+        return sum(score_parts.values()), QueryExplanation(
+            matched_fields=tuple(matched_fields),
+            exact_match=exact_match,
+            score_parts=score_parts,
+            omitted_reasons=("empty_query",),
+        )
     haystack = _node_text(node).lower()
-    score = 0.0
     if query == node.id.lower():
-        score += 900.0
+        score_parts["exact_id"] = 900.0
+        matched_fields.append("id")
+        exact_match = "id"
     if query == node.source_ref.path.lower():
-        score += 700.0
+        score_parts["exact_path"] = 700.0
+        matched_fields.append("source_ref.path")
+        exact_match = "source_ref.path"
     if query == node.label.lower():
-        score += 500.0
+        score_parts["exact_label"] = 500.0
+        matched_fields.append("label")
+        exact_match = "label"
     if query in haystack:
-        score += 50.0
+        score_parts["substring"] = 50.0
+        matched_fields.append("haystack")
     query_tokens = _tokens(query)
+    matched_tokens: tuple[str, ...] = ()
     if query_tokens:
         overlap = query_tokens & _tokens(haystack)
-        score += len(overlap) * 10.0
-    return score
+        matched_tokens = tuple(sorted(overlap))
+        if overlap:
+            score_parts["token_overlap"] = len(overlap) * 10.0
+            matched_fields.append("tokens")
+    return sum(score_parts.values()), QueryExplanation(
+        matched_fields=tuple(dict.fromkeys(matched_fields)),
+        matched_tokens=matched_tokens,
+        exact_match=exact_match,
+        score_parts=score_parts,
+    )
 
 
 def _snippet(node: GraphNode) -> str:
@@ -75,16 +103,17 @@ def query(snapshot: GraphSnapshot, request: QueryRequest | str) -> QueryResult:
     """Run deterministic lexical/structural search over a snapshot."""
     req = request if isinstance(request, QueryRequest) else QueryRequest(query=request)
     scored = [
-        (_score_node(node, req), node)
+        (score, explanation, node)
         for node in snapshot.nodes
-        if _score_node(node, req) > 0
+        for score, explanation in (_score_node(node, req),)
+        if score > 0
     ]
     scored.sort(
         key=lambda item: (
             -item[0],
-            item[1].kind,
-            item[1].source_ref.path,
-            item[1].id,
+            item[2].kind,
+            item[2].source_ref.path,
+            item[2].id,
         )
     )
     hits = tuple(
@@ -93,8 +122,9 @@ def query(snapshot: GraphSnapshot, request: QueryRequest | str) -> QueryResult:
             score=score,
             edges=_incident_edges(snapshot, node.id) if req.include_edges else (),
             snippet=_snippet(node),
+            explanation=explanation,
         )
-        for score, node in scored[: req.max_results]
+        for score, explanation, node in scored[: req.max_results]
     )
     omitted = ()
     if len(scored) > req.max_results:

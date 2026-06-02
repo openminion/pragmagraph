@@ -189,6 +189,63 @@ class OmittedDiagnostic:
 
 
 @dataclass(frozen=True)
+class ParserDiagnostic:
+    """Typed diagnostic emitted by a parser or scope policy."""
+
+    code: str
+    message: str
+    path: str = ""
+    line: int | None = None
+    details: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "code", str(self.code))
+        object.__setattr__(self, "message", str(self.message))
+        object.__setattr__(self, "path", str(self.path or ""))
+        object.__setattr__(self, "details", _frozen_mapping(self.details))
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "code": self.code,
+            "message": self.message,
+            "path": self.path,
+            "line": self.line,
+            "details": dict(self.details),
+        }
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "ParserDiagnostic":
+        return cls(
+            code=str(payload.get("code", "") or ""),
+            message=str(payload.get("message", "") or ""),
+            path=str(payload.get("path", "") or ""),
+            line=payload.get("line"),
+            details=dict(payload.get("details", {}) or {}),
+        )
+
+
+@dataclass(frozen=True)
+class ParserResult:
+    """Facts extracted from one file by a parser."""
+
+    nodes: tuple[GraphNode, ...] = ()
+    edges: tuple[GraphEdge, ...] = ()
+    diagnostics: tuple[ParserDiagnostic, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "nodes", tuple(self.nodes))
+        object.__setattr__(self, "edges", tuple(self.edges))
+        object.__setattr__(self, "diagnostics", tuple(self.diagnostics))
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "nodes": [node.to_dict() for node in self.nodes],
+            "edges": [edge.to_dict() for edge in self.edges],
+            "diagnostics": [item.to_dict() for item in self.diagnostics],
+        }
+
+
+@dataclass(frozen=True)
 class GraphSnapshot:
     """Deterministic JSON snapshot of observed graph facts."""
 
@@ -259,6 +316,39 @@ class QueryRequest:
 
 
 @dataclass(frozen=True)
+class QueryExplanation:
+    """Why a query hit scored the way it did."""
+
+    matched_fields: tuple[str, ...] = ()
+    matched_tokens: tuple[str, ...] = ()
+    exact_match: str = ""
+    score_parts: Mapping[str, float] = field(default_factory=dict)
+    omitted_reasons: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "matched_fields", _tuple_str(self.matched_fields))
+        object.__setattr__(self, "matched_tokens", _tuple_str(self.matched_tokens))
+        object.__setattr__(self, "exact_match", str(self.exact_match or ""))
+        object.__setattr__(
+            self,
+            "score_parts",
+            MappingProxyType(
+                {str(key): float(value) for key, value in self.score_parts.items()}
+            ),
+        )
+        object.__setattr__(self, "omitted_reasons", _tuple_str(self.omitted_reasons))
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "matched_fields": list(self.matched_fields),
+            "matched_tokens": list(self.matched_tokens),
+            "exact_match": self.exact_match,
+            "score_parts": dict(self.score_parts),
+            "omitted_reasons": list(self.omitted_reasons),
+        }
+
+
+@dataclass(frozen=True)
 class QueryHit:
     """One cited query hit."""
 
@@ -266,6 +356,7 @@ class QueryHit:
     score: float
     edges: tuple[GraphEdge, ...] = ()
     snippet: str = ""
+    explanation: QueryExplanation = field(default_factory=QueryExplanation)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "edges", tuple(self.edges))
@@ -277,6 +368,7 @@ class QueryHit:
             "score": self.score,
             "edges": [edge.to_dict() for edge in self.edges],
             "snippet": self.snippet,
+            "explanation": self.explanation.to_dict(),
         }
 
 
@@ -350,6 +442,93 @@ class HealthSummary:
         }
 
 
+@dataclass(frozen=True)
+class RefreshManifestEntry:
+    """Content-hash manifest row for one indexed file."""
+
+    path: str
+    content_hash: str
+    parser: str = ""
+    parser_version: str = ""
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "path", str(self.path))
+        object.__setattr__(self, "content_hash", str(self.content_hash))
+        object.__setattr__(self, "parser", str(self.parser or ""))
+        object.__setattr__(self, "parser_version", str(self.parser_version or ""))
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "path": self.path,
+            "content_hash": self.content_hash,
+            "parser": self.parser,
+            "parser_version": self.parser_version,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "RefreshManifestEntry":
+        return cls(
+            path=str(payload.get("path", "") or ""),
+            content_hash=str(payload.get("content_hash", "") or ""),
+            parser=str(payload.get("parser", "") or ""),
+            parser_version=str(payload.get("parser_version", "") or ""),
+        )
+
+
+@dataclass(frozen=True)
+class RefreshManifest:
+    """Deterministic content manifest used by refresh operations."""
+
+    entries: tuple[RefreshManifestEntry, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "entries",
+            tuple(sorted(self.entries, key=lambda item: item.path)),
+        )
+
+    def by_path(self) -> dict[str, RefreshManifestEntry]:
+        return {entry.path: entry for entry in self.entries}
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"entries": [entry.to_dict() for entry in self.entries]}
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any] | None) -> "RefreshManifest":
+        return cls(
+            entries=tuple(
+                RefreshManifestEntry.from_dict(item)
+                for item in (payload or {}).get("entries", ())
+            )
+        )
+
+
+@dataclass(frozen=True)
+class RefreshResult:
+    """Result of refreshing a graph snapshot."""
+
+    snapshot: GraphSnapshot
+    manifest: RefreshManifest
+    changed_paths: tuple[str, ...] = ()
+    unchanged_paths: tuple[str, ...] = ()
+    removed_paths: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "changed_paths", _tuple_str(self.changed_paths))
+        object.__setattr__(self, "unchanged_paths", _tuple_str(self.unchanged_paths))
+        object.__setattr__(self, "removed_paths", _tuple_str(self.removed_paths))
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "snapshot": self.snapshot.to_dict(),
+            "manifest": self.manifest.to_dict(),
+            "changed_paths": list(self.changed_paths),
+            "unchanged_paths": list(self.unchanged_paths),
+            "removed_paths": list(self.removed_paths),
+        }
+
+
 __all__ = [
     "GraphEdge",
     "GraphNode",
@@ -357,9 +536,15 @@ __all__ = [
     "HealthSummary",
     "OmittedDiagnostic",
     "PathResult",
+    "ParserDiagnostic",
+    "ParserResult",
     "PragmaGraphError",
+    "QueryExplanation",
     "QueryHit",
     "QueryRequest",
     "QueryResult",
+    "RefreshManifest",
+    "RefreshManifestEntry",
+    "RefreshResult",
     "SourceRef",
 ]

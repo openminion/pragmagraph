@@ -2,7 +2,7 @@ include LICENSE
 recursive-include scripts *.py
 recursive-include docs *.md
 recursive-include examples *.py
-recursive-include fixtures *.md *.py
+recursive-include fixtures *.json *.md *.py *.toml
 recursive-include handoff *.json
 include API_COMPATIBILITY.md
 include README.md
