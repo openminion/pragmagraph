@@ -7,6 +7,7 @@ import tomllib
 def test_pragmagraph_package_imports() -> None:
     import pragmagraph
     import pragmagraph.adapters
+    import pragmagraph.bench
     import pragmagraph.contracts
     import pragmagraph.export
     import pragmagraph.graphify
@@ -21,12 +22,14 @@ def test_pragmagraph_package_imports() -> None:
 
     assert pragmagraph.__version__ == "0.0.1"
     assert pragmagraph.PACKAGE_STATUS == "semantic-alpha"
+    assert "pragmagraph.bench" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.models" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.export" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.graphify" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.report" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "render_dot" in pragmagraph.export.__all__
     assert "to_graphify_payload" in pragmagraph.graphify.__all__
+    assert "benchmark_root" in pragmagraph.bench.__all__
     assert "GraphNode" in pragmagraph.models.__all__
     assert "query" in pragmagraph.query.__all__
     assert "build_report" in pragmagraph.report.__all__
@@ -45,6 +48,8 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "STABLE_IMPORT_ROOTS",
         "__version__",
         "CAPABILITIES",
+        "BenchmarkMeasurement",
+        "BenchmarkReport",
         "GraphEdge",
         "GraphNode",
         "GraphReport",
@@ -70,11 +75,13 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "RefreshResult",
         "SCHEMA_VERSION",
         "SourceRef",
+        "benchmark_root",
         "build_report",
         "index_path",
         "load_snapshot",
         "render_dot",
         "render_graph_export",
+        "render_markdown_benchmark",
         "render_mermaid",
         "render_markdown_report",
         "refresh_snapshot",
@@ -91,6 +98,7 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
 
 def test_public_roots_expose_semantic_alpha_contracts() -> None:
     import pragmagraph.adapters as adapters
+    import pragmagraph.bench as bench
     import pragmagraph.contracts as contracts
     import pragmagraph.export as export
     import pragmagraph.graphify as graphify
@@ -104,6 +112,7 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     import pragmagraph.storage as storage
 
     assert "index_path" in adapters.__all__
+    assert "render_markdown_benchmark" in bench.__all__
     assert "SCHEMA_VERSION" in contracts.__all__
     assert "render_mermaid" in export.__all__
     assert "snapshot_from_graphify_payload" in graphify.__all__

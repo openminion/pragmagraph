@@ -7,6 +7,7 @@ import json
 
 from pragmagraph import PACKAGE_STATUS, STABLE_IMPORT_ROOTS, __version__
 from pragmagraph.adapters import index_path
+from pragmagraph.bench import benchmark_root, render_markdown_benchmark
 from pragmagraph.export import render_graph_export
 from pragmagraph.graphify import (
     snapshot_from_graphify_payload,
@@ -96,6 +97,18 @@ def main(argv: list[str] | None = None) -> int:
     graphify_import_parser.add_argument("--namespace", default="graphify")
     graphify_import_parser.add_argument("--root-path", default="")
 
+    benchmark_parser = subparsers.add_parser(
+        "benchmark", help="benchmark package operations against a local root"
+    )
+    benchmark_parser.add_argument("root")
+    benchmark_parser.add_argument("--namespace", default="default")
+    benchmark_parser.add_argument("--query", default="README")
+    benchmark_parser.add_argument("--max-results", type=int, default=10)
+    benchmark_parser.add_argument("--top-n", type=int, default=10)
+    benchmark_parser.add_argument(
+        "--json", action="store_true", help="emit JSON output"
+    )
+
     refresh_parser = subparsers.add_parser("refresh", help="refresh a local root")
     refresh_parser.add_argument("root")
     refresh_parser.add_argument("--out", required=True)
@@ -171,6 +184,18 @@ def main(argv: list[str] | None = None) -> int:
         )
         save_snapshot(snapshot, args.out)
         _print_payload(health(snapshot), as_json=True)
+    elif args.command == "benchmark":
+        report = benchmark_root(
+            args.root,
+            namespace=args.namespace,
+            query_text=args.query,
+            max_results=args.max_results,
+            top_n=args.top_n,
+        )
+        if args.json:
+            _print_payload(report.to_dict(), as_json=True)
+        else:
+            print(render_markdown_benchmark(report), end="")
     elif args.command == "refresh":
         previous_manifest = (
             load_manifest(args.manifest_in) if args.manifest_in else None

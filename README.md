@@ -85,6 +85,7 @@ The package currently provides:
   - `pragmagraph.query`
   - `pragmagraph.storage`
   - `pragmagraph.adapters`
+  - `pragmagraph.bench`
   - `pragmagraph.portability`
   - `pragmagraph.parsers`
   - `pragmagraph.export`
@@ -107,12 +108,15 @@ The package currently provides:
   and downstream tooling
 - deterministic Graphify-shaped JSON import/export helpers for backend
   interchange tests and handoff artifacts
+- package-owned benchmark helpers plus a medium fixture for regression and
+  readiness review
 - content-hash refresh manifests for deterministic changed/unchanged/removed
   path reporting
 - scope/security policy for gitignore-aware, size-bounded, binary/symlink-safe
   local indexing
 - CLI commands for `index`, `refresh`, `query`, `explain`, `report`, `export`,
-  `graphify-export`, `graphify-import`, `neighborhood`, `path`, and `health`
+  `benchmark`, `graphify-export`, `graphify-import`, `neighborhood`, `path`,
+  and `health`
 - a semantic smoke entrypoint for install validation
 - package-local tests, lint, and release-check workflow
 - API compatibility and release docs
@@ -230,6 +234,17 @@ pragmagraph export .pragmagraph/snapshot.json --format dot
 pragmagraph export .pragmagraph/snapshot.json --format mermaid
 ```
 
+Benchmark a local repo:
+
+```bash
+pragmagraph benchmark fixtures/medium_repo --namespace medium --query RuntimeGraph
+
+pragmagraph benchmark fixtures/medium_repo \
+  --namespace medium \
+  --query RuntimeGraph \
+  --json
+```
+
 Export and import Graphify-shaped JSON:
 
 ```bash
@@ -259,7 +274,8 @@ python3.11 -m pragmagraph --json
 See [API_COMPATIBILITY.md](API_COMPATIBILITY.md) for the public import-root
 policy, [docs/report-mode.md](docs/report-mode.md) for the structural report
 contract, [docs/export-mode.md](docs/export-mode.md) for deterministic graph
-exports, [docs/graphify-interop.md](docs/graphify-interop.md) for Graphify-shaped
+exports, [docs/benchmarking.md](docs/benchmarking.md) for the benchmark/readiness
+surface, [docs/graphify-interop.md](docs/graphify-interop.md) for Graphify-shaped
 JSON interchange, [docs/certification-readiness-matrix.md](docs/certification-readiness-matrix.md)
 for package/OpenMinion proof coverage, and [RELEASING.md](RELEASING.md) for
 package-local release checks.
