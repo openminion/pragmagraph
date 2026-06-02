@@ -22,7 +22,7 @@ This doc covers:
 This doc does not define:
 
 1. hosted dashboards,
-2. Graphify import/export,
+2. Graphify runtime behavior,
 3. LLM summarization of architecture intent,
 4. OpenMinion provider behavior.
 

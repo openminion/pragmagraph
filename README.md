@@ -85,8 +85,11 @@ The package currently provides:
   - `pragmagraph.query`
   - `pragmagraph.storage`
   - `pragmagraph.adapters`
+  - `pragmagraph.bench`
   - `pragmagraph.portability`
   - `pragmagraph.parsers`
+  - `pragmagraph.export`
+  - `pragmagraph.graphify`
   - `pragmagraph.report`
   - `pragmagraph.refresh`
   - `pragmagraph.security`
@@ -101,12 +104,19 @@ The package currently provides:
 - deterministic structural report helpers with JSON and Markdown output for
   repo summaries, unresolved facts, top nodes, dependency declarations, and
   agent-oriented follow-up queries
+- deterministic DOT and Mermaid export helpers for lightweight graph viewing
+  and downstream tooling
+- deterministic Graphify-shaped JSON import/export helpers for backend
+  interchange tests and handoff artifacts
+- package-owned benchmark helpers plus a medium fixture for regression and
+  readiness review
 - content-hash refresh manifests for deterministic changed/unchanged/removed
   path reporting
 - scope/security policy for gitignore-aware, size-bounded, binary/symlink-safe
   local indexing
-- CLI commands for `index`, `refresh`, `query`, `explain`, `report`,
-  `neighborhood`, `path`, and `health`
+- CLI commands for `index`, `refresh`, `query`, `explain`, `report`, `export`,
+  `benchmark`, `graphify-export`, `graphify-import`, `neighborhood`, `path`,
+  and `health`
 - a semantic smoke entrypoint for install validation
 - package-local tests, lint, and release-check workflow
 - API compatibility and release docs
@@ -208,12 +218,45 @@ Check health:
 pragmagraph health .pragmagraph/snapshot.json --json
 ```
 
+Package-local example:
+
+```bash
+PYTHONPATH=src python3.11 examples/basic_usage.py
+```
+
 Build a structural report:
 
 ```bash
 pragmagraph report .pragmagraph/snapshot.json
 
 pragmagraph report .pragmagraph/snapshot.json --json
+```
+
+Export graph text:
+
+```bash
+pragmagraph export .pragmagraph/snapshot.json --format dot
+
+pragmagraph export .pragmagraph/snapshot.json --format mermaid
+```
+
+Benchmark a local repo:
+
+```bash
+pragmagraph benchmark fixtures/medium_repo --namespace medium --query RuntimeGraph
+
+pragmagraph benchmark fixtures/medium_repo \
+  --namespace medium \
+  --query RuntimeGraph \
+  --json
+```
+
+Export and import Graphify-shaped JSON:
+
+```bash
+pragmagraph graphify-export .pragmagraph/snapshot.json > graphify.json
+
+pragmagraph graphify-import graphify.json --out .pragmagraph/imported.json
 ```
 
 ## External Consumer Quickstart
@@ -236,6 +279,9 @@ python3.11 -m pragmagraph --json
 
 See [API_COMPATIBILITY.md](API_COMPATIBILITY.md) for the public import-root
 policy, [docs/report-mode.md](docs/report-mode.md) for the structural report
-contract, [docs/certification-readiness-matrix.md](docs/certification-readiness-matrix.md)
+contract, [docs/export-mode.md](docs/export-mode.md) for deterministic graph
+exports, [docs/benchmarking.md](docs/benchmarking.md) for the benchmark/readiness
+surface, [docs/graphify-interop.md](docs/graphify-interop.md) for Graphify-shaped
+JSON interchange, [docs/certification-readiness-matrix.md](docs/certification-readiness-matrix.md)
 for package/OpenMinion proof coverage, and [RELEASING.md](RELEASING.md) for
 package-local release checks.

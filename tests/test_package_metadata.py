@@ -23,8 +23,12 @@ def test_package_policy_and_release_automation_docs_exist() -> None:
     root = Path(__file__).resolve().parents[1]
     assert (root / "API_COMPATIBILITY.md").is_file()
     assert (root / "scripts" / "release_check.py").is_file()
+    assert (root / "examples" / "basic_usage.py").is_file()
     assert (root / "docs" / "README.md").is_file()
     assert (root / "docs" / "report-mode.md").is_file()
+    assert (root / "docs" / "export-mode.md").is_file()
+    assert (root / "docs" / "benchmarking.md").is_file()
+    assert (root / "docs" / "graphify-interop.md").is_file()
     assert (root / "docs" / "certification-readiness-matrix.md").is_file()
 
 
@@ -34,6 +38,9 @@ def test_package_readme_mentions_policy_and_quickstart() -> None:
     assert "External Consumer Quickstart" in readme
     assert "pragmagraph index" in readme
     assert "pragmagraph report" in readme
+    assert "pragmagraph export" in readme
+    assert "pragmagraph benchmark" in readme
+    assert "pragmagraph graphify-export" in readme
 
 
 def test_package_metadata_declares_public_urls() -> None:

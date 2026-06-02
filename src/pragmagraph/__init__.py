@@ -4,6 +4,18 @@ from __future__ import annotations
 
 from pragmagraph.adapters import index_path
 from pragmagraph.contracts import CAPABILITIES, INDEXER_VERSION, SCHEMA_VERSION
+from pragmagraph.bench import (
+    BenchmarkMeasurement,
+    BenchmarkReport,
+    benchmark_root,
+    render_markdown_benchmark,
+)
+from pragmagraph.export import render_dot, render_graph_export, render_mermaid
+from pragmagraph.graphify import (
+    GRAPHIFY_INTEROP_FORMAT,
+    snapshot_from_graphify_payload,
+    to_graphify_payload,
+)
 from pragmagraph.models import (
     GraphEdge,
     GraphNode,
@@ -45,8 +57,11 @@ STABLE_IMPORT_ROOTS = (
     "pragmagraph.query",
     "pragmagraph.storage",
     "pragmagraph.adapters",
+    "pragmagraph.bench",
     "pragmagraph.portability",
     "pragmagraph.parsers",
+    "pragmagraph.export",
+    "pragmagraph.graphify",
     "pragmagraph.report",
     "pragmagraph.refresh",
     "pragmagraph.security",
@@ -54,6 +69,8 @@ STABLE_IMPORT_ROOTS = (
 
 __all__ = [
     "CAPABILITIES",
+    "BenchmarkMeasurement",
+    "BenchmarkReport",
     "GraphEdge",
     "GraphNode",
     "GraphReport",
@@ -62,6 +79,7 @@ __all__ = [
     "GraphReportNode",
     "GraphReportSummary",
     "GraphSnapshot",
+    "GRAPHIFY_INTEROP_FORMAT",
     "HealthSummary",
     "INDEXER_VERSION",
     "OmittedDiagnostic",
@@ -81,11 +99,18 @@ __all__ = [
     "STABLE_IMPORT_ROOTS",
     "SourceRef",
     "__version__",
+    "benchmark_root",
     "build_report",
     "index_path",
     "load_snapshot",
+    "render_dot",
+    "render_graph_export",
+    "render_markdown_benchmark",
+    "render_mermaid",
     "render_markdown_report",
     "refresh_snapshot",
     "save_snapshot",
+    "snapshot_from_graphify_payload",
     "stable_dumps",
+    "to_graphify_payload",
 ]
