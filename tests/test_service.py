@@ -1,0 +1,214 @@
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+from pragmagraph.adapters import index_path
+from pragmagraph.models import QueryRequest
+from pragmagraph.query import query
+from pragmagraph.service import (
+    ERROR_INVALID_PARAMS,
+    ERROR_INVALID_REQUEST,
+    ERROR_REFRESH_UNSUPPORTED,
+    ERROR_UNSUPPORTED_METHOD,
+    METHOD_CAPABILITIES,
+    METHOD_QUERY,
+    METHOD_REFRESH,
+    METHOD_SHUTDOWN,
+    LocalQueryService,
+    ServiceRequest,
+    request_from_json_line,
+)
+from pragmagraph.storage import save_snapshot
+
+
+def _repo_root(tmp_path: Path) -> Path:
+    root = tmp_path / "repo"
+    (root / "src").mkdir(parents=True)
+    (root / "README.md").write_text(
+        "# Runtime Graph\n\n## Usage\n\nStatic facts only.\n",
+        encoding="utf-8",
+    )
+    (root / "src" / "app.py").write_text(
+        "class RuntimeGraph:\n"
+        "    pass\n\n"
+        "def build_runtime_graph():\n"
+        "    return RuntimeGraph()\n",
+        encoding="utf-8",
+    )
+    return root
+
+
+def _serve_process(*args: str) -> subprocess.Popen[str]:
+    return subprocess.Popen(
+        [sys.executable, "-m", "pragmagraph", "serve", *args],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+
+def _roundtrip(
+    proc: subprocess.Popen[str],
+    payload: dict[str, object],
+) -> dict[str, object]:
+    assert proc.stdin is not None
+    assert proc.stdout is not None
+    proc.stdin.write(json.dumps(payload) + "\n")
+    proc.stdin.flush()
+    return json.loads(proc.stdout.readline())
+
+
+def test_snapshot_service_keeps_loaded_state_and_rejects_refresh(
+    tmp_path: Path,
+) -> None:
+    root = _repo_root(tmp_path)
+    snapshot_path = tmp_path / "snapshot.json"
+    save_snapshot(index_path(root, namespace="fixture"), snapshot_path)
+    service = LocalQueryService.from_snapshot_path(snapshot_path)
+
+    first = service.handle_request(
+        ServiceRequest(id="q1", method=METHOD_QUERY, params={"text": "RuntimeGraph"})
+    )[0]
+    assert first.ok is True
+    assert first.to_dict()["result"]["hits"][0]["node"]["label"] == "RuntimeGraph"
+
+    mutated_root = tmp_path / "other"
+    (mutated_root / "src").mkdir(parents=True)
+    (mutated_root / "src" / "other.py").write_text(
+        "class OtherGraph:\n    pass\n",
+        encoding="utf-8",
+    )
+    save_snapshot(index_path(mutated_root, namespace="fixture"), snapshot_path)
+
+    second = service.handle_request(
+        ServiceRequest(id="q2", method=METHOD_QUERY, params={"text": "RuntimeGraph"})
+    )[0]
+    assert second.ok is True
+    assert second.to_dict()["result"]["hits"][0]["node"]["label"] == "RuntimeGraph"
+
+    refresh = service.handle_request(
+        ServiceRequest(id="r1", method=METHOD_REFRESH, params={})
+    )[0]
+    assert refresh.ok is False
+    assert refresh.to_dict()["error"]["code"] == ERROR_REFRESH_UNSUPPORTED
+
+
+def test_root_service_refresh_updates_state_and_persists_outputs(
+    tmp_path: Path,
+) -> None:
+    root = _repo_root(tmp_path)
+    snapshot_out = tmp_path / "service-snapshot.json"
+    manifest_out = tmp_path / "service-manifest.json"
+    service = LocalQueryService.from_root(
+        root,
+        namespace="fixture",
+        snapshot_out_path=snapshot_out,
+        manifest_out_path=manifest_out,
+    )
+
+    baseline = query(service.snapshot, QueryRequest(query="OperatorGraph"))
+    assert baseline.hits == ()
+    assert snapshot_out.is_file()
+    assert manifest_out.is_file()
+
+    (root / "src" / "ops.py").write_text(
+        "class OperatorGraph:\n    pass\n",
+        encoding="utf-8",
+    )
+    response = service.handle_request(
+        ServiceRequest(id="refresh", method=METHOD_REFRESH, params={})
+    )[0]
+
+    assert response.ok is True
+    payload = response.to_dict()["result"]
+    assert "src/ops.py" in payload["changed_paths"]
+    latest = query(service.snapshot, QueryRequest(query="OperatorGraph"))
+    assert latest.hits[0].node.label == "OperatorGraph"
+    assert snapshot_out.is_file()
+    assert manifest_out.is_file()
+
+
+def test_service_stdio_runner_supports_snapshot_sessions(tmp_path: Path) -> None:
+    root = _repo_root(tmp_path)
+    snapshot_path = tmp_path / "snapshot.json"
+    save_snapshot(index_path(root, namespace="fixture"), snapshot_path)
+
+    proc = _serve_process("--snapshot", str(snapshot_path))
+    try:
+        capabilities = _roundtrip(proc, {"id": "1", "method": METHOD_CAPABILITIES})
+        first = _roundtrip(
+            proc,
+            {"id": "2", "method": METHOD_QUERY, "params": {"text": "RuntimeGraph"}},
+        )
+        second = _roundtrip(
+            proc,
+            {"id": "3", "method": METHOD_QUERY, "params": {"text": "RuntimeGraph"}},
+        )
+        shutdown = _roundtrip(proc, {"id": "4", "method": METHOD_SHUTDOWN})
+    finally:
+        proc.wait(timeout=5)
+
+    assert capabilities["result"]["startup_mode"] == "snapshot"
+    assert capabilities["result"]["refresh_supported"] is False
+    assert first["result"] == second["result"]
+    assert shutdown["result"]["shutdown"] == "accepted"
+    assert proc.returncode == 0
+
+
+def test_service_stdio_runner_supports_root_refresh_sessions(tmp_path: Path) -> None:
+    root = _repo_root(tmp_path)
+    proc = _serve_process("--root", str(root), "--namespace", "fixture")
+    try:
+        initial = _roundtrip(
+            proc,
+            {"id": "1", "method": METHOD_QUERY, "params": {"text": "OperatorGraph"}},
+        )
+        (root / "src" / "ops.py").write_text(
+            "class OperatorGraph:\n    pass\n",
+            encoding="utf-8",
+        )
+        refreshed = _roundtrip(proc, {"id": "2", "method": METHOD_REFRESH})
+        queried = _roundtrip(
+            proc,
+            {"id": "3", "method": METHOD_QUERY, "params": {"text": "OperatorGraph"}},
+        )
+        _roundtrip(proc, {"id": "4", "method": METHOD_SHUTDOWN})
+    finally:
+        proc.wait(timeout=5)
+
+    assert initial["result"]["hits"] == []
+    assert "src/ops.py" in refreshed["result"]["changed_paths"]
+    assert queried["result"]["hits"][0]["node"]["label"] == "OperatorGraph"
+    assert proc.returncode == 0
+
+
+def test_service_invalid_requests_return_typed_errors(tmp_path: Path) -> None:
+    root = _repo_root(tmp_path)
+    snapshot_path = tmp_path / "snapshot.json"
+    save_snapshot(index_path(root, namespace="fixture"), snapshot_path)
+    service = LocalQueryService.from_snapshot_path(snapshot_path)
+
+    assert request_from_json_line('{"id":"1","method":"health"}').method == "health"
+
+    invalid_json = None
+    try:
+        request_from_json_line("{bad json")
+    except Exception as exc:  # pragma: no cover - assertion uses captured value
+        invalid_json = exc
+    assert getattr(invalid_json, "code") == ERROR_INVALID_REQUEST
+
+    unsupported = service.handle_request(
+        ServiceRequest(id="u1", method="unknown", params={})
+    )[0]
+    invalid_params = service.handle_request(
+        ServiceRequest(id="u2", method=METHOD_QUERY, params={"max_results": 0})
+    )[0]
+
+    assert unsupported.ok is False
+    assert unsupported.to_dict()["error"]["code"] == ERROR_UNSUPPORTED_METHOD
+    assert invalid_params.ok is False
+    assert invalid_params.to_dict()["error"]["code"] == ERROR_INVALID_PARAMS

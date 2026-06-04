@@ -18,6 +18,7 @@ def test_pragmagraph_package_imports() -> None:
     import pragmagraph.report
     import pragmagraph.refresh
     import pragmagraph.security
+    import pragmagraph.service
     import pragmagraph.storage
 
     assert pragmagraph.__version__ == "0.0.1"
@@ -27,6 +28,7 @@ def test_pragmagraph_package_imports() -> None:
     assert "pragmagraph.export" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.graphify" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.report" in pragmagraph.STABLE_IMPORT_ROOTS
+    assert "pragmagraph.service" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "render_dot" in pragmagraph.export.__all__
     assert "to_graphify_payload" in pragmagraph.graphify.__all__
     assert "benchmark_root" in pragmagraph.bench.__all__
@@ -109,6 +111,7 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     import pragmagraph.report as report
     import pragmagraph.refresh as refresh
     import pragmagraph.security as security
+    import pragmagraph.service as service
     import pragmagraph.storage as storage
 
     assert "index_path" in adapters.__all__
@@ -123,6 +126,7 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     assert "render_markdown_report" in report.__all__
     assert "refresh_snapshot" in refresh.__all__
     assert "ScopePolicy" in security.__all__
+    assert "LocalQueryService" in service.__all__
     assert "save_snapshot" in storage.__all__
 
 

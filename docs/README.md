@@ -11,13 +11,15 @@ Current canonical planning docs live in the host repository:
 - `docs/trackers/qa/pragmagraph-mvp-openminion-usability-tracker.md`
 - `docs/discussions/pragmagraph-graphify-gap-research-2026-05-31.md`
 - `docs/specs/pragmagraph-graphify-parity-expansion-spec.md`
-- `docs/trackers/archive/2026/pragmagraph-graphify-parity-expansion-tracker.md`
+- `docs/trackers/qa/pragmagraph-graphify-parity-expansion-tracker.md`
+- `docs/specs/pragmagraph-local-query-service-spec.md`
+- `docs/trackers/qa/pragmagraph-local-query-service-tracker.md`
 - `docs/specs/openminion-third-brain-provider-abstraction-readiness-spec.md`
 - `docs/trackers/qa/openminion-third-brain-provider-abstraction-readiness-tracker.md`
 - `docs/specs/openminion-pragmagraph-provider-adapter-swapability-spec.md`
-- `docs/trackers/archive/2026/openminion-pragmagraph-provider-adapter-swapability-tracker.md`
+- `docs/trackers/qa/openminion-pragmagraph-provider-adapter-swapability-tracker.md`
 - `docs/specs/pragmagraph-package-baseline-spec.md`
-- `docs/trackers/archive/2026/pragmagraph-package-baseline-tracker.md`
+- `docs/trackers/qa/pragmagraph-package-baseline-tracker.md`
 
 Package-local reusable docs:
 
@@ -26,6 +28,7 @@ Package-local reusable docs:
   packages.
 - `docs/report-mode.md` records the structural report contract and CLI shape.
 - `docs/export-mode.md` records DOT/Mermaid text export contracts and CLI shape.
+- `docs/service-mode.md` records the local service request/response contract.
 - `docs/benchmarking.md` records the package-owned benchmark surface and medium
   fixture readiness expectations.
 - `docs/graphify-interop.md` records the deterministic Graphify-shaped JSON

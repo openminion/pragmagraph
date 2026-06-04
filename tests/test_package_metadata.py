@@ -29,6 +29,7 @@ def test_package_policy_and_release_automation_docs_exist() -> None:
     assert (root / "docs" / "export-mode.md").is_file()
     assert (root / "docs" / "benchmarking.md").is_file()
     assert (root / "docs" / "graphify-interop.md").is_file()
+    assert (root / "docs" / "service-mode.md").is_file()
     assert (root / "docs" / "certification-readiness-matrix.md").is_file()
 
 
@@ -41,6 +42,7 @@ def test_package_readme_mentions_policy_and_quickstart() -> None:
     assert "pragmagraph export" in readme
     assert "pragmagraph benchmark" in readme
     assert "pragmagraph graphify-export" in readme
+    assert "pragmagraph serve" in readme
 
 
 def test_package_metadata_declares_public_urls() -> None:

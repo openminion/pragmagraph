@@ -65,6 +65,7 @@ STABLE_IMPORT_ROOTS = (
     "pragmagraph.report",
     "pragmagraph.refresh",
     "pragmagraph.security",
+    "pragmagraph.service",
 )
 
 __all__ = [
