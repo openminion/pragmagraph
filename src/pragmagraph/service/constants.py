@@ -1,0 +1,67 @@
+"""Stable constants for the PragmaGraph local service surface."""
+
+from __future__ import annotations
+
+SERVICE_VERSION = "pragmagraph.service.v1alpha1"
+
+STARTUP_MODE_SNAPSHOT = "snapshot"
+STARTUP_MODE_ROOT = "root"
+
+METHOD_CAPABILITIES = "capabilities"
+METHOD_EXPLAIN = "explain"
+METHOD_EXPORT = "export"
+METHOD_GRAPHIFY_EXPORT = "graphify_export"
+METHOD_HEALTH = "health"
+METHOD_NEIGHBORHOOD = "neighborhood"
+METHOD_PATH = "path"
+METHOD_QUERY = "query"
+METHOD_REFRESH = "refresh"
+METHOD_REPORT = "report"
+METHOD_SHUTDOWN = "shutdown"
+
+SERVICE_METHODS = (
+    METHOD_CAPABILITIES,
+    METHOD_HEALTH,
+    METHOD_QUERY,
+    METHOD_EXPLAIN,
+    METHOD_NEIGHBORHOOD,
+    METHOD_PATH,
+    METHOD_REPORT,
+    METHOD_EXPORT,
+    METHOD_GRAPHIFY_EXPORT,
+    METHOD_REFRESH,
+    METHOD_SHUTDOWN,
+)
+
+ERROR_INTERNAL = "internal_error"
+ERROR_INVALID_PARAMS = "invalid_params"
+ERROR_INVALID_REQUEST = "invalid_request"
+ERROR_NOT_FOUND = "not_found"
+ERROR_REFRESH_UNSUPPORTED = "refresh_unsupported"
+ERROR_UNAVAILABLE_STATE = "unavailable_state"
+ERROR_UNSUPPORTED_METHOD = "unsupported_method"
+
+__all__ = [
+    "ERROR_INTERNAL",
+    "ERROR_INVALID_PARAMS",
+    "ERROR_INVALID_REQUEST",
+    "ERROR_NOT_FOUND",
+    "ERROR_REFRESH_UNSUPPORTED",
+    "ERROR_UNAVAILABLE_STATE",
+    "ERROR_UNSUPPORTED_METHOD",
+    "METHOD_CAPABILITIES",
+    "METHOD_EXPLAIN",
+    "METHOD_EXPORT",
+    "METHOD_GRAPHIFY_EXPORT",
+    "METHOD_HEALTH",
+    "METHOD_NEIGHBORHOOD",
+    "METHOD_PATH",
+    "METHOD_QUERY",
+    "METHOD_REFRESH",
+    "METHOD_REPORT",
+    "METHOD_SHUTDOWN",
+    "SERVICE_METHODS",
+    "SERVICE_VERSION",
+    "STARTUP_MODE_ROOT",
+    "STARTUP_MODE_SNAPSHOT",
+]

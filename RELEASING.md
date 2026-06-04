@@ -17,11 +17,13 @@ A publishable release must satisfy all of the following:
 3. `README.md` describes install, quickstart, smoke, name meaning, and
    import-boundary expectations for external consumers.
 4. `API_COMPATIBILITY.md` names the stable import roots and deprecation policy.
-5. Package tests pass from the package root.
-6. Both wheel and sdist build successfully.
-7. A clean install smoke passes from a fresh virtualenv using the built wheel.
-8. The package still has no imports from host frameworks such as OpenMinion.
-9. Semantic-alpha releases keep graph facts reproducible from local source
+5. `pragmagraph.service` and `pragmagraph serve` remain documented when
+   present in the public alpha contract.
+6. Package tests pass from the package root.
+7. Both wheel and sdist build successfully.
+8. A clean install smoke passes from a fresh virtualenv using the built wheel.
+9. The package still has no imports from host frameworks such as OpenMinion.
+10. Semantic-alpha releases keep graph facts reproducible from local source
    artifacts and do not import OpenMinion.
 
 ## Version Bump
@@ -35,6 +37,7 @@ If the release changes the external consumer contract, also update:
 
 - `README.md`
 - `API_COMPATIBILITY.md`
+- `docs/service-mode.md`
 
 ## Build and Validation
 
@@ -70,6 +73,9 @@ Expected smoke result:
 - JSON output with `package` equal to `pragmagraph`
 - `semantic_contract` equal to `true`
 - stable import roots listed
+
+If the release includes the service surface, the fresh-wheel smoke must also be
+able to import `pragmagraph.service`.
 
 ## Publish Sequence
 

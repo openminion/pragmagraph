@@ -37,6 +37,7 @@ dev = [
 ]
 
 [project.scripts]
+pragmagraph = "pragmagraph.__main__:main"
 pragmagraph-smoke = "pragmagraph.__main__:main"
 
 [tool.setuptools]

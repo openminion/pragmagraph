@@ -1,0 +1,69 @@
+"""Package-owned local service surface for repeated PragmaGraph queries."""
+
+from __future__ import annotations
+
+from pragmagraph.service.constants import (
+    ERROR_INTERNAL,
+    ERROR_INVALID_PARAMS,
+    ERROR_INVALID_REQUEST,
+    ERROR_NOT_FOUND,
+    ERROR_REFRESH_UNSUPPORTED,
+    ERROR_UNAVAILABLE_STATE,
+    ERROR_UNSUPPORTED_METHOD,
+    METHOD_CAPABILITIES,
+    METHOD_EXPLAIN,
+    METHOD_EXPORT,
+    METHOD_GRAPHIFY_EXPORT,
+    METHOD_HEALTH,
+    METHOD_NEIGHBORHOOD,
+    METHOD_PATH,
+    METHOD_QUERY,
+    METHOD_REFRESH,
+    METHOD_REPORT,
+    METHOD_SHUTDOWN,
+    SERVICE_METHODS,
+    SERVICE_VERSION,
+    STARTUP_MODE_ROOT,
+    STARTUP_MODE_SNAPSHOT,
+)
+from pragmagraph.service.models import (
+    ServiceCapabilities,
+    ServiceError,
+    ServiceRequest,
+    ServiceResponse,
+)
+from pragmagraph.service.runtime import LocalQueryService, ServiceStartup
+from pragmagraph.service.stdio import request_from_json_line, run_stdio_service
+
+__all__ = [
+    "ERROR_INTERNAL",
+    "ERROR_INVALID_PARAMS",
+    "ERROR_INVALID_REQUEST",
+    "ERROR_NOT_FOUND",
+    "ERROR_REFRESH_UNSUPPORTED",
+    "ERROR_UNAVAILABLE_STATE",
+    "ERROR_UNSUPPORTED_METHOD",
+    "LocalQueryService",
+    "METHOD_CAPABILITIES",
+    "METHOD_EXPLAIN",
+    "METHOD_EXPORT",
+    "METHOD_GRAPHIFY_EXPORT",
+    "METHOD_HEALTH",
+    "METHOD_NEIGHBORHOOD",
+    "METHOD_PATH",
+    "METHOD_QUERY",
+    "METHOD_REFRESH",
+    "METHOD_REPORT",
+    "METHOD_SHUTDOWN",
+    "SERVICE_METHODS",
+    "SERVICE_VERSION",
+    "STARTUP_MODE_ROOT",
+    "STARTUP_MODE_SNAPSHOT",
+    "ServiceCapabilities",
+    "ServiceError",
+    "ServiceRequest",
+    "ServiceResponse",
+    "ServiceStartup",
+    "request_from_json_line",
+    "run_stdio_service",
+]

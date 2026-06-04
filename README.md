@@ -30,8 +30,9 @@ references, commits, and other facts an indexer can recover from source.
 
 This semantic alpha provides a small local source-graph MVP:
 deterministic DTOs, JSON snapshots, a local code/document indexer, lexical and
-structural query helpers, deterministic graph reports, CLI commands, and
-fixture handoff artifacts for OpenMinion consumption.
+structural query helpers, a local query service surface, deterministic graph
+reports, CLI commands, and fixture handoff artifacts for OpenMinion
+consumption.
 
 ## Boundary
 
@@ -93,6 +94,7 @@ The package currently provides:
   - `pragmagraph.report`
   - `pragmagraph.refresh`
   - `pragmagraph.security`
+  - `pragmagraph.service`
 - immutable DTOs for source refs, graph nodes, graph edges, snapshots, query
   hits, omitted diagnostics, path results, and health summaries
 - deterministic JSON snapshot load/save helpers
@@ -108,6 +110,8 @@ The package currently provides:
   and downstream tooling
 - deterministic Graphify-shaped JSON import/export helpers for backend
   interchange tests and handoff artifacts
+- package-owned local query service contracts and a stdio runner for repeated
+  snapshot-backed or root-backed sessions
 - package-owned benchmark helpers plus a medium fixture for regression and
   readiness review
 - content-hash refresh manifests for deterministic changed/unchanged/removed
@@ -116,7 +120,7 @@ The package currently provides:
   local indexing
 - CLI commands for `index`, `refresh`, `query`, `explain`, `report`, `export`,
   `benchmark`, `graphify-export`, `graphify-import`, `neighborhood`, `path`,
-  and `health`
+  `health`, and `serve`
 - a semantic smoke entrypoint for install validation
 - package-local tests, lint, and release-check workflow
 - API compatibility and release docs
@@ -128,6 +132,7 @@ This package does **not** currently provide:
 - SQLite, KuzuDB, Neo4j, hosted, vector, or typed-edge storage
 - Graphify runtime API wrapping or Graphify replacement behavior
 - file watchers, git hooks, daemons, or scheduled refresh
+- MCP, HTTP, WebSocket, or hosted service transports
 - OpenMinion runtime provider wiring
 - prompt context merging
 - semantic inference from prose or model output
@@ -179,6 +184,15 @@ pragmagraph-smoke --json
 Expected output is deterministic JSON with the package name, version, status,
 stable import roots, and `semantic_contract: true`.
 
+## Package-local docs and release
+
+- `docs/README.md` summarizes the package-local docs contract.
+- `API_COMPATIBILITY.md` records the supported public import roots and
+  top-level export policy.
+- `RELEASING.md` records the package-local release and PyPI publish flow.
+- `docs/service-mode.md` records the local service request/response contract.
+- `scripts/release_check.py` is the canonical release smoke entrypoint.
+
 ## CLI Quickstart
 
 Index a local code/docs root into a deterministic JSON snapshot:
@@ -218,10 +232,16 @@ Check health:
 pragmagraph health .pragmagraph/snapshot.json --json
 ```
 
-Package-local example:
+Run the local query service against a saved snapshot:
 
 ```bash
-PYTHONPATH=src python3.11 examples/basic_usage.py
+pragmagraph serve --snapshot .pragmagraph/snapshot.json
+```
+
+Run the local query service against a repo root with explicit refresh support:
+
+```bash
+pragmagraph serve --root . --namespace my-project
 ```
 
 Build a structural report:

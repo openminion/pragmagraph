@@ -28,6 +28,7 @@ External consumers should treat these import roots as the supported public API:
 - `pragmagraph.report`
 - `pragmagraph.refresh`
 - `pragmagraph.security`
+- `pragmagraph.service`
 
 The top-level `pragmagraph` package is the preferred entrypoint for package
 metadata and smoke validation.
@@ -50,6 +51,7 @@ The following top-level exports are part of the current public contract:
   `snapshot_from_graphify_payload`, and `GRAPHIFY_INTEROP_FORMAT`
 - structural report helpers `build_report` and `render_markdown_report`
 - refresh helper `refresh_snapshot`
+- service contracts `ServiceRequest`, `ServiceResponse`, and `LocalQueryService`
 - parser/scope DTOs such as `ParserDiagnostic`, `ParserResult`,
   `RefreshManifest`, `RefreshResult`, and `QueryExplanation`
 - report DTOs such as `GraphReport`, `GraphReportSummary`,
@@ -103,6 +105,8 @@ Public-contract confidence should be enforced by tests that cover:
 8. deterministic DOT/Mermaid export behavior over fixture snapshots,
 9. Graphify-shaped JSON import/export behavior over fixture snapshots,
 10. benchmark behavior over the package-owned medium fixture.
+11. deterministic stdio service behavior for snapshot-backed and root-backed
+    repeated-request sessions.
 
 ## Non-goals
 

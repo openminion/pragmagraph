@@ -17,6 +17,7 @@ from pragmagraph.models import QueryRequest
 from pragmagraph.query import health, neighborhood, path, query
 from pragmagraph.report import build_report, render_markdown_report
 from pragmagraph.refresh import load_manifest, refresh_snapshot, save_manifest
+from pragmagraph.service import LocalQueryService, run_stdio_service
 from pragmagraph.storage import load_snapshot, save_snapshot
 
 
@@ -139,6 +140,17 @@ def main(argv: list[str] | None = None) -> int:
     health_parser.add_argument("snapshot")
     health_parser.add_argument("--json", action="store_true", help="emit JSON output")
 
+    serve_parser = subparsers.add_parser(
+        "serve", help="run the local newline-delimited JSON service"
+    )
+    serve_group = serve_parser.add_mutually_exclusive_group(required=True)
+    serve_group.add_argument("--snapshot")
+    serve_group.add_argument("--root")
+    serve_parser.add_argument("--namespace", default="default")
+    serve_parser.add_argument("--manifest-in")
+    serve_parser.add_argument("--snapshot-out")
+    serve_parser.add_argument("--manifest-out")
+
     args = parser.parse_args(argv)
 
     if args.command == "index":
@@ -241,6 +253,18 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "health":
         snapshot = load_snapshot(args.snapshot)
         _print_payload(health(snapshot), as_json=True)
+    elif args.command == "serve":
+        if args.snapshot:
+            service = LocalQueryService.from_snapshot_path(args.snapshot)
+        else:
+            service = LocalQueryService.from_root(
+                args.root,
+                namespace=args.namespace,
+                manifest_path=args.manifest_in,
+                snapshot_out_path=args.snapshot_out,
+                manifest_out_path=args.manifest_out,
+            )
+        return run_stdio_service(service)
     elif args.json:
         print(json.dumps(smoke_payload(), sort_keys=True))
     else:
