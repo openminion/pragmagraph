@@ -70,6 +70,27 @@ def _assert_smoke_payload(stdout: str) -> None:
         raise RuntimeError(f"unexpected stable import roots: {payload!r}")
 
 
+def _assert_package_docs_shape(root: Path) -> None:
+    required_paths = [
+        root / "docs" / "README.md",
+        root / "docs" / "reference" / "benchmarking.md",
+        root / "docs" / "reference" / "certification-readiness-matrix.md",
+        root / "docs" / "reference" / "export-mode.md",
+        root / "docs" / "reference" / "graphify-interop.md",
+        root / "docs" / "reference" / "report-mode.md",
+        root / "docs" / "reference" / "service-mode.md",
+        root / "docs" / "reference" / "ui-contracts.md",
+        root / "src" / "pragmagraph" / "README.md",
+        root / "tests" / "fixtures" / "repos",
+        root / "tests" / "contracts",
+    ]
+    missing = [
+        str(path.relative_to(root)) for path in required_paths if not path.exists()
+    ]
+    if missing:
+        raise RuntimeError(f"package docs/layout drifted: missing {missing!r}")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run pragmagraph release checks")
     parser.add_argument(
@@ -81,6 +102,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     root = Path(__file__).resolve().parents[1]
+    _assert_package_docs_shape(root)
     shutil.rmtree(root / "build", ignore_errors=True)
     shutil.rmtree(root / "dist", ignore_errors=True)
     for egg_info in root.glob("src/*.egg-info"):

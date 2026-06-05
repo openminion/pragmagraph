@@ -25,6 +25,7 @@ def test_package_policy_and_release_automation_docs_exist() -> None:
     assert (root / "scripts" / "release_check.py").is_file()
     assert (root / "examples" / "basic_usage.py").is_file()
     assert (root / "docs" / "README.md").is_file()
+    assert (root / "src" / "pragmagraph" / "README.md").is_file()
     assert (root / "docs" / "reference" / "report-mode.md").is_file()
     assert (root / "docs" / "reference" / "export-mode.md").is_file()
     assert (root / "docs" / "reference" / "benchmarking.md").is_file()

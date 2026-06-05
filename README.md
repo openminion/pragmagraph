@@ -199,6 +199,8 @@ stable import roots, and `semantic_contract: true`.
   contract.
 - `docs/reference/ui-contracts.md` records the package-owned UI boundary
   contract.
+- `src/pragmagraph/README.md` explains the source-tree module layout and
+  public-vs-repo-local boundary.
 - `scripts/release_check.py` is the canonical release smoke entrypoint.
 - `tests/fixtures/repos/` and `tests/contracts/` hold repo-local regression
   fixtures and OpenMinion contract snapshots; they are validation assets, not

@@ -17,15 +17,18 @@ A publishable release must satisfy all of the following:
 3. `README.md` describes install, quickstart, smoke, name meaning, and
    import-boundary expectations for external consumers.
 4. `API_COMPATIBILITY.md` names the stable import roots and deprecation policy.
-5. `pragmagraph.service` and `pragmagraph serve` remain documented when
+5. `docs/reference/` remains the canonical package-local reference-docs root.
+6. `src/pragmagraph/README.md` continues to document the source-tree owner map
+   and repo-local validation assets.
+7. `pragmagraph.service` and `pragmagraph serve` remain documented when
    present in the public alpha contract.
-6. `pragmagraph.ui` remains documented as a typed boundary contract when
+8. `pragmagraph.ui` remains documented as a typed boundary contract when
    present in the public alpha contract.
-7. Package tests pass from the package root.
-8. Both wheel and sdist build successfully.
-9. A clean install smoke passes from a fresh virtualenv using the built wheel.
-10. The package still has no imports from host frameworks such as OpenMinion.
-11. Semantic-alpha releases keep graph facts reproducible from local source
+9. Package tests pass from the package root.
+10. Both wheel and sdist build successfully.
+11. A clean install smoke passes from a fresh virtualenv using the built wheel.
+12. The package still has no imports from host frameworks such as OpenMinion.
+13. Semantic-alpha releases keep graph facts reproducible from local source
    artifacts and do not import OpenMinion.
 
 ## Version Bump
@@ -39,6 +42,8 @@ If the release changes the external consumer contract, also update:
 
 - `README.md`
 - `API_COMPATIBILITY.md`
+- `docs/README.md`
+- `src/pragmagraph/README.md`
 - `docs/reference/service-mode.md`
 - `docs/reference/ui-contracts.md`
 
