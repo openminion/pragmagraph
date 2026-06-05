@@ -29,6 +29,7 @@ External consumers should treat these import roots as the supported public API:
 - `pragmagraph.refresh`
 - `pragmagraph.security`
 - `pragmagraph.service`
+- `pragmagraph.ui`
 
 The top-level `pragmagraph` package is the preferred entrypoint for package
 metadata and smoke validation.
@@ -52,6 +53,8 @@ The following top-level exports are part of the current public contract:
 - structural report helpers `build_report` and `render_markdown_report`
 - refresh helper `refresh_snapshot`
 - service contracts `ServiceRequest`, `ServiceResponse`, and `LocalQueryService`
+- typed UI boundary contracts such as `UiTransportBoundary`,
+  `UiScreenDefinition`, and `build_ui_screen_manifest`
 - parser/scope DTOs such as `ParserDiagnostic`, `ParserResult`,
   `RefreshManifest`, `RefreshResult`, and `QueryExplanation`
 - report DTOs such as `GraphReport`, `GraphReportSummary`,

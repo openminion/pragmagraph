@@ -7,9 +7,11 @@ from pathlib import Path
 
 from pragmagraph.bench import benchmark_root, render_markdown_benchmark
 
+from .package_paths import fixture_repo
+
 
 def _medium_repo() -> Path:
-    return Path(__file__).resolve().parents[1] / "fixtures" / "medium_repo"
+    return fixture_repo("medium_repo")
 
 
 def test_benchmark_root_returns_expected_measurements() -> None:

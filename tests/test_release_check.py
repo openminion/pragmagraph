@@ -14,3 +14,4 @@ def test_release_check_is_package_local() -> None:
     assert "pytest" in release_check
     assert "build" in release_check
     assert "pragmagraph.service" in release_check
+    assert "pragmagraph.ui" in release_check

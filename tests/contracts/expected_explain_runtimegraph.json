@@ -5,6 +5,6 @@
     "query": "RuntimeGraph",
     "requires_explanation": true
   },
-  "fixture_root": "fixtures/mixed_repo",
+  "fixture_root": "tests/fixtures/repos/mixed_repo",
   "package": "pragmagraph"
 }

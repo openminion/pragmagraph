@@ -13,7 +13,13 @@ from pragmagraph.storage import load_snapshot, save_snapshot
 
 
 def run_quickstart(root: str | Path) -> dict[str, object]:
-    fixture_root = Path(__file__).resolve().parents[1] / "fixtures" / "tiny_repo"
+    fixture_root = (
+        Path(__file__).resolve().parents[1]
+        / "tests"
+        / "fixtures"
+        / "repos"
+        / "tiny_repo"
+    )
     snapshot = index_path(fixture_root, namespace="quickstart")
     output_path = Path(root) / "snapshot.json"
     save_snapshot(snapshot, output_path)

@@ -25,12 +25,17 @@ def test_package_policy_and_release_automation_docs_exist() -> None:
     assert (root / "scripts" / "release_check.py").is_file()
     assert (root / "examples" / "basic_usage.py").is_file()
     assert (root / "docs" / "README.md").is_file()
-    assert (root / "docs" / "report-mode.md").is_file()
-    assert (root / "docs" / "export-mode.md").is_file()
-    assert (root / "docs" / "benchmarking.md").is_file()
-    assert (root / "docs" / "graphify-interop.md").is_file()
-    assert (root / "docs" / "service-mode.md").is_file()
-    assert (root / "docs" / "certification-readiness-matrix.md").is_file()
+    assert (root / "docs" / "reference" / "report-mode.md").is_file()
+    assert (root / "docs" / "reference" / "export-mode.md").is_file()
+    assert (root / "docs" / "reference" / "benchmarking.md").is_file()
+    assert (root / "docs" / "reference" / "graphify-interop.md").is_file()
+    assert (root / "docs" / "reference" / "service-mode.md").is_file()
+    assert (root / "docs" / "reference" / "ui-contracts.md").is_file()
+    assert (root / "docs" / "reference" / "certification-readiness-matrix.md").is_file()
+    assert (root / "tests" / "fixtures" / "repos" / "tiny_repo").is_dir()
+    assert (root / "tests" / "contracts" / "capabilities.json").is_file()
+    assert not (root / "fixtures").exists()
+    assert not (root / "handoff").exists()
 
 
 def test_package_readme_mentions_policy_and_quickstart() -> None:
@@ -43,6 +48,7 @@ def test_package_readme_mentions_policy_and_quickstart() -> None:
     assert "pragmagraph benchmark" in readme
     assert "pragmagraph graphify-export" in readme
     assert "pragmagraph serve" in readme
+    assert "pragmagraph.ui" in readme
 
 
 def test_package_metadata_declares_public_urls() -> None:

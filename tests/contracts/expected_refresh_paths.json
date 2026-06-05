@@ -4,6 +4,6 @@
     "removed_path": "package.json",
     "unchanged_path": "src/app.py"
   },
-  "fixture_root": "fixtures/mixed_repo",
+  "fixture_root": "tests/fixtures/repos/mixed_repo",
   "package": "pragmagraph"
 }

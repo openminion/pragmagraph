@@ -60,6 +60,7 @@ def _assert_smoke_payload(stdout: str) -> None:
         "pragmagraph.refresh",
         "pragmagraph.security",
         "pragmagraph.service",
+        "pragmagraph.ui",
     ]
     if payload.get("package") != "pragmagraph":
         raise RuntimeError(f"unexpected smoke package: {payload!r}")
@@ -128,6 +129,7 @@ def main(argv: list[str] | None = None) -> int:
                         "from pragmagraph.export import render_dot, render_mermaid; "
                         "from pragmagraph.graphify import to_graphify_payload; "
                         "from pragmagraph.service import LocalQueryService; "
+                        "from pragmagraph.ui import build_ui_screen_manifest; "
                         "from pragmagraph.report import build_report, "
                         "render_markdown_report"
                     ),

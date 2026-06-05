@@ -20,6 +20,7 @@ def test_pragmagraph_package_imports() -> None:
     import pragmagraph.security
     import pragmagraph.service
     import pragmagraph.storage
+    import pragmagraph.ui
 
     assert pragmagraph.__version__ == "0.0.1"
     assert pragmagraph.PACKAGE_STATUS == "semantic-alpha"
@@ -29,6 +30,7 @@ def test_pragmagraph_package_imports() -> None:
     assert "pragmagraph.graphify" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.report" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.service" in pragmagraph.STABLE_IMPORT_ROOTS
+    assert "pragmagraph.ui" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "render_dot" in pragmagraph.export.__all__
     assert "to_graphify_payload" in pragmagraph.graphify.__all__
     assert "benchmark_root" in pragmagraph.bench.__all__
@@ -113,6 +115,7 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     import pragmagraph.security as security
     import pragmagraph.service as service
     import pragmagraph.storage as storage
+    import pragmagraph.ui as ui
 
     assert "index_path" in adapters.__all__
     assert "render_markdown_benchmark" in bench.__all__
@@ -128,6 +131,7 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     assert "ScopePolicy" in security.__all__
     assert "LocalQueryService" in service.__all__
     assert "save_snapshot" in storage.__all__
+    assert "build_ui_screen_manifest" in ui.__all__
 
 
 def test_pragmagraph_package_does_not_import_openminion_from_source() -> None:

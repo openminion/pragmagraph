@@ -18,10 +18,10 @@ The package-owned benchmark surface lives under:
 ## CLI
 
 ```bash
-pragmagraph benchmark fixtures/medium_repo --namespace medium --query RuntimeGraph
+pragmagraph benchmark /path/to/repo --namespace demo --query RuntimeGraph
 
-pragmagraph benchmark fixtures/medium_repo \
-  --namespace medium \
+pragmagraph benchmark /path/to/repo \
+  --namespace demo \
   --query RuntimeGraph \
   --json
 ```
@@ -43,10 +43,10 @@ bytes.
 
 ## Fixture policy
 
-`fixtures/medium_repo/` is the current package-owned medium fixture for
-benchmark and readiness checks. It is intentionally larger and more connected
-than `tiny_repo` and `mixed_repo`: nested Python modules, multiple docs, and
-multiple config files.
+`tests/fixtures/repos/medium_repo/` is the current repo-local regression
+fixture for benchmark and readiness checks. It is intentionally larger and more
+connected than `tiny_repo` and `mixed_repo`: nested Python modules, multiple
+docs, and multiple config files.
 
 ## Readiness note
 

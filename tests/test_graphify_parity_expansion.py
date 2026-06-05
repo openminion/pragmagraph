@@ -22,6 +22,8 @@ from pragmagraph.query import query
 from pragmagraph.refresh import refresh_snapshot
 from pragmagraph.security import ScopePolicy
 
+from .package_paths import contract_path, fixture_repo
+
 
 def _mixed_repo(tmp_path: Path) -> Path:
     root = tmp_path / "mixed"
@@ -191,13 +193,12 @@ def test_cli_refresh_and_explain_commands(tmp_path: Path) -> None:
 
 
 def test_expanded_handoff_fixture_contracts_are_stable(tmp_path: Path) -> None:
-    package_root = Path(__file__).resolve().parents[1]
-    fixture = package_root / "fixtures" / "mixed_repo"
+    fixture = fixture_repo("mixed_repo")
     explain_contract = json.loads(
-        (package_root / "handoff" / "expected_explain_runtimegraph.json").read_text()
+        contract_path("expected_explain_runtimegraph.json").read_text()
     )
     refresh_contract = json.loads(
-        (package_root / "handoff" / "expected_refresh_paths.json").read_text()
+        contract_path("expected_refresh_paths.json").read_text()
     )
 
     snapshot = index_path(fixture, namespace="fixture")

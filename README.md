@@ -31,8 +31,7 @@ references, commits, and other facts an indexer can recover from source.
 This semantic alpha provides a small local source-graph MVP:
 deterministic DTOs, JSON snapshots, a local code/document indexer, lexical and
 structural query helpers, a local query service surface, deterministic graph
-reports, CLI commands, and fixture handoff artifacts for OpenMinion
-consumption.
+reports, and CLI commands for local observed-fact graph work.
 
 ## Boundary
 
@@ -109,10 +108,14 @@ The package currently provides:
 - deterministic DOT and Mermaid export helpers for lightweight graph viewing
   and downstream tooling
 - deterministic Graphify-shaped JSON import/export helpers for backend
-  interchange tests and handoff artifacts
+  interchange tests and provider-swap validation
 - package-owned local query service contracts and a stdio runner for repeated
   snapshot-backed or root-backed sessions
-- package-owned benchmark helpers plus a medium fixture for regression and
+- package-owned UI boundary contracts in `pragmagraph.ui` for the future
+  OpenMinion third-brain workbench: search, result detail, neighborhood, path,
+  and provider-status screens without bundling a separate UI runtime into this
+  package
+- package-owned benchmark helpers plus repo-local regression fixtures for
   readiness review
 - content-hash refresh manifests for deterministic changed/unchanged/removed
   path reporting
@@ -135,6 +138,8 @@ This package does **not** currently provide:
 - MCP, HTTP, WebSocket, or hosted service transports
 - OpenMinion runtime provider wiring
 - prompt context merging
+- the actual operator-facing workbench runtime UI (that belongs to OpenMinion;
+  `pragmagraph.ui` only defines the typed package boundary)
 - semantic inference from prose or model output
 - automatic Sophiagraph memory writes or promotion
 
@@ -190,8 +195,14 @@ stable import roots, and `semantic_contract: true`.
 - `API_COMPATIBILITY.md` records the supported public import roots and
   top-level export policy.
 - `RELEASING.md` records the package-local release and PyPI publish flow.
-- `docs/service-mode.md` records the local service request/response contract.
+- `docs/reference/service-mode.md` records the local service request/response
+  contract.
+- `docs/reference/ui-contracts.md` records the package-owned UI boundary
+  contract.
 - `scripts/release_check.py` is the canonical release smoke entrypoint.
+- `tests/fixtures/repos/` and `tests/contracts/` hold repo-local regression
+  fixtures and OpenMinion contract snapshots; they are validation assets, not
+  public package API.
 
 ## CLI Quickstart
 
@@ -263,10 +274,10 @@ pragmagraph export .pragmagraph/snapshot.json --format mermaid
 Benchmark a local repo:
 
 ```bash
-pragmagraph benchmark fixtures/medium_repo --namespace medium --query RuntimeGraph
+pragmagraph benchmark /path/to/repo --namespace demo --query RuntimeGraph
 
-pragmagraph benchmark fixtures/medium_repo \
-  --namespace medium \
+pragmagraph benchmark /path/to/repo \
+  --namespace demo \
   --query RuntimeGraph \
   --json
 ```
@@ -298,10 +309,10 @@ python3.11 -m pragmagraph --json
 ```
 
 See [API_COMPATIBILITY.md](API_COMPATIBILITY.md) for the public import-root
-policy, [docs/report-mode.md](docs/report-mode.md) for the structural report
-contract, [docs/export-mode.md](docs/export-mode.md) for deterministic graph
-exports, [docs/benchmarking.md](docs/benchmarking.md) for the benchmark/readiness
-surface, [docs/graphify-interop.md](docs/graphify-interop.md) for Graphify-shaped
-JSON interchange, [docs/certification-readiness-matrix.md](docs/certification-readiness-matrix.md)
+policy, [docs/reference/report-mode.md](docs/reference/report-mode.md) for the
+structural report contract, [docs/reference/export-mode.md](docs/reference/export-mode.md)
+for deterministic graph exports, [docs/reference/benchmarking.md](docs/reference/benchmarking.md)
+for the benchmark/readiness surface, [docs/reference/graphify-interop.md](docs/reference/graphify-interop.md)
+for Graphify-shaped JSON interchange, [docs/reference/certification-readiness-matrix.md](docs/reference/certification-readiness-matrix.md)
 for package/OpenMinion proof coverage, and [RELEASING.md](RELEASING.md) for
 package-local release checks.
