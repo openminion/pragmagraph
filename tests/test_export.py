@@ -31,7 +31,8 @@ def test_render_dot_is_deterministic_graph_text(tmp_path: Path) -> None:
     second = render_graph_export(snapshot, format="dot")
 
     assert first == second
-    assert first.startswith("digraph pragmagraph {\n")
+    assert first.startswith("// export_schema_version=")
+    assert "digraph pragmagraph {\n" in first
     assert "rankdir=LR" in first
     assert "->" in first
     assert 'label="contains"' in first
@@ -45,7 +46,8 @@ def test_render_mermaid_is_deterministic_graph_text(tmp_path: Path) -> None:
     second = render_graph_export(snapshot, format="mermaid")
 
     assert first == second
-    assert first.startswith("flowchart LR\n")
+    assert first.startswith("%% export_schema_version=")
+    assert "flowchart LR\n" in first
     assert "-->|contains|" in first
     assert "src/app.py" in first
 
@@ -84,5 +86,5 @@ def test_cli_export_emits_dot_and_mermaid(tmp_path: Path) -> None:
         text=True,
     ).stdout
 
-    assert dot.startswith("digraph pragmagraph {\n")
-    assert mermaid.startswith("flowchart LR\n")
+    assert dot.startswith("// export_schema_version=")
+    assert mermaid.startswith("%% export_schema_version=")

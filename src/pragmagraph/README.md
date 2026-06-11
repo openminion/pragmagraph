@@ -1,0 +1,40 @@
+# PragmaGraph Package Layout
+
+`pragmagraph` is the standalone observed-fact graph package for local source,
+doc, and artifact structure.
+
+## Public contract
+
+The public alpha surface is documented in:
+
+1. `README.md`
+2. `API_COMPATIBILITY.md`
+3. `docs/reference/`
+
+The preferred entrypoint is `pragmagraph`, with additional stable import roots
+for contracts, models, query, storage, adapters, bench, portability, parsers,
+export, graphify, report, refresh, security, service, and `pragmagraph.ui`.
+
+## Source-tree owner map
+
+1. `contracts/` owns schema/version constants and typed package errors.
+2. `models/` owns immutable DTOs.
+3. `adapters/` owns local indexing from source roots into snapshots.
+4. `query/` owns deterministic search, explain, neighborhood, path, and
+   health helpers.
+5. `storage/` owns snapshot load/save and stable JSON encoding.
+6. `report/`, `export/`, and `graphify/` own derived structural views over
+   snapshots.
+7. `refresh/` owns content-hash manifest and refresh behavior.
+8. `service/` owns the local repeated-query service boundary.
+9. `ui/` owns typed UI contracts only; runtime workbench implementation
+   belongs in OpenMinion.
+
+## Repo-local but not public API
+
+1. `tests/fixtures/repos/` holds regression fixtures for package tests and
+   benchmarks.
+2. `tests/contracts/` holds OpenMinion-facing contract snapshots for adapter
+   and provider validation.
+3. `examples/` are usage demos, not additional stability guarantees beyond the
+   documented public surface.

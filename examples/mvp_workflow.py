@@ -11,7 +11,13 @@ from pragmagraph.storage import save_snapshot
 
 
 def main() -> int:
-    root = Path(__file__).resolve().parents[1] / "fixtures" / "tiny_repo"
+    root = (
+        Path(__file__).resolve().parents[1]
+        / "tests"
+        / "fixtures"
+        / "repos"
+        / "tiny_repo"
+    )
     snapshot = index_path(root, namespace="fixture")
     save_snapshot(snapshot, Path(".pragmagraph") / "fixture-snapshot.json")
     result = query(snapshot, QueryRequest(query="RuntimeGraph", max_results=3))

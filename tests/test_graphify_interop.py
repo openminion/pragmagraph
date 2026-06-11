@@ -35,6 +35,7 @@ def test_graphify_payload_is_deterministic_subset(tmp_path: Path) -> None:
     payload = to_graphify_payload(snapshot)
 
     assert payload["format"] == GRAPHIFY_INTEROP_FORMAT
+    assert payload["interop_schema_version"].startswith("pragmagraph.graphify.schema.")
     assert payload["source"]["namespace"] == "fixture"
     assert [node["id"] for node in payload["nodes"]] == sorted(
         node.id for node in snapshot.nodes
@@ -98,5 +99,6 @@ def test_cli_graphify_export_and_import(tmp_path: Path) -> None:
     imported = load_snapshot(imported_path)
 
     assert payload["format"] == GRAPHIFY_INTEROP_FORMAT
+    assert payload["interop_schema_version"].startswith("pragmagraph.graphify.schema.")
     assert health["ok"] is True
     assert len(imported.nodes) == len(snapshot.nodes)

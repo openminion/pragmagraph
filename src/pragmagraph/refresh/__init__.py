@@ -7,7 +7,14 @@ import json
 from pathlib import Path
 
 from pragmagraph.adapters import index_path
-from pragmagraph.models import RefreshManifest, RefreshManifestEntry, RefreshResult
+from pragmagraph.models import (
+    GraphSnapshot,
+    RefreshManifest,
+    RefreshManifestEntry,
+    RefreshPathChange,
+    RefreshResult,
+    SnapshotStructuralDelta,
+)
 from pragmagraph.portability import normalize_relative_path
 from pragmagraph.security import ScopePolicy, load_gitignore, should_index_path
 
@@ -37,10 +44,12 @@ def build_manifest(
                 path=rel,
                 content_hash=hashlib.sha256(path.read_bytes()).hexdigest(),
                 parser=_parser_name(path),
-                parser_version="pragmagraph.parser.v1alpha1",
+                parser_version=_parser_version(path),
+                size_bytes=path.stat().st_size,
+                file_kind=_file_kind(path),
             )
         )
-    return RefreshManifest(entries=tuple(entries))
+    return RefreshManifest(root_path=str(root), entries=tuple(entries))
 
 
 def refresh_snapshot(
@@ -48,13 +57,15 @@ def refresh_snapshot(
     *,
     namespace: str = "default",
     previous_manifest: RefreshManifest | None = None,
+    previous_snapshot: GraphSnapshot | None = None,
     policy: ScopePolicy | None = None,
     created_at: str = "",
 ) -> RefreshResult:
     """Index ``root_path`` and report content changes since ``previous_manifest``."""
+    root = Path(root_path).resolve()
     manifest = build_manifest(root_path, policy=policy)
     snapshot = index_path(
-        root_path,
+        root,
         namespace=namespace,
         policy=policy,
         created_at=created_at,
@@ -76,12 +87,19 @@ def refresh_snapshot(
         and previous[path].parser_version == entry.parser_version
     )
     removed = tuple(path for path in sorted(previous) if path not in current)
+    path_changes = tuple(_path_changes(previous, current))
     return RefreshResult(
         snapshot=snapshot,
         manifest=manifest,
         changed_paths=changed,
         unchanged_paths=unchanged,
         removed_paths=removed,
+        path_changes=path_changes,
+        snapshot_delta=diff_snapshots(
+            previous_snapshot
+            or GraphSnapshot(namespace=namespace, root_path=str(root)),
+            snapshot,
+        ),
     )
 
 
@@ -101,11 +119,114 @@ def save_manifest(manifest: RefreshManifest, path: str | Path) -> None:
 
 
 def _parser_name(path: Path) -> str:
-    return "python_ast" if path.suffix.lower() == ".py" else "raw_file"
+    if path.suffix.lower() == ".py":
+        return "python_ast"
+    if path.suffix.lower() in {".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx"}:
+        return "script_lexical"
+    return "raw_file"
+
+
+def _file_kind(path: Path) -> str:
+    suffix = path.suffix.lower()
+    if suffix in {".js", ".jsx", ".mjs", ".cjs"}:
+        return "javascript"
+    if suffix in {".ts", ".tsx"}:
+        return "typescript"
+    if suffix == ".py":
+        return "python"
+    if suffix == ".md":
+        return "markdown"
+    if suffix in {".toml", ".json", ".yaml", ".yml"}:
+        return "config"
+    return "text"
+
+
+def _parser_version(path: Path) -> str:
+    parser = _parser_name(path)
+    if parser == "script_lexical":
+        return "pragmagraph.script_lexical.v1alpha1"
+    if parser == "python_ast":
+        return "pragmagraph.parser.v1alpha1"
+    return "pragmagraph.raw_file.v1alpha1"
+
+
+def _path_changes(
+    previous: dict[str, RefreshManifestEntry],
+    current: dict[str, RefreshManifestEntry],
+) -> list[RefreshPathChange]:
+    statuses: list[RefreshPathChange] = []
+    all_paths = sorted(set(previous) | set(current))
+    for path in all_paths:
+        before = previous.get(path)
+        after = current.get(path)
+        if before is None and after is not None:
+            statuses.append(
+                RefreshPathChange(
+                    path=path,
+                    status="added",
+                    reasons=("new_path",),
+                    current_entry=after,
+                )
+            )
+            continue
+        if before is not None and after is None:
+            statuses.append(
+                RefreshPathChange(
+                    path=path,
+                    status="removed",
+                    reasons=("removed_path",),
+                    previous_entry=before,
+                )
+            )
+            continue
+        assert before is not None and after is not None
+        reasons: list[str] = []
+        if before.content_hash != after.content_hash:
+            reasons.append("content_hash_changed")
+        if before.parser != after.parser:
+            reasons.append("parser_changed")
+        if before.parser_version != after.parser_version:
+            reasons.append("parser_version_changed")
+        if before.size_bytes != after.size_bytes:
+            reasons.append("size_changed")
+        if before.file_kind != after.file_kind:
+            reasons.append("file_kind_changed")
+        statuses.append(
+            RefreshPathChange(
+                path=path,
+                status="changed" if reasons else "unchanged",
+                reasons=tuple(reasons) if reasons else ("unchanged_content",),
+                previous_entry=before,
+                current_entry=after,
+            )
+        )
+    return statuses
+
+
+def diff_snapshots(
+    before: GraphSnapshot,
+    after: GraphSnapshot,
+) -> SnapshotStructuralDelta:
+    """Return the deterministic structural delta between two snapshots."""
+    before_node_ids = {node.id for node in before.nodes}
+    after_node_ids = {node.id for node in after.nodes}
+    before_edge_ids = {edge.id for edge in before.edges}
+    after_edge_ids = {edge.id for edge in after.edges}
+    before_omitted_ids = {f"{item.reason}:{item.item_id}" for item in before.omitted}
+    after_omitted_ids = {f"{item.reason}:{item.item_id}" for item in after.omitted}
+    return SnapshotStructuralDelta(
+        added_node_ids=tuple(sorted(after_node_ids - before_node_ids)),
+        removed_node_ids=tuple(sorted(before_node_ids - after_node_ids)),
+        added_edge_ids=tuple(sorted(after_edge_ids - before_edge_ids)),
+        removed_edge_ids=tuple(sorted(before_edge_ids - after_edge_ids)),
+        added_omitted_ids=tuple(sorted(after_omitted_ids - before_omitted_ids)),
+        removed_omitted_ids=tuple(sorted(before_omitted_ids - after_omitted_ids)),
+    )
 
 
 __all__ = [
     "build_manifest",
+    "diff_snapshots",
     "load_manifest",
     "refresh_snapshot",
     "save_manifest",

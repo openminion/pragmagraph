@@ -13,6 +13,7 @@ from pragmagraph.export import render_dot, render_mermaid
 from pragmagraph.graphify import to_graphify_payload
 from pragmagraph.models import QueryRequest
 from pragmagraph.query import query
+from pragmagraph.refresh import refresh_snapshot
 from pragmagraph.report import build_report
 from pragmagraph.storage import stable_dumps
 
@@ -49,9 +50,12 @@ class BenchmarkReport:
     root_path: str
     namespace: str
     query_text: str
+    fixture_profile: str
     snapshot_bytes: int
     node_count: int
     edge_count: int
+    omitted_count: int
+    omitted_rate: float
     measurements: tuple[BenchmarkMeasurement, ...] = ()
 
     def __post_init__(self) -> None:
@@ -62,9 +66,12 @@ class BenchmarkReport:
             "root_path": self.root_path,
             "namespace": self.namespace,
             "query_text": self.query_text,
+            "fixture_profile": self.fixture_profile,
             "snapshot_bytes": self.snapshot_bytes,
             "node_count": self.node_count,
             "edge_count": self.edge_count,
+            "omitted_count": self.omitted_count,
+            "omitted_rate": self.omitted_rate,
             "measurements": [item.to_dict() for item in self.measurements],
         }
 
@@ -149,18 +156,46 @@ def benchmark_root(
             "edge_count": len(value.get("edges", ())),
         },
     )
+    refresh_result, refresh_measurement = _measure(
+        "refresh_unchanged",
+        lambda: refresh_snapshot(
+            root,
+            namespace=namespace,
+            previous_manifest=refresh_snapshot(root, namespace=namespace).manifest,
+            previous_snapshot=snapshot,
+        ),
+        detail_builder=lambda value: {
+            "changed_paths": len(value.changed_paths),
+            "unchanged_paths": len(value.unchanged_paths),
+            "removed_paths": len(value.removed_paths),
+        },
+    )
 
-    _ = query_result, report_result, dot_text, mermaid_text, graphify_payload
+    _ = (
+        query_result,
+        report_result,
+        dot_text,
+        mermaid_text,
+        graphify_payload,
+        refresh_result,
+    )
     return BenchmarkReport(
         root_path=str(root),
         namespace=snapshot.namespace,
         query_text=query_text,
+        fixture_profile=_fixture_profile(len(snapshot.nodes)),
         snapshot_bytes=len(snapshot_json.encode("utf-8")),
         node_count=len(snapshot.nodes),
         edge_count=len(snapshot.edges),
+        omitted_count=len(snapshot.omitted),
+        omitted_rate=round(
+            len(snapshot.omitted) / max(1, len(snapshot.nodes) + len(snapshot.edges)),
+            6,
+        ),
         measurements=(
             index_measurement,
             snapshot_measurement,
+            refresh_measurement,
             query_measurement,
             report_measurement,
             dot_measurement,
@@ -178,8 +213,11 @@ def render_markdown_benchmark(report: BenchmarkReport) -> str:
         f"- Root: `{report.root_path}`",
         f"- Namespace: `{report.namespace}`",
         f"- Query: `{report.query_text}`",
+        f"- Fixture profile: `{report.fixture_profile}`",
         f"- Nodes: `{report.node_count}`",
         f"- Edges: `{report.edge_count}`",
+        f"- Omitted count: `{report.omitted_count}`",
+        f"- Omitted rate: `{report.omitted_rate}`",
         f"- Snapshot bytes: `{report.snapshot_bytes}`",
         "",
         "## Measurements",
@@ -193,6 +231,14 @@ def render_markdown_benchmark(report: BenchmarkReport) -> str:
             )
             lines.append(f"  details: `{detail_text}`")
     return "\n".join(lines) + "\n"
+
+
+def _fixture_profile(node_count: int) -> str:
+    if node_count <= 15:
+        return "small"
+    if node_count <= 120:
+        return "medium"
+    return "large"
 
 
 __all__ = [

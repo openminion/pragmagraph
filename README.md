@@ -28,11 +28,12 @@ deed, matter, fact, or thing done; in this package it frames the third brain as
 a graph of reproducible structure: files, symbols, document sections, artifacts,
 references, commits, and other facts an indexer can recover from source.
 
-This semantic alpha provides a small local source-graph MVP:
-deterministic DTOs, JSON snapshots, a local code/document indexer, lexical and
-structural query helpers, a local query service surface, deterministic graph
-reports, CLI commands, and fixture handoff artifacts for OpenMinion
-consumption.
+This semantic alpha provides a local observed-fact source-graph surface:
+deterministic DTOs, JSON snapshots, a local code/document indexer, incremental
+refresh manifests and structural deltas, structural query helpers, a local
+query service surface, deterministic graph reports and exports, Graphify-shaped
+interop, benchmark helpers, and CLI commands for local observed-fact graph
+work.
 
 ## Boundary
 
@@ -99,23 +100,31 @@ The package currently provides:
   hits, omitted diagnostics, path results, and health summaries
 - deterministic JSON snapshot load/save helpers
 - a local indexer for directories, files, Markdown headings and references,
-  Python AST modules/classes/functions/methods/imports/calls/inheritance, selected
-  JSON/TOML/YAML config metadata, and lexical snippets
-- query, explain, neighborhood, path, refresh, and health helpers over loaded
-  snapshots
+  Python AST modules/classes/functions/methods/imports/calls/inheritance,
+  lexical TypeScript/JavaScript modules/functions/classes/imports/exports,
+  selected JSON/TOML/YAML config metadata, and lexical snippets
+- query, explain, neighborhood, path, reverse-import, reverse-dependency,
+  backlink, impact, refresh, and health helpers over loaded snapshots
+- content-hash refresh manifests with parser/version metadata, root metadata,
+  per-path reason codes, and deterministic structural delta helpers
 - deterministic structural report helpers with JSON and Markdown output for
-  repo summaries, unresolved facts, top nodes, dependency declarations, and
-  agent-oriented follow-up queries
+  repo summaries, unresolved facts, top nodes, hotspots, structural summaries,
+  dependency/config declarations, and agent-oriented follow-up queries
 - deterministic DOT and Mermaid export helpers for lightweight graph viewing
-  and downstream tooling
+  and downstream tooling, with explicit export-schema markers
 - deterministic Graphify-shaped JSON import/export helpers for backend
-  interchange tests and handoff artifacts
+  interchange tests and provider-swap validation, with explicit interop schema
+  versioning
 - package-owned local query service contracts and a stdio runner for repeated
-  snapshot-backed or root-backed sessions
-- package-owned benchmark helpers plus a medium fixture for regression and
-  readiness review
-- content-hash refresh manifests for deterministic changed/unchanged/removed
-  path reporting
+  snapshot-backed or root-backed sessions, including richer capabilities,
+  health, and refresh metadata
+- package-owned UI boundary contracts in `pragmagraph.ui` for the future
+  OpenMinion third-brain workbench: search, result detail, neighborhood, path,
+  and provider-status screens without bundling a separate UI runtime into this
+  package
+- package-owned benchmark helpers plus repo-local regression fixtures for
+  readiness review, fixture profiling, refresh benchmarking, and omitted-rate
+  tracking
 - scope/security policy for gitignore-aware, size-bounded, binary/symlink-safe
   local indexing
 - CLI commands for `index`, `refresh`, `query`, `explain`, `report`, `export`,
@@ -135,6 +144,8 @@ This package does **not** currently provide:
 - MCP, HTTP, WebSocket, or hosted service transports
 - OpenMinion runtime provider wiring
 - prompt context merging
+- the actual operator-facing workbench runtime UI (that belongs to OpenMinion;
+  `pragmagraph.ui` only defines the typed package boundary)
 - semantic inference from prose or model output
 - automatic Sophiagraph memory writes or promotion
 
@@ -190,8 +201,22 @@ stable import roots, and `semantic_contract: true`.
 - `API_COMPATIBILITY.md` records the supported public import roots and
   top-level export policy.
 - `RELEASING.md` records the package-local release and PyPI publish flow.
-- `docs/service-mode.md` records the local service request/response contract.
+- `docs/reference/service-mode.md` records the local service request/response
+  contract.
+- `docs/reference/report-mode.md` records the structural report contract.
+- `docs/reference/export-mode.md` records the deterministic export contract.
+- `docs/reference/graphify-interop.md` records the deterministic Graphify
+  interchange contract.
+- `docs/reference/benchmarking.md` records the benchmark surface and readiness
+  posture.
+- `docs/reference/ui-contracts.md` records the package-owned UI boundary
+  contract.
+- `src/pragmagraph/README.md` explains the source-tree module layout and
+  public-vs-repo-local boundary.
 - `scripts/release_check.py` is the canonical release smoke entrypoint.
+- `tests/fixtures/repos/` and `tests/contracts/` hold repo-local regression
+  fixtures and OpenMinion contract snapshots; they are validation assets, not
+  public package API.
 
 ## CLI Quickstart
 
@@ -232,6 +257,15 @@ Check health:
 pragmagraph health .pragmagraph/snapshot.json --json
 ```
 
+Inspect impact and reverse edges:
+
+```bash
+pragmagraph neighborhood .pragmagraph/snapshot.json \
+  "pragma://my-project/module/src/app.py" \
+  --edge-kind imports \
+  --json
+```
+
 Run the local query service against a saved snapshot:
 
 ```bash
@@ -263,10 +297,10 @@ pragmagraph export .pragmagraph/snapshot.json --format mermaid
 Benchmark a local repo:
 
 ```bash
-pragmagraph benchmark fixtures/medium_repo --namespace medium --query RuntimeGraph
+pragmagraph benchmark /path/to/repo --namespace demo --query RuntimeGraph
 
-pragmagraph benchmark fixtures/medium_repo \
-  --namespace medium \
+pragmagraph benchmark /path/to/repo \
+  --namespace demo \
   --query RuntimeGraph \
   --json
 ```
@@ -298,10 +332,10 @@ python3.11 -m pragmagraph --json
 ```
 
 See [API_COMPATIBILITY.md](API_COMPATIBILITY.md) for the public import-root
-policy, [docs/report-mode.md](docs/report-mode.md) for the structural report
-contract, [docs/export-mode.md](docs/export-mode.md) for deterministic graph
-exports, [docs/benchmarking.md](docs/benchmarking.md) for the benchmark/readiness
-surface, [docs/graphify-interop.md](docs/graphify-interop.md) for Graphify-shaped
-JSON interchange, [docs/certification-readiness-matrix.md](docs/certification-readiness-matrix.md)
+policy, [docs/reference/report-mode.md](docs/reference/report-mode.md) for the
+structural report contract, [docs/reference/export-mode.md](docs/reference/export-mode.md)
+for deterministic graph exports, [docs/reference/benchmarking.md](docs/reference/benchmarking.md)
+for the benchmark/readiness surface, [docs/reference/graphify-interop.md](docs/reference/graphify-interop.md)
+for Graphify-shaped JSON interchange, [docs/reference/certification-readiness-matrix.md](docs/reference/certification-readiness-matrix.md)
 for package/OpenMinion proof coverage, and [RELEASING.md](RELEASING.md) for
 package-local release checks.

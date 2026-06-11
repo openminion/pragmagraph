@@ -2,8 +2,8 @@ include LICENSE
 recursive-include scripts *.py
 recursive-include docs *.md
 recursive-include examples *.py
-recursive-include fixtures *.json *.md *.py *.toml
-recursive-include handoff *.json
+recursive-include tests/contracts *.json
+recursive-include tests/fixtures *.json *.md *.py *.toml
 include API_COMPATIBILITY.md
 include README.md
 include RELEASING.md

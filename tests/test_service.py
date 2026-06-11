@@ -126,6 +126,8 @@ def test_root_service_refresh_updates_state_and_persists_outputs(
     assert response.ok is True
     payload = response.to_dict()["result"]
     assert "src/ops.py" in payload["changed_paths"]
+    assert payload["path_changes"]
+    assert payload["snapshot_delta"]["added_node_ids"]
     latest = query(service.snapshot, QueryRequest(query="OperatorGraph"))
     assert latest.hits[0].node.label == "OperatorGraph"
     assert snapshot_out.is_file()
@@ -154,6 +156,11 @@ def test_service_stdio_runner_supports_snapshot_sessions(tmp_path: Path) -> None
 
     assert capabilities["result"]["startup_mode"] == "snapshot"
     assert capabilities["result"]["refresh_supported"] is False
+    assert capabilities["result"]["export_schema_version"].startswith(
+        "pragmagraph.export."
+    )
+    assert capabilities["result"]["snapshot_id"]
+    assert capabilities["result"]["parser_set"]
     assert first["result"] == second["result"]
     assert shutdown["result"]["shutdown"] == "accepted"
     assert proc.returncode == 0
@@ -182,6 +189,7 @@ def test_service_stdio_runner_supports_root_refresh_sessions(tmp_path: Path) -> 
 
     assert initial["result"]["hits"] == []
     assert "src/ops.py" in refreshed["result"]["changed_paths"]
+    assert refreshed["result"]["path_changes"]
     assert queried["result"]["hits"][0]["node"]["label"] == "OperatorGraph"
     assert proc.returncode == 0
 
@@ -212,3 +220,25 @@ def test_service_invalid_requests_return_typed_errors(tmp_path: Path) -> None:
     assert unsupported.to_dict()["error"]["code"] == ERROR_UNSUPPORTED_METHOD
     assert invalid_params.ok is False
     assert invalid_params.to_dict()["error"]["code"] == ERROR_INVALID_PARAMS
+
+
+def test_service_health_and_export_surface_richer_metadata(tmp_path: Path) -> None:
+    root = _repo_root(tmp_path)
+    snapshot_path = tmp_path / "snapshot.json"
+    save_snapshot(index_path(root, namespace="fixture"), snapshot_path)
+    service = LocalQueryService.from_snapshot_path(snapshot_path)
+
+    health_response = service.handle_request(
+        ServiceRequest(id="h1", method="health", params={})
+    )[0]
+    export_response = service.handle_request(
+        ServiceRequest(id="e1", method="export", params={"format": "dot"})
+    )[0]
+
+    assert health_response.ok is True
+    assert health_response.to_dict()["result"]["service"]["snapshot_id"]
+    assert "diagnostic_counts" in health_response.to_dict()["result"]["service"]
+    assert export_response.ok is True
+    assert export_response.to_dict()["result"]["export_schema_version"].startswith(
+        "pragmagraph.export."
+    )

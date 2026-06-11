@@ -8,6 +8,7 @@ from pragmagraph.contracts import INDEXER_VERSION, SCHEMA_VERSION
 from pragmagraph.models import GraphEdge, GraphNode, GraphSnapshot, SourceRef
 
 GRAPHIFY_INTEROP_FORMAT = "pragmagraph.graphify.v1alpha1"
+GRAPHIFY_INTEROP_SCHEMA_VERSION = "pragmagraph.graphify.schema.v1alpha1"
 
 
 def _source_payload(source_ref: SourceRef) -> dict[str, Any]:
@@ -48,6 +49,7 @@ def to_graphify_payload(snapshot: GraphSnapshot) -> dict[str, Any]:
     edges = sorted(snapshot.edges, key=lambda edge: edge.id)
     return {
         "format": GRAPHIFY_INTEROP_FORMAT,
+        "interop_schema_version": GRAPHIFY_INTEROP_SCHEMA_VERSION,
         "source": {
             "schema_version": snapshot.schema_version,
             "indexer_version": snapshot.indexer_version,
@@ -95,6 +97,10 @@ def snapshot_from_graphify_payload(
         created_at = ""
         schema_version = SCHEMA_VERSION
         indexer_version = INDEXER_VERSION
+
+    _ = str(
+        payload.get("interop_schema_version", "") or GRAPHIFY_INTEROP_SCHEMA_VERSION
+    )
 
     nodes = []
     for item in payload.get("nodes", ()):
@@ -146,6 +152,7 @@ def snapshot_from_graphify_payload(
 
 __all__ = [
     "GRAPHIFY_INTEROP_FORMAT",
+    "GRAPHIFY_INTEROP_SCHEMA_VERSION",
     "snapshot_from_graphify_payload",
     "to_graphify_payload",
 ]

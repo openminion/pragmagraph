@@ -25,6 +25,7 @@ pragmagraph graphify-import graphify.json --out .pragmagraph/imported.json
 The exported payload is a JSON object with:
 
 - `format`: the PragmaGraph Graphify interop format string,
+- `interop_schema_version`: explicit PragmaGraph interop schema version,
 - `source`: source snapshot metadata,
 - `nodes`: sorted node rows with `id`, `type`, `label`, and `properties`,
 - `edges`: sorted edge rows with `id`, `type`, `source`, `target`, and
@@ -34,7 +35,8 @@ The exported payload is a JSON object with:
 
 The supported import subset reads `nodes` and `edges` with Graphify-style
 `type`, `source`, `target`, `label`, and `properties` fields. Unknown payload
-keys are ignored.
+keys are ignored. Consumers should preserve `interop_schema_version` and may
+use it to guard fixture drift.
 
 ## Boundary
 

@@ -14,6 +14,8 @@ from pragmagraph.portability import node_id, pragma_uri
 from pragmagraph.query import health, neighborhood, path, query
 from pragmagraph.storage import load_snapshot, save_snapshot, stable_dumps
 
+from .package_paths import contract_path, fixture_repo
+
 
 def _fixture_root(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
@@ -180,13 +182,10 @@ def test_invalid_snapshot_schema_is_typed_error(tmp_path: Path) -> None:
 
 
 def test_openminion_handoff_artifacts_match_fixture_contract() -> None:
-    root = Path(__file__).resolve().parents[1]
-    fixture = root / "fixtures" / "tiny_repo"
-    capabilities = json.loads((root / "handoff" / "capabilities.json").read_text())
-    expected = json.loads(
-        (root / "handoff" / "expected_query_runtimegraph.json").read_text()
-    )
-    errors = json.loads((root / "handoff" / "typed_errors.json").read_text())
+    fixture = fixture_repo("tiny_repo")
+    capabilities = json.loads(contract_path("capabilities.json").read_text())
+    expected = json.loads(contract_path("expected_query_runtimegraph.json").read_text())
+    errors = json.loads(contract_path("typed_errors.json").read_text())
 
     snapshot = index_path(fixture, namespace="fixture")
     result = query(snapshot, QueryRequest(query=expected["expected"]["query"]))

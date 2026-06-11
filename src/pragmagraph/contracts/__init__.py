@@ -38,6 +38,10 @@ NODE_PYTHON_MODULE = "python_module"
 NODE_PYTHON_CLASS = "python_class"
 NODE_PYTHON_FUNCTION = "python_function"
 NODE_PYTHON_METHOD = "python_method"
+NODE_SCRIPT_MODULE = "script_module"
+NODE_SCRIPT_FUNCTION = "script_function"
+NODE_SCRIPT_CLASS = "script_class"
+NODE_SCRIPT_EXPORT = "script_export"
 NODE_IMPORT = "import"
 NODE_CONFIG = "config"
 NODE_CONFIG_KEY = "config_key"
@@ -53,6 +57,10 @@ NODE_KINDS = frozenset(
         NODE_PYTHON_CLASS,
         NODE_PYTHON_FUNCTION,
         NODE_PYTHON_METHOD,
+        NODE_SCRIPT_MODULE,
+        NODE_SCRIPT_FUNCTION,
+        NODE_SCRIPT_CLASS,
+        NODE_SCRIPT_EXPORT,
         NODE_IMPORT,
         NODE_CONFIG,
         NODE_CONFIG_KEY,
@@ -124,5 +132,9 @@ __all__ = [
     "NODE_PYTHON_METHOD",
     "NODE_PYTHON_MODULE",
     "NODE_PYTHON_SYMBOL",
+    "NODE_SCRIPT_CLASS",
+    "NODE_SCRIPT_EXPORT",
+    "NODE_SCRIPT_FUNCTION",
+    "NODE_SCRIPT_MODULE",
     "SCHEMA_VERSION",
 ]

@@ -134,12 +134,29 @@ class ServiceCapabilities:
     snapshot_schema_version: str = ""
     indexer_version: str = ""
     graphify_format: str = ""
+    export_schema_version: str = ""
+    manifest_schema_version: str = ""
+    parser_set: tuple[str, ...] = ()
+    export_formats: tuple[str, ...] = ()
+    report_formats: tuple[str, ...] = ()
+    snapshot_id: str = ""
+    root_path: str = ""
+    snapshot_path: str = ""
 
     def __post_init__(self) -> None:
         object.__setattr__(
             self,
             "supported_methods",
             tuple(sorted(_tuple_str(self.supported_methods))),
+        )
+        object.__setattr__(
+            self, "parser_set", tuple(sorted(_tuple_str(self.parser_set)))
+        )
+        object.__setattr__(
+            self, "export_formats", tuple(sorted(_tuple_str(self.export_formats)))
+        )
+        object.__setattr__(
+            self, "report_formats", tuple(sorted(_tuple_str(self.report_formats)))
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -154,6 +171,14 @@ class ServiceCapabilities:
             "snapshot_schema_version": self.snapshot_schema_version,
             "indexer_version": self.indexer_version,
             "graphify_format": self.graphify_format,
+            "export_schema_version": self.export_schema_version,
+            "manifest_schema_version": self.manifest_schema_version,
+            "parser_set": list(self.parser_set),
+            "export_formats": list(self.export_formats),
+            "report_formats": list(self.report_formats),
+            "snapshot_id": self.snapshot_id,
+            "root_path": self.root_path,
+            "snapshot_path": self.snapshot_path,
         }
 
 
