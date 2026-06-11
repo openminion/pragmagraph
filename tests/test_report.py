@@ -48,13 +48,17 @@ def test_build_report_returns_structural_summary(tmp_path: Path) -> None:
     assert report.summary.namespace == "fixture"
     assert report.summary.node_count == len(snapshot.nodes)
     assert report.summary.edge_count == len(snapshot.edges)
+    assert report.summary.dependency_count >= 1
+    assert report.summary.config_count >= 1
     assert report.summary.node_kinds["python_class"] >= 1
     assert report.summary.edge_kinds["depends_on"] >= 1
     assert report.dependencies[0].dependency == "ruff"
+    assert report.hotspots
     assert any(
         item.category == "unresolved_markdown_reference"
         for item in report.unresolved_items
     )
+    assert report.structural_summary
     assert report.suggested_queries
 
 
@@ -64,8 +68,9 @@ def test_markdown_report_renders_expected_sections(tmp_path: Path) -> None:
     markdown = render_markdown_report(build_report(snapshot))
 
     assert "# PragmaGraph Structural Report" in markdown
-    assert "## Top Nodes" in markdown
+    assert "## Hotspots" in markdown
     assert "## Dependencies" in markdown
+    assert "## Structural Summary" in markdown
     assert "`ruff` declared by `pyproject.toml`" in markdown
 
 
@@ -105,4 +110,4 @@ def test_cli_report_emits_json_and_markdown(tmp_path: Path) -> None:
     assert "# PragmaGraph Structural Report" in markdown
     assert payload["summary"]["namespace"] == "fixture"
     assert payload["dependencies"][0]["dependency"] == "ruff"
-    assert payload["top_nodes"]
+    assert payload["hotspots"]

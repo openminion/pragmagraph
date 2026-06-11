@@ -1,6 +1,6 @@
 # PragmaGraph Structural Report Mode
 
-Last updated: 2026-06-01
+Last updated: 2026-06-06
 Status: Active
 
 ## Purpose
@@ -35,9 +35,12 @@ The current report surface includes:
 3. edge-kind counts,
 4. omitted-reason counts,
 5. top nodes by structural degree,
-6. declared dependencies extracted from config files,
-7. unresolved items derived from omitted diagnostics,
-8. deterministic suggested follow-up queries for agents.
+6. deterministic hotspot rows,
+7. orphan-node rows,
+8. declared dependencies and config posture extracted from config files,
+9. unresolved items derived from omitted diagnostics,
+10. structural summary sections,
+11. deterministic suggested follow-up queries for agents.
 
 ## JSON contract
 
@@ -48,7 +51,9 @@ The current report surface includes:
 3. `orphan_nodes`
 4. `unresolved_items`
 5. `dependencies`
-6. `suggested_queries`
+6. `hotspots`
+7. `structural_summary`
+8. `suggested_queries`
 
 All report DTOs expose `to_dict()` and remain deterministic for the same
 snapshot input.
@@ -60,10 +65,13 @@ snapshot input.
 1. a report title,
 2. summary bullets,
 3. node/edge/omitted count sections,
-4. top-node section,
-5. dependency section,
-6. unresolved-item section,
-7. suggested-query section.
+4. dependency and config counts,
+5. top-node section,
+6. hotspot section,
+7. structural-summary section,
+8. dependency section,
+9. unresolved-item section,
+10. suggested-query section.
 
 The Markdown is structural and cited. It does not explain architectural intent
 or infer meanings beyond what the indexer already observed.
@@ -90,4 +98,5 @@ Report mode stays inside the third-brain contract:
 2. unresolved items come from typed omitted diagnostics,
 3. dependency rows come from indexed config facts,
 4. suggested queries are deterministic templates, not generated prose,
-5. no report section writes Sophiagraph memory or claims design judgment.
+5. hotspot and structural-summary sections remain structural-only,
+6. no report section writes Sophiagraph memory or claims design judgment.

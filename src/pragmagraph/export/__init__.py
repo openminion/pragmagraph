@@ -6,6 +6,8 @@ import re
 
 from pragmagraph.models import GraphEdge, GraphNode, GraphSnapshot
 
+EXPORT_SCHEMA_VERSION = "pragmagraph.export.v1alpha1"
+
 
 def _dot_quote(value: object) -> str:
     text = str(value)
@@ -53,6 +55,8 @@ def _sorted_edges(snapshot: GraphSnapshot) -> tuple[GraphEdge, ...]:
 def render_dot(snapshot: GraphSnapshot) -> str:
     """Render ``snapshot`` as deterministic Graphviz DOT."""
     lines = [
+        f"// export_schema_version={EXPORT_SCHEMA_VERSION}",
+        f"// snapshot_schema_version={snapshot.schema_version}",
         "digraph pragmagraph {",
         "  graph [rankdir=LR];",
         "  node [shape=box];",
@@ -80,7 +84,11 @@ def render_mermaid(snapshot: GraphSnapshot) -> str:
     """Render ``snapshot`` as deterministic Mermaid flowchart text."""
     nodes = _sorted_nodes(snapshot)
     mermaid_ids = {node.id: _mermaid_id(index) for index, node in enumerate(nodes)}
-    lines = ["flowchart LR"]
+    lines = [
+        f"%% export_schema_version={EXPORT_SCHEMA_VERSION}",
+        f"%% snapshot_schema_version={snapshot.schema_version}",
+        "flowchart LR",
+    ]
     for node in nodes:
         lines.append(
             f'  {mermaid_ids[node.id]}["{_mermaid_escape(_node_label(node))}"]'
@@ -109,6 +117,7 @@ def render_graph_export(snapshot: GraphSnapshot, *, format: str) -> str:
 
 
 __all__ = [
+    "EXPORT_SCHEMA_VERSION",
     "render_dot",
     "render_graph_export",
     "render_mermaid",

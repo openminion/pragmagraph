@@ -14,6 +14,12 @@ The current package-owned formats are:
 - Mermaid flowchart text via `render_mermaid(snapshot)`
 - format-dispatch helper via `render_graph_export(snapshot, format=...)`
 
+All exported text surfaces a versioned contract:
+
+- DOT begins with `export_schema_version` and `snapshot_schema_version`
+  comments.
+- Mermaid begins with matching `%%` metadata comments.
+
 ## CLI
 
 ```bash
@@ -32,7 +38,8 @@ Exports are deterministic for the same snapshot:
 2. edges are ordered by snapshot edge ID,
 3. missing-edge endpoints are skipped rather than repaired,
 4. node labels include the observed label, kind, and source path when available,
-5. edge labels use the observed edge kind.
+5. edge labels use the observed edge kind,
+6. export-schema metadata is explicit in the rendered text.
 
 Export mode does not infer design intent, call relationships beyond indexed
 facts, ownership, or recommended architecture changes. Those judgments belong to

@@ -232,12 +232,20 @@ def _resolve_local_imports(
     modules = {
         str(node.metadata.get("module_name")): node.id
         for node in nodes.values()
-        if node.kind == "python_module" and node.metadata.get("module_name")
+        if node.kind in {"python_module", "script_module"}
+        and node.metadata.get("module_name")
+    }
+    modules_by_path = {
+        normalize_relative_path(Path(node.source_ref.path).with_suffix("")): node.id
+        for node in nodes.values()
+        if node.kind in {"python_module", "script_module"} and node.source_ref.path
     }
     for node in tuple(nodes.values()):
         if node.kind != NODE_IMPORT:
             continue
         target_id = modules.get(node.label)
+        if target_id is None:
+            target_id = _resolve_relative_module_id(node, modules_by_path)
         if target_id:
             _add_edge(
                 edges,
@@ -250,7 +258,7 @@ def _resolve_local_imports(
                     metadata={"resolved": True},
                 ),
             )
-        elif "." in node.label:
+        elif "." in node.label or str(node.metadata.get("source_path", "")).strip():
             omitted.append(
                 OmittedDiagnostic(
                     reason="unresolved_local_import",
@@ -284,6 +292,15 @@ def _index_file(
         _index_config(namespace, rel, file_id, text, nodes, edges, omitted)
     parser = registry.parser_for(path)
     if parser is None:
+        optional_diagnostic = registry.unavailable_parser_diagnostic(path, rel=rel)
+        if optional_diagnostic is not None:
+            omitted.append(
+                OmittedDiagnostic(
+                    reason=optional_diagnostic.code,
+                    item_id=optional_diagnostic.path or rel,
+                    details=optional_diagnostic.to_dict(),
+                )
+            )
         return
     result = parser.parse(namespace=namespace, rel=rel, file_id=file_id, text=text)
     for node in result.nodes:
@@ -298,6 +315,32 @@ def _index_file(
                 details=diagnostic.to_dict(),
             )
         )
+
+
+def _resolve_relative_module_id(
+    import_node: GraphNode,
+    modules_by_path: dict[str, str],
+) -> str | None:
+    source_path = str(import_node.metadata.get("source_path", "") or "")
+    label = import_node.label.strip()
+    if not source_path or not label.startswith((".", "/")):
+        return None
+    base = Path(source_path).parent
+    target = normalize_relative_path(base / label)
+    candidates = (
+        target,
+        f"{target}/index",
+    )
+    for candidate in candidates:
+        if candidate in modules_by_path:
+            return modules_by_path[candidate]
+    for suffix in (".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx"):
+        trimmed = candidate = (
+            target.removesuffix(suffix) if target.endswith(suffix) else ""
+        )
+        if trimmed and trimmed in modules_by_path:
+            return modules_by_path[trimmed]
+    return None
 
 
 def _index_markdown(
@@ -604,6 +647,18 @@ def _dependency_values(key: str, value: object) -> tuple[str, ...]:
         & key_parts
     ):
         return ()
+    key_segments = key.split(".")
+    if (
+        isinstance(value, str)
+        and len(key_segments) >= 2
+        and key_segments[-2]
+        in {
+            "dependencies",
+            "devDependencies",
+            "optionalDependencies",
+        }
+    ):
+        return (key_segments[-1],)
     if isinstance(value, list):
         return tuple(str(item) for item in value)
     if isinstance(value, str):

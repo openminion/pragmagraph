@@ -39,28 +39,16 @@ Repository-local but not package API:
 3. Host-framework planning, tracker, and swapability docs remain in the
    workspace-root `docs/` tree rather than this package-local docs directory.
 
-Current canonical planning docs live in the host repository:
+Host-repository planning docs remain outside this package-local public-docs
+surface. They define OpenMinion adoption, tracker history, and broader
+second-brain versus third-brain planning; they are not part of the packaged
+PragmaGraph API contract.
 
-- `docs/reference/second-vs-third-brain-quick-reference.md`
-- `docs/discussions/sophiagraph-pragmagraph-boundary-2026-05-27.md`
-- `docs/discussions/pragmagraph-third-brain-market-research-2026-05-31.md`
-- `docs/specs/pragmagraph-mvp-openminion-usability-spec.md`
-- `docs/trackers/qa/pragmagraph-mvp-openminion-usability-tracker.md`
-- `docs/discussions/pragmagraph-graphify-gap-research-2026-05-31.md`
-- `docs/specs/pragmagraph-graphify-parity-expansion-spec.md`
-- `docs/trackers/qa/pragmagraph-graphify-parity-expansion-tracker.md`
-- `docs/specs/pragmagraph-local-query-service-spec.md`
-- `docs/trackers/qa/pragmagraph-local-query-service-tracker.md`
-- `docs/specs/openminion-third-brain-provider-abstraction-readiness-spec.md`
-- `docs/trackers/qa/openminion-third-brain-provider-abstraction-readiness-tracker.md`
-- `docs/specs/openminion-pragmagraph-provider-adapter-swapability-spec.md`
-- `docs/trackers/qa/openminion-pragmagraph-provider-adapter-swapability-tracker.md`
-- `docs/specs/pragmagraph-package-baseline-spec.md`
-- `docs/trackers/qa/pragmagraph-package-baseline-tracker.md`
-
-The `0.0.1` semantic alpha defines the first narrow graph-facing contracts:
-immutable DTOs, JSON snapshots, local indexing, deterministic query/traversal,
-CLI commands, and OpenMinion handoff fixtures.
+The `0.0.1` semantic alpha defines the current public package contract:
+immutable DTOs, JSON snapshots, local indexing, deterministic
+query/traversal/report/export helpers, Graphify-shaped interop, package-local
+service and UI boundary contracts, benchmark helpers, and package-owned
+validation fixtures.
 
 Boundary shorthand:
 

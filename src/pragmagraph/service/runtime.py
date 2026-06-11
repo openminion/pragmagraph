@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
 from pragmagraph.contracts import INDEXER_VERSION, SCHEMA_VERSION
-from pragmagraph.export import render_graph_export
+from pragmagraph.export import EXPORT_SCHEMA_VERSION, render_graph_export
 from pragmagraph.graphify import GRAPHIFY_INTEROP_FORMAT, to_graphify_payload
 from pragmagraph.models import (
     GraphSnapshot,
@@ -45,7 +46,7 @@ from pragmagraph.service.models import (
     ServiceRequest,
     ServiceResponse,
 )
-from pragmagraph.storage import load_snapshot, save_snapshot
+from pragmagraph.storage import load_snapshot, save_snapshot, stable_dumps
 
 
 @dataclass(frozen=True)
@@ -135,6 +136,15 @@ class LocalQueryService:
         methods = list(SERVICE_METHODS)
         if not self.refresh_supported:
             methods.remove(METHOD_REFRESH)
+        parser_set = tuple(
+            sorted(
+                {
+                    str(node.metadata.get("parser"))
+                    for node in self._snapshot.nodes
+                    if node.metadata.get("parser")
+                }
+            )
+        )
         return ServiceCapabilities(
             service_version=SERVICE_VERSION,
             package_version=pragmagraph.__version__,
@@ -146,6 +156,16 @@ class LocalQueryService:
             snapshot_schema_version=SCHEMA_VERSION,
             indexer_version=INDEXER_VERSION,
             graphify_format=GRAPHIFY_INTEROP_FORMAT,
+            export_schema_version=EXPORT_SCHEMA_VERSION,
+            manifest_schema_version=(
+                self._manifest.schema_version if self._manifest is not None else ""
+            ),
+            parser_set=parser_set,
+            export_formats=("dot", "mermaid"),
+            report_formats=("json", "markdown"),
+            snapshot_id=_snapshot_id(self._snapshot),
+            root_path=self._startup.root_path or self._snapshot.root_path,
+            snapshot_path=self._startup.snapshot_path,
         )
 
     def handle_request(self, request: ServiceRequest) -> tuple[ServiceResponse, bool]:
@@ -179,7 +199,18 @@ class LocalQueryService:
         if method == METHOD_CAPABILITIES:
             return self.capabilities().to_dict()
         if method == METHOD_HEALTH:
-            return health(self._snapshot).to_dict()
+            summary = health(self._snapshot).to_dict()
+            summary["service"] = {
+                "startup_mode": self._startup.mode,
+                "refresh_supported": self.refresh_supported,
+                "snapshot_id": _snapshot_id(self._snapshot),
+                "manifest_schema_version": (
+                    self._manifest.schema_version if self._manifest is not None else ""
+                ),
+                "parser_set": self.capabilities().parser_set,
+                "diagnostic_counts": _diagnostic_counts(self._snapshot),
+            }
+            return summary
         if method in {METHOD_QUERY, METHOD_EXPLAIN}:
             return self._query_result(request.params).to_dict()
         if method == METHOD_NEIGHBORHOOD:
@@ -250,6 +281,8 @@ class LocalQueryService:
             format_name = self._str_param(request.params, "format", default="dot")
             return {
                 "format": format_name,
+                "export_schema_version": EXPORT_SCHEMA_VERSION,
+                "snapshot_schema_version": self._snapshot.schema_version,
                 "text": render_graph_export(self._snapshot, format=format_name),
             }
         if method == METHOD_GRAPHIFY_EXPORT:
@@ -292,6 +325,8 @@ class LocalQueryService:
             "changed_paths": list(refresh.changed_paths),
             "unchanged_paths": list(refresh.unchanged_paths),
             "removed_paths": list(refresh.removed_paths),
+            "path_changes": [item.to_dict() for item in refresh.path_changes],
+            "snapshot_delta": refresh.snapshot_delta.to_dict(),
             "health": health(refresh.snapshot).to_dict(),
         }
 
@@ -382,6 +417,17 @@ class LocalQueryService:
         details: Mapping[str, Any] | None = None,
     ) -> PragmaGraphError:
         return PragmaGraphError(message, code=code, details=details or {})
+
+
+def _snapshot_id(snapshot: GraphSnapshot) -> str:
+    return hashlib.sha256(stable_dumps(snapshot).encode("utf-8")).hexdigest()[:16]
+
+
+def _diagnostic_counts(snapshot: GraphSnapshot) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for item in snapshot.omitted:
+        counts[item.reason] = counts.get(item.reason, 0) + 1
+    return dict(sorted(counts.items()))
 
 
 __all__ = ["LocalQueryService", "ServiceStartup"]

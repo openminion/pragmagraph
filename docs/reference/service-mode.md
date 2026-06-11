@@ -15,6 +15,15 @@ queries without reloading state on every call.
 The service is deliberately local-first and single-process. It does not claim
 HTTP, MCP, hosted transport, background watching, auth, or daemon supervision.
 
+Capabilities and health responses are intentionally richer than the MVP surface:
+
+- snapshot identity
+- manifest schema version
+- parser set
+- export and report format support
+- refresh support posture
+- diagnostic counts
+
 ## Request envelope
 
 One JSON object per line:
@@ -50,6 +59,10 @@ Failure:
 - `graphify_export`
 - `refresh` (root-backed startup only)
 - `shutdown`
+
+Root-backed `refresh` responses include deterministic `path_changes`,
+`snapshot_delta`, and `health` summaries so callers can inspect structural
+change without reparsing the whole service response by hand.
 
 ## Boundary
 

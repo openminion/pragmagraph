@@ -24,18 +24,21 @@ def test_benchmark_root_returns_expected_measurements() -> None:
     measurement_names = [item.name for item in report.measurements]
 
     assert report.namespace == "medium"
+    assert report.fixture_profile == "medium"
     assert report.node_count >= 12
     assert report.edge_count >= 12
     assert report.snapshot_bytes > 0
     assert measurement_names == [
         "index",
         "snapshot_serialize",
+        "refresh_unchanged",
         "query",
         "report",
         "export_dot",
         "export_mermaid",
         "graphify_export",
     ]
+    assert report.omitted_count >= 0
     assert all(item.duration_ms >= 0.0 for item in report.measurements)
 
 
@@ -50,6 +53,7 @@ def test_benchmark_markdown_renders_sections() -> None:
 
     assert "# PragmaGraph Benchmark Report" in markdown
     assert "## Measurements" in markdown
+    assert "`refresh_unchanged`" in markdown
     assert "`graphify_export`" in markdown
 
 
@@ -95,4 +99,5 @@ def test_cli_benchmark_emits_json_and_markdown() -> None:
     assert "# PragmaGraph Benchmark Report" in markdown
     assert payload["namespace"] == "medium"
     assert payload["node_count"] >= 12
+    assert payload["fixture_profile"] == "medium"
     assert payload["measurements"][0]["name"] == "index"

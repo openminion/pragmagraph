@@ -35,6 +35,7 @@ def test_pragmagraph_package_imports() -> None:
     assert "to_graphify_payload" in pragmagraph.graphify.__all__
     assert "benchmark_root" in pragmagraph.bench.__all__
     assert "GraphNode" in pragmagraph.models.__all__
+    assert "reverse_imports" in pragmagraph.query.__all__
     assert "query" in pragmagraph.query.__all__
     assert "build_report" in pragmagraph.report.__all__
     assert "load_snapshot" in pragmagraph.storage.__all__
@@ -76,11 +77,16 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "QueryResult",
         "RefreshManifest",
         "RefreshManifestEntry",
+        "RefreshPathChange",
         "RefreshResult",
         "SCHEMA_VERSION",
+        "SnapshotStructuralDelta",
         "SourceRef",
+        "backlinks",
         "benchmark_root",
         "build_report",
+        "diff_snapshots",
+        "impact",
         "index_path",
         "load_snapshot",
         "render_dot",
@@ -89,6 +95,8 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "render_mermaid",
         "render_markdown_report",
         "refresh_snapshot",
+        "reverse_dependencies",
+        "reverse_imports",
         "save_snapshot",
         "snapshot_from_graphify_payload",
         "stable_dumps",
@@ -123,10 +131,13 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     assert "render_mermaid" in export.__all__
     assert "snapshot_from_graphify_payload" in graphify.__all__
     assert "GraphSnapshot" in models.__all__
+    assert "OptionalParserFamily" in parsers.__all__
     assert "get_default_registry" in parsers.__all__
     assert "pragma_uri" in portability.__all__
+    assert "reverse_imports" in query.__all__
     assert "neighborhood" in query.__all__
     assert "render_markdown_report" in report.__all__
+    assert "diff_snapshots" in refresh.__all__
     assert "refresh_snapshot" in refresh.__all__
     assert "ScopePolicy" in security.__all__
     assert "LocalQueryService" in service.__all__

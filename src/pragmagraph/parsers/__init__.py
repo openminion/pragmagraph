@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import ast
+import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import Iterable, Protocol
 
 from pragmagraph.contracts import (
     EDGE_CALLS,
@@ -19,6 +20,10 @@ from pragmagraph.contracts import (
     NODE_PYTHON_METHOD,
     NODE_PYTHON_MODULE,
     NODE_PYTHON_SYMBOL,
+    NODE_SCRIPT_CLASS,
+    NODE_SCRIPT_EXPORT,
+    NODE_SCRIPT_FUNCTION,
+    NODE_SCRIPT_MODULE,
 )
 from pragmagraph.models import (
     GraphEdge,
@@ -31,6 +36,7 @@ from pragmagraph.portability import edge_id, node_id
 from pragmagraph.security import escape_label
 
 PARSER_VERSION = "pragmagraph.parser.v1alpha1"
+SCRIPT_PARSER_VERSION = "pragmagraph.script_lexical.v1alpha1"
 
 
 class BuiltInParser(Protocol):
@@ -47,16 +53,44 @@ class BuiltInParser(Protocol):
 
 
 @dataclass(frozen=True)
+class OptionalParserFamily:
+    """Optional parser family declaration for known-but-unavailable suffixes."""
+
+    name: str
+    suffixes: frozenset[str]
+    dependency: str = ""
+
+
+@dataclass(frozen=True)
 class ParserRegistry:
     """Suffix-based parser registry."""
 
     parsers: tuple[BuiltInParser, ...]
+    optional_families: tuple[OptionalParserFamily, ...] = ()
 
     def parser_for(self, path: str | Path) -> BuiltInParser | None:
         suffix = Path(path).suffix.lower()
         for parser in self.parsers:
             if suffix in parser.suffixes:
                 return parser
+        return None
+
+    def unavailable_parser_diagnostic(
+        self, path: str | Path, *, rel: str
+    ) -> ParserDiagnostic | None:
+        suffix = Path(path).suffix.lower()
+        for family in self.optional_families:
+            if suffix in family.suffixes:
+                return ParserDiagnostic(
+                    "optional_parser_unavailable",
+                    "optional parser family is unavailable in the current environment",
+                    rel,
+                    details={
+                        "parser_family": family.name,
+                        "dependency": family.dependency,
+                        "suffix": suffix,
+                    },
+                )
         return None
 
 
@@ -117,6 +151,260 @@ class PythonAstParser:
             nodes=tuple(sorted(nodes.values(), key=lambda node: node.id)),
             edges=tuple(sorted(edges.values(), key=lambda edge: edge.id)),
         )
+
+    @staticmethod
+    def _add_node(nodes: dict[str, GraphNode], node: GraphNode) -> None:
+        nodes.setdefault(node.id, node)
+
+    @staticmethod
+    def _add_edge(edges: dict[str, GraphEdge], edge: GraphEdge) -> None:
+        edges.setdefault(edge.id, edge)
+
+
+class ScriptLexicalParser:
+    """Deterministic lexical parser for JS/TS module structure."""
+
+    name = "script_lexical"
+    version = SCRIPT_PARSER_VERSION
+    suffixes = frozenset({".cjs", ".js", ".jsx", ".mjs", ".ts", ".tsx"})
+
+    _IMPORT_FROM_RE = re.compile(
+        r"""^\s*import\s+(?:type\s+)?(?:.+?\s+from\s+)?["']([^"']+)["']""",
+        re.MULTILINE,
+    )
+    _REQUIRE_RE = re.compile(r"""require\(\s*["']([^"']+)["']\s*\)""")
+    _CLASS_RE = re.compile(
+        r"""^\s*(?:export\s+default\s+|export\s+)?class\s+([A-Za-z_$][A-Za-z0-9_$]*)""",
+        re.MULTILINE,
+    )
+    _FUNCTION_RE = re.compile(
+        r"""^\s*(?:export\s+default\s+|export\s+)?(?:async\s+)?function\s+([A-Za-z_$][A-Za-z0-9_$]*)""",
+        re.MULTILINE,
+    )
+    _CONST_EXPORT_RE = re.compile(
+        r"""^\s*export\s+(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)""",
+        re.MULTILINE,
+    )
+    _NAMED_EXPORT_RE = re.compile(r"""^\s*export\s*\{\s*([^}]+)\s*\}""", re.MULTILINE)
+
+    def parse(
+        self, *, namespace: str, rel: str, file_id: str, text: str
+    ) -> ParserResult:
+        nodes: dict[str, GraphNode] = {}
+        edges: dict[str, GraphEdge] = {}
+        module_id = node_id(namespace, NODE_SCRIPT_MODULE, rel)
+        module_name = _module_name(rel)
+        self._add_node(
+            nodes,
+            GraphNode(
+                id=module_id,
+                kind=NODE_SCRIPT_MODULE,
+                label=Path(rel).stem,
+                source_ref=SourceRef(path=rel, line=1),
+                metadata={
+                    "module_name": module_name,
+                    "language": _script_language(rel),
+                    "parser": self.name,
+                    "parser_version": self.version,
+                },
+            ),
+        )
+        self._add_edge(
+            edges,
+            GraphEdge(
+                id=edge_id(namespace, file_id, EDGE_DEFINES, module_id),
+                kind=EDGE_DEFINES,
+                source_id=file_id,
+                target_id=module_id,
+                source_ref=SourceRef(path=rel, line=1),
+            ),
+        )
+        for line_number, line in enumerate(text.splitlines(), start=1):
+            self._parse_imports(
+                namespace, rel, file_id, line, line_number, nodes, edges
+            )
+            self._parse_symbols(
+                namespace, rel, file_id, module_id, line, line_number, nodes, edges
+            )
+        return ParserResult(
+            nodes=tuple(sorted(nodes.values(), key=lambda node: node.id)),
+            edges=tuple(sorted(edges.values(), key=lambda edge: edge.id)),
+        )
+
+    def _parse_imports(
+        self,
+        namespace: str,
+        rel: str,
+        file_id: str,
+        line: str,
+        line_number: int,
+        nodes: dict[str, GraphNode],
+        edges: dict[str, GraphEdge],
+    ) -> None:
+        for pattern in (self._IMPORT_FROM_RE, self._REQUIRE_RE):
+            for match in pattern.finditer(line):
+                module = match.group(1).strip()
+                import_id = node_id(namespace, NODE_IMPORT, f"import:{rel}:{module}")
+                source_ref = SourceRef(path=rel, line=line_number)
+                self._add_node(
+                    nodes,
+                    GraphNode(
+                        id=import_id,
+                        kind=NODE_IMPORT,
+                        label=module,
+                        source_ref=source_ref,
+                        metadata={
+                            "external": not module.startswith((".", "/")),
+                            "language": _script_language(rel),
+                            "source_path": rel,
+                            "parser": self.name,
+                            "parser_version": self.version,
+                        },
+                    ),
+                )
+                self._add_edge(
+                    edges,
+                    GraphEdge(
+                        id=edge_id(namespace, file_id, EDGE_IMPORTS, import_id),
+                        kind=EDGE_IMPORTS,
+                        source_id=file_id,
+                        target_id=import_id,
+                        source_ref=source_ref,
+                    ),
+                )
+
+    def _parse_symbols(
+        self,
+        namespace: str,
+        rel: str,
+        file_id: str,
+        module_id: str,
+        line: str,
+        line_number: int,
+        nodes: dict[str, GraphNode],
+        edges: dict[str, GraphEdge],
+    ) -> None:
+        source_ref = SourceRef(path=rel, line=line_number)
+        symbol_defs: list[tuple[str, str]] = []
+        class_match = self._CLASS_RE.match(line)
+        if class_match:
+            symbol_defs.append((class_match.group(1), NODE_SCRIPT_CLASS))
+        function_match = self._FUNCTION_RE.match(line)
+        if function_match:
+            symbol_defs.append((function_match.group(1), NODE_SCRIPT_FUNCTION))
+        const_match = self._CONST_EXPORT_RE.match(line)
+        if const_match:
+            symbol_defs.append((const_match.group(1), NODE_SCRIPT_EXPORT))
+        for label, kind in symbol_defs:
+            symbol_id = node_id(namespace, kind, f"{rel}:{label}")
+            export_kind = "export" if line.lstrip().startswith("export") else "local"
+            self._add_node(
+                nodes,
+                GraphNode(
+                    id=symbol_id,
+                    kind=kind,
+                    label=label,
+                    source_ref=source_ref,
+                    text=label,
+                    metadata={
+                        "qualified_name": label,
+                        "module_id": module_id,
+                        "module_name": _module_name(rel),
+                        "language": _script_language(rel),
+                        "export_kind": export_kind,
+                        "parser": self.name,
+                        "parser_version": self.version,
+                    },
+                ),
+            )
+            self._add_edge(
+                edges,
+                GraphEdge(
+                    id=edge_id(namespace, file_id, EDGE_DEFINES, symbol_id),
+                    kind=EDGE_DEFINES,
+                    source_id=file_id,
+                    target_id=symbol_id,
+                    source_ref=source_ref,
+                ),
+            )
+            self._add_edge(
+                edges,
+                GraphEdge(
+                    id=edge_id(namespace, module_id, EDGE_PARENT_SYMBOL, symbol_id),
+                    kind=EDGE_PARENT_SYMBOL,
+                    source_id=module_id,
+                    target_id=symbol_id,
+                    source_ref=source_ref,
+                ),
+            )
+            if export_kind == "export":
+                export_id = node_id(
+                    namespace, NODE_SCRIPT_EXPORT, f"{rel}:export:{label}"
+                )
+                self._add_node(
+                    nodes,
+                    GraphNode(
+                        id=export_id,
+                        kind=NODE_SCRIPT_EXPORT,
+                        label=label,
+                        source_ref=source_ref,
+                        text=label,
+                        metadata={
+                            "qualified_name": label,
+                            "module_id": module_id,
+                            "module_name": _module_name(rel),
+                            "language": _script_language(rel),
+                            "export_kind": "direct",
+                            "parser": self.name,
+                            "parser_version": self.version,
+                        },
+                    ),
+                )
+                self._add_edge(
+                    edges,
+                    GraphEdge(
+                        id=edge_id(namespace, symbol_id, EDGE_DEFINES, export_id),
+                        kind=EDGE_DEFINES,
+                        source_id=symbol_id,
+                        target_id=export_id,
+                        source_ref=source_ref,
+                    ),
+                )
+        named_export_match = self._NAMED_EXPORT_RE.match(line)
+        if named_export_match:
+            for item in _parse_named_exports(named_export_match.group(1)):
+                export_id = node_id(
+                    namespace, NODE_SCRIPT_EXPORT, f"{rel}:export:{item}"
+                )
+                self._add_node(
+                    nodes,
+                    GraphNode(
+                        id=export_id,
+                        kind=NODE_SCRIPT_EXPORT,
+                        label=item,
+                        source_ref=source_ref,
+                        text=item,
+                        metadata={
+                            "qualified_name": item,
+                            "module_id": module_id,
+                            "module_name": _module_name(rel),
+                            "language": _script_language(rel),
+                            "export_kind": "named",
+                            "parser": self.name,
+                            "parser_version": self.version,
+                        },
+                    ),
+                )
+                self._add_edge(
+                    edges,
+                    GraphEdge(
+                        id=edge_id(namespace, file_id, EDGE_DEFINES, export_id),
+                        kind=EDGE_DEFINES,
+                        source_id=file_id,
+                        target_id=export_id,
+                        source_ref=source_ref,
+                    ),
+                )
 
     @staticmethod
     def _add_node(nodes: dict[str, GraphNode], node: GraphNode) -> None:
@@ -329,15 +617,33 @@ def _module_name(rel: str) -> str:
     return ".".join(parts) or path.stem
 
 
+def _script_language(rel: str) -> str:
+    suffix = Path(rel).suffix.lower()
+    return "typescript" if suffix in {".ts", ".tsx"} else "javascript"
+
+
+def _parse_named_exports(value: str) -> Iterable[str]:
+    for item in value.split(","):
+        candidate = item.strip()
+        if not candidate:
+            continue
+        left = candidate.split(" as ", 1)[0].strip()
+        if left:
+            yield left
+
+
 def get_default_registry() -> ParserRegistry:
     """Return the built-in parser registry."""
-    return ParserRegistry(parsers=(PythonAstParser(),))
+    return ParserRegistry(parsers=(PythonAstParser(), ScriptLexicalParser()))
 
 
 __all__ = [
     "BuiltInParser",
+    "OptionalParserFamily",
     "PARSER_VERSION",
     "ParserRegistry",
     "PythonAstParser",
+    "SCRIPT_PARSER_VERSION",
+    "ScriptLexicalParser",
     "get_default_registry",
 ]

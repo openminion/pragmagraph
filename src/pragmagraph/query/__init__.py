@@ -45,6 +45,22 @@ def _incident_edges(snapshot: GraphSnapshot, node_id: str) -> tuple[GraphEdge, .
     )
 
 
+def _matches_edge_filters(
+    edge: GraphEdge,
+    *,
+    edge_kinds: tuple[str, ...] = (),
+) -> bool:
+    return not edge_kinds or edge.kind in edge_kinds
+
+
+def _matches_node_filters(
+    node: GraphNode,
+    *,
+    node_kinds: tuple[str, ...] = (),
+) -> bool:
+    return not node_kinds or node.kind in node_kinds
+
+
 def _score_node(
     node: GraphNode, request: QueryRequest
 ) -> tuple[float, QueryExplanation]:
@@ -149,6 +165,8 @@ def neighborhood(
     *,
     depth: int = 1,
     max_results: int = 10,
+    edge_kinds: tuple[str, ...] = (),
+    node_kinds: tuple[str, ...] = (),
 ) -> QueryResult:
     """Return cited nodes around ``node_id``."""
     node_map = snapshot.node_map()
@@ -160,12 +178,16 @@ def neighborhood(
         if current_depth >= depth:
             continue
         for edge in _incident_edges(snapshot, current):
+            if not _matches_edge_filters(edge, edge_kinds=edge_kinds):
+                continue
             other = edge.target_id if edge.source_id == current else edge.source_id
             if other in visited:
                 continue
             visited.add(other)
             node = node_map.get(other)
             if node is None:
+                continue
+            if not _matches_node_filters(node, node_kinds=node_kinds):
                 continue
             found.append(node)
             queue.append((other, current_depth + 1))
@@ -201,11 +223,15 @@ def path(
     target_id: str,
     *,
     max_hops: int = 4,
+    edge_kinds: tuple[str, ...] = (),
+    node_kinds: tuple[str, ...] = (),
 ) -> PathResult:
     """Find one deterministic bounded path between two nodes."""
     node_map = snapshot.node_map()
     adjacency: dict[str, list[tuple[str, GraphEdge]]] = {}
     for edge in sorted(snapshot.edges, key=lambda item: item.id):
+        if not _matches_edge_filters(edge, edge_kinds=edge_kinds):
+            continue
         adjacency.setdefault(edge.source_id, []).append((edge.target_id, edge))
         adjacency.setdefault(edge.target_id, []).append((edge.source_id, edge))
     queue: deque[tuple[str, list[GraphEdge]]] = deque([(source_id, [])])
@@ -218,10 +244,13 @@ def path(
             for edge in edge_path:
                 cursor = edge.target_id if edge.source_id == cursor else edge.source_id
                 ids.append(cursor)
+            nodes = tuple(node_map[node] for node in ids if node in node_map)
+            if node_kinds and any(node.kind not in node_kinds for node in nodes):
+                continue
             return PathResult(
                 source_id=source_id,
                 target_id=target_id,
-                nodes=tuple(node_map[node] for node in ids if node in node_map),
+                nodes=nodes,
                 edges=tuple(edge_path),
             )
         if len(edge_path) >= max_hops:
@@ -244,6 +273,228 @@ def path(
     )
 
 
+def reverse_dependencies(
+    snapshot: GraphSnapshot,
+    target_id: str,
+    *,
+    max_results: int = 10,
+) -> QueryResult:
+    """Return config nodes that depend on ``target_id``."""
+    node_map = snapshot.node_map()
+    hits = []
+    for edge in sorted(snapshot.edges, key=lambda item: item.id):
+        if edge.kind != "depends_on" or edge.target_id != target_id:
+            continue
+        node = node_map.get(edge.source_id)
+        if node is None:
+            continue
+        hits.append(
+            QueryHit(
+                node=node,
+                score=100.0,
+                edges=(edge,),
+                snippet=_snippet(node),
+                explanation=QueryExplanation(
+                    matched_fields=("edge.depends_on",),
+                    score_parts={"reverse_dependency": 100.0},
+                ),
+            )
+        )
+    return QueryResult(
+        query=target_id,
+        hits=tuple(hits[:max_results]),
+        omitted=_max_results_omitted(target_id, len(hits), max_results),
+        diagnostics={"resolution_kind": "static_reverse_dependency"},
+    )
+
+
+def reverse_imports(
+    snapshot: GraphSnapshot,
+    target_id: str,
+    *,
+    max_results: int = 10,
+) -> QueryResult:
+    """Return importer files for one resolved module target."""
+    node_map = snapshot.node_map()
+    importer_ids: list[str] = []
+    for edge in sorted(snapshot.edges, key=lambda item: item.id):
+        if (
+            edge.kind == "imports"
+            and edge.target_id == target_id
+            and edge.metadata.get("resolved") is True
+        ):
+            import_node = node_map.get(edge.source_id)
+            if import_node is None:
+                continue
+            source_path = str(import_node.metadata.get("source_path", "") or "")
+            for candidate_edge in _incident_edges(snapshot, import_node.id):
+                if (
+                    candidate_edge.kind == "imports"
+                    and candidate_edge.source_id != import_node.id
+                ):
+                    importer_ids.append(candidate_edge.source_id)
+            if source_path:
+                for node in snapshot.nodes:
+                    if node.kind == "file" and node.source_ref.path == source_path:
+                        importer_ids.append(node.id)
+    hits = []
+    seen: set[str] = set()
+    for importer_id in importer_ids:
+        if importer_id in seen:
+            continue
+        seen.add(importer_id)
+        node = node_map.get(importer_id)
+        if node is None:
+            continue
+        hits.append(
+            QueryHit(
+                node=node,
+                score=100.0,
+                edges=_incident_edges(snapshot, node.id),
+                snippet=_snippet(node),
+                explanation=QueryExplanation(
+                    matched_fields=("edge.imports",),
+                    score_parts={"resolved_reverse_import": 100.0},
+                ),
+            )
+        )
+    return QueryResult(
+        query=target_id,
+        hits=tuple(hits[:max_results]),
+        omitted=_max_results_omitted(target_id, len(hits), max_results),
+        diagnostics={"resolution_kind": "static_resolved_import"},
+    )
+
+
+def backlinks(
+    snapshot: GraphSnapshot,
+    target_id: str,
+    *,
+    max_results: int = 10,
+) -> QueryResult:
+    """Return document/file nodes that link to ``target_id``."""
+    node_map = snapshot.node_map()
+    hits = []
+    for edge in sorted(snapshot.edges, key=lambda item: item.id):
+        if edge.kind not in {"references_doc", "references_section"}:
+            continue
+        if edge.target_id != target_id:
+            continue
+        node = node_map.get(edge.source_id)
+        if node is None:
+            continue
+        hits.append(
+            QueryHit(
+                node=node,
+                score=100.0,
+                edges=(edge,),
+                snippet=_snippet(node),
+                explanation=QueryExplanation(
+                    matched_fields=("edge.backlink",),
+                    score_parts={"backlink": 100.0},
+                ),
+            )
+        )
+    return QueryResult(
+        query=target_id,
+        hits=tuple(hits[:max_results]),
+        omitted=_max_results_omitted(target_id, len(hits), max_results),
+        diagnostics={"resolution_kind": "static_backlink"},
+    )
+
+
+def impact(
+    snapshot: GraphSnapshot,
+    node_id: str,
+    *,
+    max_results: int = 10,
+) -> QueryResult:
+    """Return high-confidence inbound impact for one node."""
+    node_map = snapshot.node_map()
+    hits: list[QueryHit] = []
+    omitted: list[OmittedDiagnostic] = []
+    for edge in sorted(snapshot.edges, key=lambda item: item.id):
+        if edge.target_id != node_id:
+            continue
+        resolution_kind = _edge_resolution_kind(edge, node_map)
+        if resolution_kind in {"heuristic", "unsupported"}:
+            omitted.append(
+                OmittedDiagnostic(
+                    reason="impact_edge_unresolved",
+                    item_id=edge.id,
+                    details={
+                        "edge_kind": edge.kind,
+                        "resolution_kind": resolution_kind,
+                    },
+                )
+            )
+            continue
+        node = node_map.get(edge.source_id)
+        if node is None:
+            continue
+        hits.append(
+            QueryHit(
+                node=node,
+                score=100.0,
+                edges=(edge,),
+                snippet=_snippet(node),
+                explanation=QueryExplanation(
+                    matched_fields=(f"edge.{edge.kind}",),
+                    score_parts={"impact": 100.0},
+                    exact_match=resolution_kind,
+                ),
+            )
+        )
+    if len(hits) > max_results:
+        omitted.extend(_max_results_omitted(node_id, len(hits), max_results))
+    return QueryResult(
+        query=node_id,
+        hits=tuple(hits[:max_results]),
+        omitted=tuple(omitted),
+        diagnostics={"resolution_kind": "high_confidence_static_only"},
+    )
+
+
+def _edge_resolution_kind(
+    edge: GraphEdge,
+    node_map: dict[str, GraphNode],
+) -> str:
+    if edge.kind in {"depends_on", "references_doc", "references_section"}:
+        return "static"
+    if edge.kind == "imports":
+        return "static" if edge.metadata.get("resolved") is True else "heuristic"
+    if edge.kind in {"defines", "parent_symbol", "contains"}:
+        return "static"
+    if edge.kind in {"calls", "inherits"}:
+        source = node_map.get(edge.source_id)
+        target = node_map.get(edge.target_id)
+        if (
+            source is not None
+            and target is not None
+            and not target.metadata.get("external")
+            and source.source_ref.path == target.source_ref.path
+        ):
+            return "static"
+        return "heuristic"
+    return "unsupported"
+
+
+def _max_results_omitted(
+    item_id: str,
+    total: int,
+    max_results: int,
+) -> tuple[OmittedDiagnostic, ...]:
+    if total <= max_results:
+        return ()
+    return (
+        OmittedDiagnostic(
+            reason="max_results",
+            item_id=item_id,
+            details={"omitted": total - max_results},
+        ),
+    )
+
+
 def health(snapshot: GraphSnapshot) -> HealthSummary:
     """Return a deterministic snapshot health summary."""
     return HealthSummary(
@@ -258,8 +509,12 @@ def health(snapshot: GraphSnapshot) -> HealthSummary:
 
 
 __all__ = [
+    "backlinks",
     "health",
+    "impact",
     "neighborhood",
     "path",
     "query",
+    "reverse_dependencies",
+    "reverse_imports",
 ]

@@ -31,6 +31,7 @@ target that exercises only the public package surface.
 | --- | --- | --- |
 | Semantic MVP | `pragmagraph/tests/test_semantic_mvp.py` | `openminion/tests/knowledge_graphs/test_pragmagraph_adapter.py` |
 | Graphify-parity package expansion | `pragmagraph/tests/test_graphify_parity_expansion.py` | `openminion/tests/knowledge_graphs/test_pragmagraph_provider_swap.py` |
+| Core features depth lane | `pragmagraph/tests/test_core_features.py` | `n/a` |
 | Structural report mode | `pragmagraph/tests/test_report.py` | `n/a` |
 | Graph text export mode | `pragmagraph/tests/test_export.py` | `n/a` |
 | Graphify-shaped JSON interop | `pragmagraph/tests/test_graphify_interop.py` | `n/a` |

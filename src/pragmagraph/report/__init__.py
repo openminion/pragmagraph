@@ -44,6 +44,8 @@ class GraphReportSummary:
     node_count: int
     edge_count: int
     omitted_count: int
+    dependency_count: int = 0
+    config_count: int = 0
     node_kinds: Mapping[str, int] = field(default_factory=dict)
     edge_kinds: Mapping[str, int] = field(default_factory=dict)
     omitted_reasons: Mapping[str, int] = field(default_factory=dict)
@@ -64,6 +66,8 @@ class GraphReportSummary:
             "node_count": self.node_count,
             "edge_count": self.edge_count,
             "omitted_count": self.omitted_count,
+            "dependency_count": self.dependency_count,
+            "config_count": self.config_count,
             "node_kinds": dict(self.node_kinds),
             "edge_kinds": dict(self.edge_kinds),
             "omitted_reasons": dict(self.omitted_reasons),
@@ -141,16 +145,22 @@ class GraphReport:
 
     summary: GraphReportSummary
     top_nodes: tuple[GraphReportNode, ...] = ()
+    hotspots: tuple[GraphReportNode, ...] = ()
     orphan_nodes: tuple[GraphReportFinding, ...] = ()
     unresolved_items: tuple[GraphReportFinding, ...] = ()
     dependencies: tuple[GraphReportDependency, ...] = ()
+    structural_summary: tuple[str, ...] = ()
     suggested_queries: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "top_nodes", tuple(self.top_nodes))
+        object.__setattr__(self, "hotspots", tuple(self.hotspots))
         object.__setattr__(self, "orphan_nodes", tuple(self.orphan_nodes))
         object.__setattr__(self, "unresolved_items", tuple(self.unresolved_items))
         object.__setattr__(self, "dependencies", tuple(self.dependencies))
+        object.__setattr__(
+            self, "structural_summary", _tuple_str(self.structural_summary)
+        )
         object.__setattr__(
             self, "suggested_queries", _tuple_str(self.suggested_queries)
         )
@@ -159,9 +169,11 @@ class GraphReport:
         return {
             "summary": self.summary.to_dict(),
             "top_nodes": [item.to_dict() for item in self.top_nodes],
+            "hotspots": [item.to_dict() for item in self.hotspots],
             "orphan_nodes": [item.to_dict() for item in self.orphan_nodes],
             "unresolved_items": [item.to_dict() for item in self.unresolved_items],
             "dependencies": [item.to_dict() for item in self.dependencies],
+            "structural_summary": list(self.structural_summary),
             "suggested_queries": list(self.suggested_queries),
         }
 
@@ -212,6 +224,12 @@ def build_report(snapshot: GraphSnapshot, *, top_n: int = 10) -> GraphReport:
     )
     unresolved_items = tuple(_finding_from_omitted(item) for item in snapshot.omitted)
     dependencies = _dependencies(snapshot, node_map)
+    structural_summary = _structural_summary(
+        top_nodes=top_nodes,
+        orphan_nodes=orphan_nodes,
+        unresolved_items=unresolved_items,
+        dependencies=dependencies,
+    )
     suggested_queries = _suggested_queries(snapshot, dependencies, unresolved_items)
 
     return GraphReport(
@@ -223,14 +241,18 @@ def build_report(snapshot: GraphSnapshot, *, top_n: int = 10) -> GraphReport:
             node_count=len(snapshot.nodes),
             edge_count=len(snapshot.edges),
             omitted_count=len(snapshot.omitted),
+            dependency_count=len(dependencies),
+            config_count=sum(1 for node in snapshot.nodes if node.kind == "config"),
             node_kinds=node_kinds,
             edge_kinds=edge_kinds,
             omitted_reasons=omitted_reasons,
         ),
         top_nodes=top_nodes,
+        hotspots=top_nodes,
         orphan_nodes=orphan_nodes,
         unresolved_items=unresolved_items,
         dependencies=dependencies,
+        structural_summary=structural_summary,
         suggested_queries=suggested_queries,
     )
 
@@ -248,6 +270,8 @@ def render_markdown_report(report: GraphReport) -> str:
         f"- Node count: `{summary.node_count}`",
         f"- Edge count: `{summary.edge_count}`",
         f"- Omitted count: `{summary.omitted_count}`",
+        f"- Dependency count: `{summary.dependency_count}`",
+        f"- Config count: `{summary.config_count}`",
         "",
         "## Node Kinds",
         "",
@@ -257,9 +281,9 @@ def render_markdown_report(report: GraphReport) -> str:
     lines.extend(_markdown_count_lines(summary.edge_kinds))
     lines.extend(["", "## Omitted Reasons", ""])
     lines.extend(_markdown_count_lines(summary.omitted_reasons))
-    lines.extend(["", "## Top Nodes", ""])
-    if report.top_nodes:
-        for item in report.top_nodes:
+    lines.extend(["", "## Hotspots", ""])
+    if report.hotspots:
+        for item in report.hotspots:
             path = item.source_ref.path or item.node_id
             lines.append(
                 f"- `{item.label}` ({item.kind}) in `{path}` "
@@ -279,6 +303,12 @@ def render_markdown_report(report: GraphReport) -> str:
             path = item.source_ref.path or str(item.details.get("source_path") or "")
             suffix = f" via `{path}`" if path else ""
             lines.append(f"- `{item.category}`: `{item.item_id}`{suffix}")
+    else:
+        lines.append("- none")
+    lines.extend(["", "## Structural Summary", ""])
+    if report.structural_summary:
+        for item in report.structural_summary:
+            lines.append(f"- {item}")
     else:
         lines.append("- none")
     lines.extend(["", "## Suggested Queries", ""])
@@ -372,6 +402,25 @@ def _suggested_queries(
     if any(item.category.startswith("unresolved_") for item in unresolved_items):
         suggestions.append("What unresolved imports or doc links exist?")
     return tuple(dict.fromkeys(suggestions))
+
+
+def _structural_summary(
+    *,
+    top_nodes: tuple[GraphReportNode, ...],
+    orphan_nodes: tuple[GraphReportFinding, ...],
+    unresolved_items: tuple[GraphReportFinding, ...],
+    dependencies: tuple[GraphReportDependency, ...],
+) -> tuple[str, ...]:
+    lines: list[str] = []
+    if top_nodes:
+        first = top_nodes[0]
+        lines.append(
+            f"Top hotspot by graph degree is `{first.label}` with degree {first.degree}."
+        )
+    lines.append(f"Orphan node count: {len(orphan_nodes)}.")
+    lines.append(f"Unresolved structural item count: {len(unresolved_items)}.")
+    lines.append(f"Declared dependency count: {len(dependencies)}.")
+    return tuple(lines)
 
 
 def _markdown_count_lines(counts: Mapping[str, int]) -> list[str]:

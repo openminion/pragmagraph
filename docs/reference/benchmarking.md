@@ -31,22 +31,30 @@ pragmagraph benchmark /path/to/repo \
 The current benchmark report times:
 
 1. indexing,
-2. snapshot serialization,
-3. query execution,
-4. report generation,
-5. DOT export,
-6. Mermaid export,
-7. Graphify-shaped JSON export.
+2. unchanged refresh,
+3. snapshot serialization,
+4. query execution,
+5. report generation,
+6. DOT export,
+7. Mermaid export,
+8. Graphify-shaped JSON export.
 
-The report also records total node count, edge count, and snapshot size in
-bytes.
+The report also records:
+
+1. total node count,
+2. total edge count,
+3. snapshot size in bytes,
+4. fixture profile (`small`, `medium`, or `large`),
+5. omitted count,
+6. omitted rate.
 
 ## Fixture policy
 
 `tests/fixtures/repos/medium_repo/` is the current repo-local regression
 fixture for benchmark and readiness checks. It is intentionally larger and more
 connected than `tiny_repo` and `mixed_repo`: nested Python modules, multiple
-docs, and multiple config files.
+docs, multiple config files, and mixed package relationships that exercise
+query, report, export, and refresh behavior together.
 
 ## Readiness note
 

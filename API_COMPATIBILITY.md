@@ -51,12 +51,15 @@ The following top-level exports are part of the current public contract:
 - Graphify-shaped JSON interop helpers `to_graphify_payload`,
   `snapshot_from_graphify_payload`, and `GRAPHIFY_INTEROP_FORMAT`
 - structural report helpers `build_report` and `render_markdown_report`
-- refresh helper `refresh_snapshot`
+- refresh helpers `refresh_snapshot` and `diff_snapshots`
+- structural navigation helpers `reverse_imports`, `reverse_dependencies`,
+  `backlinks`, and `impact`
 - service contracts `ServiceRequest`, `ServiceResponse`, and `LocalQueryService`
 - typed UI boundary contracts such as `UiTransportBoundary`,
   `UiScreenDefinition`, and `build_ui_screen_manifest`
 - parser/scope DTOs such as `ParserDiagnostic`, `ParserResult`,
-  `RefreshManifest`, `RefreshResult`, and `QueryExplanation`
+  `RefreshManifest`, `RefreshResult`, `RefreshPathChange`,
+  `SnapshotStructuralDelta`, and `QueryExplanation`
 - report DTOs such as `GraphReport`, `GraphReportSummary`,
   `GraphReportNode`, `GraphReportFinding`, and `GraphReportDependency`
 
@@ -107,8 +110,10 @@ Public-contract confidence should be enforced by tests that cover:
 7. deterministic report JSON/Markdown behavior over fixture snapshots,
 8. deterministic DOT/Mermaid export behavior over fixture snapshots,
 9. Graphify-shaped JSON import/export behavior over fixture snapshots,
-10. benchmark behavior over the package-owned medium fixture.
-11. deterministic stdio service behavior for snapshot-backed and root-backed
+10. mixed-language parser coverage and explicit optional-parser diagnostics,
+11. incremental refresh manifest/delta determinism over repeated refreshes,
+12. benchmark behavior over the package-owned medium fixture,
+13. deterministic stdio service behavior for snapshot-backed and root-backed
     repeated-request sessions.
 
 ## Non-goals

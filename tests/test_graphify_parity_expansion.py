@@ -123,12 +123,17 @@ def test_refresh_snapshot_reports_changed_unchanged_and_removed_paths(
     (root / "package.json").unlink()
 
     second = refresh_snapshot(
-        root, namespace="fixture", previous_manifest=first.manifest
+        root,
+        namespace="fixture",
+        previous_manifest=first.manifest,
+        previous_snapshot=first.snapshot,
     )
 
     assert "README.md" in second.changed_paths
     assert "src/app.py" in second.unchanged_paths
     assert "package.json" in second.removed_paths
+    assert any(item.status == "changed" for item in second.path_changes)
+    assert second.snapshot_delta.removed_node_ids
     assert second.snapshot.stats["parser_count"] >= 1
 
 
@@ -213,7 +218,10 @@ def test_expanded_handoff_fixture_contracts_are_stable(tmp_path: Path) -> None:
     (copy_root / "README.md").write_text("# Changed\n", encoding="utf-8")
     (copy_root / "package.json").unlink()
     second = refresh_snapshot(
-        copy_root, namespace="fixture", previous_manifest=first.manifest
+        copy_root,
+        namespace="fixture",
+        previous_manifest=first.manifest,
+        previous_snapshot=first.snapshot,
     )
 
     assert first_hit.node.kind == explain_contract["expected"]["first_hit_kind"]

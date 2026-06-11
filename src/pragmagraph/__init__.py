@@ -32,7 +32,9 @@ from pragmagraph.models import (
     QueryResult,
     RefreshManifest,
     RefreshManifestEntry,
+    RefreshPathChange,
     RefreshResult,
+    SnapshotStructuralDelta,
     SourceRef,
 )
 from pragmagraph.report import (
@@ -44,7 +46,8 @@ from pragmagraph.report import (
     build_report,
     render_markdown_report,
 )
-from pragmagraph.refresh import refresh_snapshot
+from pragmagraph.query import backlinks, impact, reverse_dependencies, reverse_imports
+from pragmagraph.refresh import diff_snapshots, refresh_snapshot
 from pragmagraph.storage import load_snapshot, save_snapshot, stable_dumps
 
 __version__ = "0.0.1"
@@ -96,13 +99,18 @@ __all__ = [
     "QueryResult",
     "RefreshManifest",
     "RefreshManifestEntry",
+    "RefreshPathChange",
     "RefreshResult",
     "SCHEMA_VERSION",
+    "SnapshotStructuralDelta",
     "STABLE_IMPORT_ROOTS",
     "SourceRef",
     "__version__",
+    "backlinks",
     "benchmark_root",
     "build_report",
+    "diff_snapshots",
+    "impact",
     "index_path",
     "load_snapshot",
     "render_dot",
@@ -111,6 +119,8 @@ __all__ = [
     "render_mermaid",
     "render_markdown_report",
     "refresh_snapshot",
+    "reverse_dependencies",
+    "reverse_imports",
     "save_snapshot",
     "snapshot_from_graphify_payload",
     "stable_dumps",

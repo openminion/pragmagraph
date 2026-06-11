@@ -224,6 +224,8 @@ def main(argv: list[str] | None = None) -> int:
                 "changed_paths": list(result.changed_paths),
                 "unchanged_paths": list(result.unchanged_paths),
                 "removed_paths": list(result.removed_paths),
+                "path_changes": [item.to_dict() for item in result.path_changes],
+                "snapshot_delta": result.snapshot_delta.to_dict(),
                 "health": health(result.snapshot).to_dict(),
             },
             as_json=args.json,

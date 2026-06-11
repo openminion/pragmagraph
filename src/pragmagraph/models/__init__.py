@@ -450,12 +450,16 @@ class RefreshManifestEntry:
     content_hash: str
     parser: str = ""
     parser_version: str = ""
+    size_bytes: int = 0
+    file_kind: str = ""
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "path", str(self.path))
         object.__setattr__(self, "content_hash", str(self.content_hash))
         object.__setattr__(self, "parser", str(self.parser or ""))
         object.__setattr__(self, "parser_version", str(self.parser_version or ""))
+        object.__setattr__(self, "size_bytes", max(0, int(self.size_bytes or 0)))
+        object.__setattr__(self, "file_kind", str(self.file_kind or ""))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -463,6 +467,8 @@ class RefreshManifestEntry:
             "content_hash": self.content_hash,
             "parser": self.parser,
             "parser_version": self.parser_version,
+            "size_bytes": self.size_bytes,
+            "file_kind": self.file_kind,
         }
 
     @classmethod
@@ -472,6 +478,8 @@ class RefreshManifestEntry:
             content_hash=str(payload.get("content_hash", "") or ""),
             parser=str(payload.get("parser", "") or ""),
             parser_version=str(payload.get("parser_version", "") or ""),
+            size_bytes=int(payload.get("size_bytes", 0) or 0),
+            file_kind=str(payload.get("file_kind", "") or ""),
         )
 
 
@@ -479,9 +487,13 @@ class RefreshManifestEntry:
 class RefreshManifest:
     """Deterministic content manifest used by refresh operations."""
 
+    schema_version: str = "pragmagraph.refresh_manifest.v2alpha1"
+    root_path: str = ""
     entries: tuple[RefreshManifestEntry, ...] = ()
 
     def __post_init__(self) -> None:
+        object.__setattr__(self, "schema_version", str(self.schema_version or ""))
+        object.__setattr__(self, "root_path", str(self.root_path or ""))
         object.__setattr__(
             self,
             "entries",
@@ -491,17 +503,99 @@ class RefreshManifest:
     def by_path(self) -> dict[str, RefreshManifestEntry]:
         return {entry.path: entry for entry in self.entries}
 
+    def parser_versions(self) -> tuple[str, ...]:
+        return tuple(
+            sorted(
+                {
+                    f"{entry.parser}:{entry.parser_version}"
+                    for entry in self.entries
+                    if entry.parser
+                }
+            )
+        )
+
     def to_dict(self) -> dict[str, Any]:
-        return {"entries": [entry.to_dict() for entry in self.entries]}
+        return {
+            "schema_version": self.schema_version,
+            "root_path": self.root_path,
+            "entries": [entry.to_dict() for entry in self.entries],
+        }
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, Any] | None) -> "RefreshManifest":
         return cls(
+            schema_version=str((payload or {}).get("schema_version", "") or ""),
+            root_path=str((payload or {}).get("root_path", "") or ""),
             entries=tuple(
                 RefreshManifestEntry.from_dict(item)
                 for item in (payload or {}).get("entries", ())
-            )
+            ),
         )
+
+
+@dataclass(frozen=True)
+class RefreshPathChange:
+    """Deterministic per-path refresh status."""
+
+    path: str
+    status: str
+    reasons: tuple[str, ...] = ()
+    previous_entry: RefreshManifestEntry | None = None
+    current_entry: RefreshManifestEntry | None = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "path", str(self.path or ""))
+        object.__setattr__(self, "status", str(self.status or ""))
+        object.__setattr__(self, "reasons", _tuple_str(self.reasons))
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "path": self.path,
+            "status": self.status,
+            "reasons": list(self.reasons),
+            "previous_entry": (
+                self.previous_entry.to_dict()
+                if self.previous_entry is not None
+                else None
+            ),
+            "current_entry": (
+                self.current_entry.to_dict() if self.current_entry is not None else None
+            ),
+        }
+
+
+@dataclass(frozen=True)
+class SnapshotStructuralDelta:
+    """Structural delta between two deterministic snapshots."""
+
+    added_node_ids: tuple[str, ...] = ()
+    removed_node_ids: tuple[str, ...] = ()
+    added_edge_ids: tuple[str, ...] = ()
+    removed_edge_ids: tuple[str, ...] = ()
+    added_omitted_ids: tuple[str, ...] = ()
+    removed_omitted_ids: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "added_node_ids", _tuple_str(self.added_node_ids))
+        object.__setattr__(self, "removed_node_ids", _tuple_str(self.removed_node_ids))
+        object.__setattr__(self, "added_edge_ids", _tuple_str(self.added_edge_ids))
+        object.__setattr__(self, "removed_edge_ids", _tuple_str(self.removed_edge_ids))
+        object.__setattr__(
+            self, "added_omitted_ids", _tuple_str(self.added_omitted_ids)
+        )
+        object.__setattr__(
+            self, "removed_omitted_ids", _tuple_str(self.removed_omitted_ids)
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "added_node_ids": list(self.added_node_ids),
+            "removed_node_ids": list(self.removed_node_ids),
+            "added_edge_ids": list(self.added_edge_ids),
+            "removed_edge_ids": list(self.removed_edge_ids),
+            "added_omitted_ids": list(self.added_omitted_ids),
+            "removed_omitted_ids": list(self.removed_omitted_ids),
+        }
 
 
 @dataclass(frozen=True)
@@ -513,11 +607,16 @@ class RefreshResult:
     changed_paths: tuple[str, ...] = ()
     unchanged_paths: tuple[str, ...] = ()
     removed_paths: tuple[str, ...] = ()
+    path_changes: tuple[RefreshPathChange, ...] = ()
+    snapshot_delta: SnapshotStructuralDelta = field(
+        default_factory=SnapshotStructuralDelta
+    )
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "changed_paths", _tuple_str(self.changed_paths))
         object.__setattr__(self, "unchanged_paths", _tuple_str(self.unchanged_paths))
         object.__setattr__(self, "removed_paths", _tuple_str(self.removed_paths))
+        object.__setattr__(self, "path_changes", tuple(self.path_changes))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -526,6 +625,8 @@ class RefreshResult:
             "changed_paths": list(self.changed_paths),
             "unchanged_paths": list(self.unchanged_paths),
             "removed_paths": list(self.removed_paths),
+            "path_changes": [item.to_dict() for item in self.path_changes],
+            "snapshot_delta": self.snapshot_delta.to_dict(),
         }
 
 
@@ -545,6 +646,8 @@ __all__ = [
     "QueryResult",
     "RefreshManifest",
     "RefreshManifestEntry",
+    "RefreshPathChange",
     "RefreshResult",
+    "SnapshotStructuralDelta",
     "SourceRef",
 ]

@@ -44,6 +44,10 @@ If the release changes the external consumer contract, also update:
 - `API_COMPATIBILITY.md`
 - `docs/README.md`
 - `src/pragmagraph/README.md`
+- `docs/reference/report-mode.md`
+- `docs/reference/export-mode.md`
+- `docs/reference/graphify-interop.md`
+- `docs/reference/benchmarking.md`
 - `docs/reference/service-mode.md`
 - `docs/reference/ui-contracts.md`
 

@@ -25,7 +25,22 @@ DEFAULT_IGNORES = frozenset(
 
 DEFAULT_MAX_FILE_BYTES = 1_000_000
 TEXT_SUFFIXES = frozenset(
-    {".json", ".md", ".py", ".rst", ".toml", ".txt", ".yaml", ".yml"}
+    {
+        ".cjs",
+        ".js",
+        ".json",
+        ".jsx",
+        ".md",
+        ".mjs",
+        ".py",
+        ".rst",
+        ".toml",
+        ".ts",
+        ".tsx",
+        ".txt",
+        ".yaml",
+        ".yml",
+    }
 )
 
 
