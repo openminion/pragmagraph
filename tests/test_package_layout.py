@@ -24,6 +24,7 @@ def test_docs_reference_surface_contains_expected_package_refs() -> None:
         "benchmarking.md",
         "certification-readiness-matrix.md",
         "export-mode.md",
+        "git-history-mode.md",
         "graphify-interop.md",
         "report-mode.md",
         "service-mode.md",

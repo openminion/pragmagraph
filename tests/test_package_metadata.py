@@ -29,6 +29,7 @@ def test_package_policy_and_release_automation_docs_exist() -> None:
     assert (root / "docs" / "reference" / "report-mode.md").is_file()
     assert (root / "docs" / "reference" / "export-mode.md").is_file()
     assert (root / "docs" / "reference" / "benchmarking.md").is_file()
+    assert (root / "docs" / "reference" / "git-history-mode.md").is_file()
     assert (root / "docs" / "reference" / "graphify-interop.md").is_file()
     assert (root / "docs" / "reference" / "service-mode.md").is_file()
     assert (root / "docs" / "reference" / "ui-contracts.md").is_file()
@@ -47,6 +48,9 @@ def test_package_readme_mentions_policy_and_quickstart() -> None:
     assert "pragmagraph report" in readme
     assert "pragmagraph export" in readme
     assert "pragmagraph benchmark" in readme
+    assert "pragmagraph git-commits-for-path" in readme
+    assert "pragmagraph git-files-for-commit" in readme
+    assert "pragmagraph git-commits-for-symbol" in readme
     assert "pragmagraph graphify-export" in readme
     assert "pragmagraph serve" in readme
     assert "pragmagraph.ui" in readme

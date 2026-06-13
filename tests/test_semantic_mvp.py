@@ -193,6 +193,7 @@ def test_openminion_handoff_artifacts_match_fixture_contract() -> None:
     assert capabilities["provider"] == "pragmagraph"
     assert capabilities["semantic_contract"] is True
     assert "query" in capabilities["capabilities"]
+    assert "git_history" in capabilities["capabilities"]
     assert result.hits[0].node.kind == expected["expected"]["first_hit_kind"]
     assert result.hits[0].node.label == expected["expected"]["first_hit_label"]
     assert result.hits[0].node.source_ref.path == expected["expected"]["first_hit_path"]

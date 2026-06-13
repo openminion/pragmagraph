@@ -8,6 +8,12 @@ import tomllib
 from pathlib import Path
 from typing import Any, Iterable
 
+from pragmagraph.adapters.git_history import (
+    DEFAULT_GIT_IDENTITY_MODE,
+    SUPPORTED_GIT_IDENTITY_MODES,
+    collect_git_overlay,
+    validate_git_identity_mode,
+)
 from pragmagraph.contracts import (
     EDGE_CONTAINS,
     EDGE_DEFINES,
@@ -109,11 +115,13 @@ def index_path(
     created_at: str = "",
     policy: ScopePolicy | None = None,
     parser_registry: ParserRegistry | None = None,
+    git_identity_mode: str = DEFAULT_GIT_IDENTITY_MODE,
 ) -> GraphSnapshot:
     """Index a local code/docs root into a deterministic snapshot."""
     root = Path(root_path).resolve()
     scope = policy or ScopePolicy(ignore_names=ignore_names)
     registry = parser_registry or get_default_registry()
+    identity_mode = validate_git_identity_mode(git_identity_mode)
     nodes: dict[str, GraphNode] = {}
     edges: dict[str, GraphEdge] = {}
     omitted: list[OmittedDiagnostic] = []
@@ -202,8 +210,26 @@ def index_path(
         )
 
     _resolve_local_imports(namespace, nodes, edges, omitted)
+    git_nodes, git_edges, git_omitted, git_stats = collect_git_overlay(
+        root=root,
+        namespace=namespace,
+        nodes_by_id=nodes,
+        git_identity_mode=identity_mode,
+    )
+    for node in git_nodes:
+        _add_node(nodes, node)
+    for edge in git_edges:
+        _add_edge(edges, edge)
+    omitted.extend(git_omitted)
     stats = {
         "edge_count": len(edges),
+        "git_changed_path_count": int(git_stats.get("git_changed_path_count", 0)),
+        "git_commit_count": int(git_stats.get("git_commit_count", 0)),
+        "git_identity_mode": str(git_stats.get("git_identity_mode", identity_mode)),
+        "git_overlay_enabled": bool(git_stats.get("git_overlay_enabled", False)),
+        "git_repo_root": str(git_stats.get("git_repo_root", "")),
+        "git_root_prefix": str(git_stats.get("git_root_prefix", "")),
+        "git_shallow_repository": bool(git_stats.get("git_shallow_repository", False)),
         "node_count": len(nodes),
         "omitted_count": len(omitted),
         "root_exists": root.exists(),
@@ -680,6 +706,9 @@ __all__ = [
     "CONFIG_NAMES",
     "CONFIG_SUFFIXES",
     "DEFAULT_IGNORES",
+    "DEFAULT_GIT_IDENTITY_MODE",
+    "SUPPORTED_GIT_IDENTITY_MODES",
     "TEXT_SUFFIXES",
     "index_path",
+    "validate_git_identity_mode",
 ]

@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
+from pragmagraph.adapters.git_history import DEFAULT_GIT_IDENTITY_MODE
 from pragmagraph.contracts import INDEXER_VERSION, SCHEMA_VERSION
 from pragmagraph.export import EXPORT_SCHEMA_VERSION, render_graph_export
 from pragmagraph.graphify import GRAPHIFY_INTEROP_FORMAT, to_graphify_payload
@@ -15,6 +16,12 @@ from pragmagraph.models import (
     PragmaGraphError,
     QueryRequest,
     RefreshManifest,
+)
+from pragmagraph.operations import (
+    RefreshProfile,
+    RefreshStatus,
+    refresh_status_from_result,
+    save_refresh_status,
 )
 from pragmagraph.query import health, neighborhood, path, query
 from pragmagraph.refresh import load_manifest, refresh_snapshot, save_manifest
@@ -60,6 +67,7 @@ class ServiceStartup:
     manifest_path: str = ""
     snapshot_out_path: str = ""
     manifest_out_path: str = ""
+    state_out_path: str = ""
 
 
 class LocalQueryService:
@@ -71,10 +79,12 @@ class LocalQueryService:
         snapshot: GraphSnapshot,
         startup: ServiceStartup,
         manifest: RefreshManifest | None = None,
+        refresh_status: RefreshStatus | None = None,
     ) -> None:
         self._snapshot = snapshot
         self._startup = startup
         self._manifest = manifest
+        self._refresh_status = refresh_status
 
     @classmethod
     def from_snapshot_path(cls, snapshot_path: str | Path) -> "LocalQueryService":
@@ -97,6 +107,8 @@ class LocalQueryService:
         manifest_path: str | Path | None = None,
         snapshot_out_path: str | Path | None = None,
         manifest_out_path: str | Path | None = None,
+        state_out_path: str | Path | None = None,
+        git_identity_mode: str = DEFAULT_GIT_IDENTITY_MODE,
     ) -> "LocalQueryService":
         loaded_manifest = None
         if manifest_path and Path(manifest_path).exists():
@@ -105,6 +117,7 @@ class LocalQueryService:
             root_path,
             namespace=namespace,
             previous_manifest=loaded_manifest,
+            git_identity_mode=git_identity_mode,
         )
         startup = ServiceStartup(
             mode=STARTUP_MODE_ROOT,
@@ -113,11 +126,25 @@ class LocalQueryService:
             manifest_path=str(manifest_path or ""),
             snapshot_out_path=str(snapshot_out_path or ""),
             manifest_out_path=str(manifest_out_path or ""),
+            state_out_path=str(state_out_path or ""),
+        )
+        refresh_status = refresh_status_from_result(
+            profile=RefreshProfile(
+                label="service-root",
+                root_path=str(Path(root_path).resolve()),
+                namespace=namespace,
+                snapshot_path=startup.snapshot_out_path,
+                manifest_path=startup.manifest_out_path or startup.manifest_path,
+                state_path=startup.state_out_path,
+                git_identity_mode=git_identity_mode,
+            ),
+            result=refresh,
         )
         service = cls(
             snapshot=refresh.snapshot,
             startup=startup,
             manifest=refresh.manifest,
+            refresh_status=refresh_status,
         )
         service._persist_state()
         return service
@@ -166,7 +193,20 @@ class LocalQueryService:
             snapshot_id=_snapshot_id(self._snapshot),
             root_path=self._startup.root_path or self._snapshot.root_path,
             snapshot_path=self._startup.snapshot_path,
+            git_overlay_supported=bool(
+                self._snapshot.stats.get("git_overlay_enabled", False)
+            ),
+            git_identity_mode=str(
+                self._snapshot.stats.get("git_identity_mode", "") or ""
+            ),
+            git_commit_count=int(self._snapshot.stats.get("git_commit_count", 0) or 0),
+            git_changed_path_count=int(
+                self._snapshot.stats.get("git_changed_path_count", 0) or 0
+            ),
         )
+
+    def current_refresh_status(self) -> RefreshStatus | None:
+        return self._refresh_status
 
     def handle_request(self, request: ServiceRequest) -> tuple[ServiceResponse, bool]:
         try:
@@ -209,6 +249,25 @@ class LocalQueryService:
                 ),
                 "parser_set": self.capabilities().parser_set,
                 "diagnostic_counts": _diagnostic_counts(self._snapshot),
+                "git_overlay": {
+                    "enabled": bool(
+                        self._snapshot.stats.get("git_overlay_enabled", False)
+                    ),
+                    "identity_mode": str(
+                        self._snapshot.stats.get("git_identity_mode", "") or ""
+                    ),
+                    "commit_count": int(
+                        self._snapshot.stats.get("git_commit_count", 0) or 0
+                    ),
+                    "changed_path_count": int(
+                        self._snapshot.stats.get("git_changed_path_count", 0) or 0
+                    ),
+                },
+                "refresh_state": (
+                    self._refresh_status.to_dict()
+                    if self._refresh_status is not None
+                    else None
+                ),
             }
             return summary
         if method in {METHOD_QUERY, METHOD_EXPLAIN}:
@@ -317,9 +376,36 @@ class LocalQueryService:
             self._startup.root_path,
             namespace=self._startup.namespace,
             previous_manifest=self._manifest,
+            git_identity_mode=str(
+                self._snapshot.stats.get(
+                    "git_identity_mode",
+                    DEFAULT_GIT_IDENTITY_MODE,
+                )
+                or DEFAULT_GIT_IDENTITY_MODE
+            ),
         )
         self._snapshot = refresh.snapshot
         self._manifest = refresh.manifest
+        self._refresh_status = refresh_status_from_result(
+            profile=RefreshProfile(
+                label="service-root",
+                root_path=self._startup.root_path,
+                namespace=self._startup.namespace,
+                snapshot_path=self._startup.snapshot_out_path,
+                manifest_path=(
+                    self._startup.manifest_out_path or self._startup.manifest_path
+                ),
+                state_path=self._startup.state_out_path,
+                git_identity_mode=str(
+                    self._snapshot.stats.get(
+                        "git_identity_mode",
+                        DEFAULT_GIT_IDENTITY_MODE,
+                    )
+                    or DEFAULT_GIT_IDENTITY_MODE
+                ),
+            ),
+            result=refresh,
+        )
         self._persist_state()
         return {
             "changed_paths": list(refresh.changed_paths),
@@ -328,6 +414,11 @@ class LocalQueryService:
             "path_changes": [item.to_dict() for item in refresh.path_changes],
             "snapshot_delta": refresh.snapshot_delta.to_dict(),
             "health": health(refresh.snapshot).to_dict(),
+            "refresh_state": (
+                self._refresh_status.to_dict()
+                if self._refresh_status is not None
+                else None
+            ),
         }
 
     def _persist_state(self) -> None:
@@ -335,6 +426,8 @@ class LocalQueryService:
             save_snapshot(self._snapshot, self._startup.snapshot_out_path)
         if self._startup.manifest_out_path and self._manifest is not None:
             save_manifest(self._manifest, self._startup.manifest_out_path)
+        if self._startup.state_out_path and self._refresh_status is not None:
+            save_refresh_status(self._refresh_status, self._startup.state_out_path)
 
     def _required_str(self, params: Mapping[str, Any], key: str) -> str:
         value = params.get(key)

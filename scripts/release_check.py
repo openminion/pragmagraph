@@ -58,6 +58,7 @@ def _assert_smoke_payload(stdout: str) -> None:
         "pragmagraph.graphify",
         "pragmagraph.report",
         "pragmagraph.refresh",
+        "pragmagraph.operations",
         "pragmagraph.security",
         "pragmagraph.service",
         "pragmagraph.ui",

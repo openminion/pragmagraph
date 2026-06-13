@@ -8,7 +8,7 @@ from time import perf_counter_ns
 from types import MappingProxyType
 from typing import Any, Callable, Mapping, TypeVar
 
-from pragmagraph.adapters import index_path
+from pragmagraph.adapters import DEFAULT_GIT_IDENTITY_MODE, index_path
 from pragmagraph.export import render_dot, render_mermaid
 from pragmagraph.graphify import to_graphify_payload
 from pragmagraph.models import QueryRequest
@@ -101,12 +101,17 @@ def benchmark_root(
     query_text: str = "README",
     max_results: int = 10,
     top_n: int = 10,
+    git_identity_mode: str = DEFAULT_GIT_IDENTITY_MODE,
 ) -> BenchmarkReport:
     """Benchmark the main package surfaces over ``root_path``."""
     root = Path(root_path).resolve()
     snapshot, index_measurement = _measure(
         "index",
-        lambda: index_path(root, namespace=namespace),
+        lambda: index_path(
+            root,
+            namespace=namespace,
+            git_identity_mode=git_identity_mode,
+        ),
         detail_builder=lambda value: {
             "node_count": len(value.nodes),
             "edge_count": len(value.edges),
@@ -161,8 +166,13 @@ def benchmark_root(
         lambda: refresh_snapshot(
             root,
             namespace=namespace,
-            previous_manifest=refresh_snapshot(root, namespace=namespace).manifest,
+            previous_manifest=refresh_snapshot(
+                root,
+                namespace=namespace,
+                git_identity_mode=git_identity_mode,
+            ).manifest,
             previous_snapshot=snapshot,
+            git_identity_mode=git_identity_mode,
         ),
         detail_builder=lambda value: {
             "changed_paths": len(value.changed_paths),

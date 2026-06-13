@@ -12,6 +12,7 @@ def test_pragmagraph_package_imports() -> None:
     import pragmagraph.export
     import pragmagraph.graphify
     import pragmagraph.models
+    import pragmagraph.operations
     import pragmagraph.parsers
     import pragmagraph.portability
     import pragmagraph.query
@@ -31,6 +32,7 @@ def test_pragmagraph_package_imports() -> None:
     assert "pragmagraph.report" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.service" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.ui" in pragmagraph.STABLE_IMPORT_ROOTS
+    assert "pragmagraph.operations" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "render_dot" in pragmagraph.export.__all__
     assert "to_graphify_payload" in pragmagraph.graphify.__all__
     assert "benchmark_root" in pragmagraph.bench.__all__
@@ -60,6 +62,7 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "GraphReport",
         "GraphReportDependency",
         "GraphReportFinding",
+        "GraphReportGitCommit",
         "GraphReportNode",
         "GraphReportSummary",
         "GraphSnapshot",
@@ -77,26 +80,41 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "QueryResult",
         "RefreshManifest",
         "RefreshManifestEntry",
+        "RefreshOperationResult",
         "RefreshPathChange",
+        "RefreshPlan",
+        "RefreshProfile",
         "RefreshResult",
+        "RefreshStatus",
         "SCHEMA_VERSION",
         "SnapshotStructuralDelta",
         "SourceRef",
         "backlinks",
         "benchmark_root",
         "build_report",
+        "build_refresh_plan",
+        "build_refresh_profile",
+        "commits_touching_symbol_file",
         "diff_snapshots",
+        "files_touched_by_commit",
         "impact",
         "index_path",
+        "load_refresh_profile",
+        "load_refresh_status",
         "load_snapshot",
+        "recent_commits_for_path",
         "render_dot",
         "render_graph_export",
         "render_markdown_benchmark",
         "render_mermaid",
         "render_markdown_report",
         "refresh_snapshot",
+        "refresh_status_from_result",
         "reverse_dependencies",
         "reverse_imports",
+        "run_refresh_profile",
+        "save_refresh_profile",
+        "save_refresh_status",
         "save_snapshot",
         "snapshot_from_graphify_payload",
         "stable_dumps",

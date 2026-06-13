@@ -15,6 +15,7 @@ def test_python_m_pragmagraph_smoke() -> None:
     )
     payload = json.loads(result.stdout)
     assert payload == {
+        "git_identity_mode_default": "name_email_hash",
         "openminion_imports": False,
         "package": "pragmagraph",
         "semantic_contract": True,
@@ -32,6 +33,7 @@ def test_python_m_pragmagraph_smoke() -> None:
             "pragmagraph.graphify",
             "pragmagraph.report",
             "pragmagraph.refresh",
+            "pragmagraph.operations",
             "pragmagraph.security",
             "pragmagraph.service",
             "pragmagraph.ui",

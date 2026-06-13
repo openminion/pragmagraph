@@ -23,6 +23,9 @@ Capabilities and health responses are intentionally richer than the MVP surface:
 - export and report format support
 - refresh support posture
 - diagnostic counts
+- git overlay support posture
+- git identity mode
+- git commit and changed-path counts
 
 ## Request envelope
 
@@ -69,3 +72,11 @@ change without reparsing the whole service response by hand.
 The service only returns deterministic structural facts derived from the loaded
 snapshot or indexed root. It does not perform LLM inference, memory writes, or
 OpenMinion runtime wiring.
+
+When the loaded snapshot contains git overlays, capabilities and health payloads
+surface only observed git facts and the active privacy posture:
+
+1. commit/path counts,
+2. whether git overlays are enabled,
+3. the active identity mode (`name_email_hash` by default, `full` only when
+   explicitly enabled).

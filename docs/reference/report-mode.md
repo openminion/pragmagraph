@@ -39,8 +39,9 @@ The current report surface includes:
 7. orphan-node rows,
 8. declared dependencies and config posture extracted from config files,
 9. unresolved items derived from omitted diagnostics,
-10. structural summary sections,
-11. deterministic suggested follow-up queries for agents.
+10. recent git overlay commit rows when git facts are present,
+11. structural summary sections,
+12. deterministic suggested follow-up queries for agents.
 
 ## JSON contract
 
@@ -52,8 +53,9 @@ The current report surface includes:
 4. `unresolved_items`
 5. `dependencies`
 6. `hotspots`
-7. `structural_summary`
-8. `suggested_queries`
+7. `git_commits`
+8. `structural_summary`
+9. `suggested_queries`
 
 All report DTOs expose `to_dict()` and remain deterministic for the same
 snapshot input.
@@ -68,10 +70,11 @@ snapshot input.
 4. dependency and config counts,
 5. top-node section,
 6. hotspot section,
-7. structural-summary section,
-8. dependency section,
-9. unresolved-item section,
-10. suggested-query section.
+7. dependency section,
+8. unresolved-item section,
+9. git-overlay section,
+10. structural-summary section,
+11. suggested-query section.
 
 The Markdown is structural and cited. It does not explain architectural intent
 or infer meanings beyond what the indexer already observed.
@@ -99,4 +102,5 @@ Report mode stays inside the third-brain contract:
 3. dependency rows come from indexed config facts,
 4. suggested queries are deterministic templates, not generated prose,
 5. hotspot and structural-summary sections remain structural-only,
-6. no report section writes Sophiagraph memory or claims design judgment.
+6. git commit subjects remain raw metadata rather than semantic summaries,
+7. no report section writes Sophiagraph memory or claims design judgment.

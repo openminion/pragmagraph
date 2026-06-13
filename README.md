@@ -94,6 +94,7 @@ The package currently provides:
   - `pragmagraph.graphify`
   - `pragmagraph.report`
   - `pragmagraph.refresh`
+  - `pragmagraph.operations`
   - `pragmagraph.security`
   - `pragmagraph.service`
 - immutable DTOs for source refs, graph nodes, graph edges, snapshots, query
@@ -102,11 +103,16 @@ The package currently provides:
 - a local indexer for directories, files, Markdown headings and references,
   Python AST modules/classes/functions/methods/imports/calls/inheritance,
   lexical TypeScript/JavaScript modules/functions/classes/imports/exports,
-  selected JSON/TOML/YAML config metadata, and lexical snippets
+  selected JSON/TOML/YAML config metadata, lexical snippets, and local
+  git-history overlays for commits and changed paths
 - query, explain, neighborhood, path, reverse-import, reverse-dependency,
-  backlink, impact, refresh, and health helpers over loaded snapshots
+  backlink, impact, refresh, health, recent git commits by path, files touched
+  by commit, and commits touching a symbol's file over loaded snapshots
 - content-hash refresh manifests with parser/version metadata, root metadata,
   per-path reason codes, and deterministic structural delta helpers
+- package-owned explicit refresh operations: refresh previews, saved invocation
+  profiles, persistent refresh status ledgers, repeatable explicit-run helpers,
+  and root-backed service refresh-state reporting
 - deterministic structural report helpers with JSON and Markdown output for
   repo summaries, unresolved facts, top nodes, hotspots, structural summaries,
   dependency/config declarations, and agent-oriented follow-up queries
@@ -117,7 +123,7 @@ The package currently provides:
   versioning
 - package-owned local query service contracts and a stdio runner for repeated
   snapshot-backed or root-backed sessions, including richer capabilities,
-  health, and refresh metadata
+  health, refresh, and git-overlay metadata
 - package-owned UI boundary contracts in `pragmagraph.ui` for the future
   OpenMinion third-brain workbench: search, result detail, neighborhood, path,
   and provider-status screens without bundling a separate UI runtime into this
@@ -129,7 +135,8 @@ The package currently provides:
   local indexing
 - CLI commands for `index`, `refresh`, `query`, `explain`, `report`, `export`,
   `benchmark`, `graphify-export`, `graphify-import`, `neighborhood`, `path`,
-  `health`, and `serve`
+  `health`, `git-commits-for-path`, `git-files-for-commit`,
+  `git-commits-for-symbol`, and `serve`
 - a semantic smoke entrypoint for install validation
 - package-local tests, lint, and release-check workflow
 - API compatibility and release docs
@@ -203,12 +210,16 @@ stable import roots, and `semantic_contract: true`.
 - `RELEASING.md` records the package-local release and PyPI publish flow.
 - `docs/reference/service-mode.md` records the local service request/response
   contract.
+- `docs/reference/refresh-operations.md` records the package-owned explicit
+  refresh/profile/status contract.
 - `docs/reference/report-mode.md` records the structural report contract.
 - `docs/reference/export-mode.md` records the deterministic export contract.
 - `docs/reference/graphify-interop.md` records the deterministic Graphify
   interchange contract.
 - `docs/reference/benchmarking.md` records the benchmark surface and readiness
   posture.
+- `docs/reference/git-history-mode.md` records the local git-overlay contract,
+  privacy posture, and CLI shape.
 - `docs/reference/ui-contracts.md` records the package-owned UI boundary
   contract.
 - `src/pragmagraph/README.md` explains the source-tree module layout and
@@ -223,7 +234,11 @@ stable import roots, and `semantic_contract: true`.
 Index a local code/docs root into a deterministic JSON snapshot:
 
 ```bash
-pragmagraph index . --out .pragmagraph/snapshot.json --namespace my-project --json
+pragmagraph index . \
+  --out .pragmagraph/snapshot.json \
+  --namespace my-project \
+  --git-identity-mode name_email_hash \
+  --json
 ```
 
 Query the snapshot:
@@ -242,6 +257,17 @@ pragmagraph refresh . \
   --json
 
 pragmagraph explain .pragmagraph/snapshot.json "RuntimeGraph" --json
+```
+
+Inspect git-aware provenance:
+
+```bash
+pragmagraph git-commits-for-path .pragmagraph/snapshot.json src/app.py --json
+pragmagraph git-files-for-commit .pragmagraph/snapshot.json abc123def456 --json
+pragmagraph git-commits-for-symbol \
+  .pragmagraph/snapshot.json \
+  "pragma://my-project/python_class/src/app.py:RuntimeGraph" \
+  --json
 ```
 
 Inspect nearby graph facts:
@@ -276,6 +302,28 @@ Run the local query service against a repo root with explicit refresh support:
 
 ```bash
 pragmagraph serve --root . --namespace my-project
+```
+
+Preview what an explicit refresh would touch:
+
+```bash
+pragmagraph refresh-plan . --manifest-in .pragmagraph/manifest.json --json
+```
+
+Create and run a repeatable explicit-refresh profile:
+
+```bash
+pragmagraph profile-init . \
+  --out .pragmagraph/profile.json \
+  --label my-project \
+  --namespace my-project \
+  --snapshot-out .pragmagraph/snapshot.json \
+  --manifest-out .pragmagraph/manifest.json \
+  --state-out .pragmagraph/status.json \
+  --json
+
+pragmagraph profile-run .pragmagraph/profile.json --json
+pragmagraph refresh-status .pragmagraph/status.json --json
 ```
 
 Build a structural report:

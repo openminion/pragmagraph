@@ -11,12 +11,16 @@ Package-local reference docs:
   CLI shape.
 - `docs/reference/service-mode.md` records the local service request/response
   contract.
+- `docs/reference/refresh-operations.md` records the package-owned explicit
+  refresh/profile/status surface.
 - `docs/reference/ui-contracts.md` records the package-owned `pragmagraph.ui`
   boundary for the future OpenMinion workbench surface.
 - `docs/reference/benchmarking.md` records the package-owned benchmark surface
   and repo-local regression fixture policy.
 - `docs/reference/graphify-interop.md` records the deterministic
   Graphify-shaped JSON import/export contract.
+- `docs/reference/git-history-mode.md` records the local git-overlay contract,
+  privacy posture, and CLI shape.
 - `docs/reference/certification-readiness-matrix.md` records the current
   standalone and OpenMinion proof targets for the public package surface.
 
@@ -47,8 +51,9 @@ PragmaGraph API contract.
 The `0.0.1` semantic alpha defines the current public package contract:
 immutable DTOs, JSON snapshots, local indexing, deterministic
 query/traversal/report/export helpers, Graphify-shaped interop, package-local
-service and UI boundary contracts, benchmark helpers, and package-owned
-validation fixtures.
+service and UI boundary contracts, explicit refresh/profile/status helpers,
+git-aware provenance overlays, benchmark helpers, and package-owned validation
+fixtures.
 
 Boundary shorthand:
 

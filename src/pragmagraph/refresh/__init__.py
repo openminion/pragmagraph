@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 from pragmagraph.adapters import index_path
+from pragmagraph.adapters.git_history import DEFAULT_GIT_IDENTITY_MODE
 from pragmagraph.models import (
     GraphSnapshot,
     RefreshManifest,
@@ -60,6 +61,7 @@ def refresh_snapshot(
     previous_snapshot: GraphSnapshot | None = None,
     policy: ScopePolicy | None = None,
     created_at: str = "",
+    git_identity_mode: str = DEFAULT_GIT_IDENTITY_MODE,
 ) -> RefreshResult:
     """Index ``root_path`` and report content changes since ``previous_manifest``."""
     root = Path(root_path).resolve()
@@ -69,6 +71,7 @@ def refresh_snapshot(
         namespace=namespace,
         policy=policy,
         created_at=created_at,
+        git_identity_mode=git_identity_mode,
     )
     previous = (previous_manifest or RefreshManifest()).by_path()
     current = manifest.by_path()
@@ -203,6 +206,14 @@ def _path_changes(
     return statuses
 
 
+def describe_manifest_changes(
+    previous_manifest: RefreshManifest,
+    current_manifest: RefreshManifest,
+) -> tuple[RefreshPathChange, ...]:
+    """Describe deterministic path-level differences between two manifests."""
+    return tuple(_path_changes(previous_manifest.by_path(), current_manifest.by_path()))
+
+
 def diff_snapshots(
     before: GraphSnapshot,
     after: GraphSnapshot,
@@ -226,6 +237,7 @@ def diff_snapshots(
 
 __all__ = [
     "build_manifest",
+    "describe_manifest_changes",
     "diff_snapshots",
     "load_manifest",
     "refresh_snapshot",

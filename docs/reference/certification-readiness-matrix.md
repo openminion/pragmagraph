@@ -33,6 +33,7 @@ target that exercises only the public package surface.
 | Graphify-parity package expansion | `pragmagraph/tests/test_graphify_parity_expansion.py` | `openminion/tests/knowledge_graphs/test_pragmagraph_provider_swap.py` |
 | Core features depth lane | `pragmagraph/tests/test_core_features.py` | `n/a` |
 | Structural report mode | `pragmagraph/tests/test_report.py` | `n/a` |
+| Git-aware structural facts | `pragmagraph/tests/test_git_history.py` | `n/a` |
 | Graph text export mode | `pragmagraph/tests/test_export.py` | `n/a` |
 | Graphify-shaped JSON interop | `pragmagraph/tests/test_graphify_interop.py` | `n/a` |
 | Benchmark and medium-fixture readiness | `pragmagraph/tests/test_bench.py` | `n/a` |

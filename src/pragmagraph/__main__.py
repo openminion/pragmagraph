@@ -6,7 +6,11 @@ import argparse
 import json
 
 from pragmagraph import PACKAGE_STATUS, STABLE_IMPORT_ROOTS, __version__
-from pragmagraph.adapters import index_path
+from pragmagraph.adapters import (
+    DEFAULT_GIT_IDENTITY_MODE,
+    SUPPORTED_GIT_IDENTITY_MODES,
+    index_path,
+)
 from pragmagraph.bench import benchmark_root, render_markdown_benchmark
 from pragmagraph.export import render_graph_export
 from pragmagraph.graphify import (
@@ -14,7 +18,23 @@ from pragmagraph.graphify import (
     to_graphify_payload,
 )
 from pragmagraph.models import QueryRequest
-from pragmagraph.query import health, neighborhood, path, query
+from pragmagraph.operations import (
+    build_refresh_plan,
+    build_refresh_profile,
+    load_refresh_profile,
+    load_refresh_status,
+    run_refresh_profile,
+    save_refresh_profile,
+)
+from pragmagraph.query import (
+    commits_touching_symbol_file,
+    files_touched_by_commit,
+    health,
+    neighborhood,
+    path,
+    query,
+    recent_commits_for_path,
+)
 from pragmagraph.report import build_report, render_markdown_report
 from pragmagraph.refresh import load_manifest, refresh_snapshot, save_manifest
 from pragmagraph.service import LocalQueryService, run_stdio_service
@@ -30,6 +50,7 @@ def smoke_payload() -> dict[str, object]:
         "stable_import_roots": list(STABLE_IMPORT_ROOTS),
         "semantic_contract": True,
         "openminion_imports": False,
+        "git_identity_mode_default": DEFAULT_GIT_IDENTITY_MODE,
     }
 
 
@@ -51,6 +72,11 @@ def main(argv: list[str] | None = None) -> int:
     index_parser.add_argument("root")
     index_parser.add_argument("--out", required=True)
     index_parser.add_argument("--namespace", default="default")
+    index_parser.add_argument(
+        "--git-identity-mode",
+        choices=tuple(sorted(SUPPORTED_GIT_IDENTITY_MODES)),
+        default=DEFAULT_GIT_IDENTITY_MODE,
+    )
     index_parser.add_argument("--json", action="store_true", help="emit JSON output")
 
     query_parser = subparsers.add_parser("query", help="query a snapshot")
@@ -66,6 +92,37 @@ def main(argv: list[str] | None = None) -> int:
     explain_parser.add_argument("query")
     explain_parser.add_argument("--max-results", type=int, default=10)
     explain_parser.add_argument("--json", action="store_true", help="emit JSON output")
+
+    git_path_parser = subparsers.add_parser(
+        "git-commits-for-path",
+        help="show recent git commits affecting one relative path",
+    )
+    git_path_parser.add_argument("snapshot")
+    git_path_parser.add_argument("path")
+    git_path_parser.add_argument("--max-results", type=int, default=10)
+    git_path_parser.add_argument("--json", action="store_true", help="emit JSON output")
+
+    git_commit_parser = subparsers.add_parser(
+        "git-files-for-commit",
+        help="show current file/path nodes touched by one git commit",
+    )
+    git_commit_parser.add_argument("snapshot")
+    git_commit_parser.add_argument("commit_ref")
+    git_commit_parser.add_argument("--max-results", type=int, default=50)
+    git_commit_parser.add_argument(
+        "--json", action="store_true", help="emit JSON output"
+    )
+
+    git_symbol_parser = subparsers.add_parser(
+        "git-commits-for-symbol",
+        help="show recent git commits touching a symbol's containing file",
+    )
+    git_symbol_parser.add_argument("snapshot")
+    git_symbol_parser.add_argument("symbol_node_id")
+    git_symbol_parser.add_argument("--max-results", type=int, default=10)
+    git_symbol_parser.add_argument(
+        "--json", action="store_true", help="emit JSON output"
+    )
 
     report_parser = subparsers.add_parser(
         "report", help="build a deterministic structural report"
@@ -103,6 +160,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     benchmark_parser.add_argument("root")
     benchmark_parser.add_argument("--namespace", default="default")
+    benchmark_parser.add_argument(
+        "--git-identity-mode",
+        choices=tuple(sorted(SUPPORTED_GIT_IDENTITY_MODES)),
+        default=DEFAULT_GIT_IDENTITY_MODE,
+    )
     benchmark_parser.add_argument("--query", default="README")
     benchmark_parser.add_argument("--max-results", type=int, default=10)
     benchmark_parser.add_argument("--top-n", type=int, default=10)
@@ -116,7 +178,58 @@ def main(argv: list[str] | None = None) -> int:
     refresh_parser.add_argument("--manifest-in")
     refresh_parser.add_argument("--manifest-out", required=True)
     refresh_parser.add_argument("--namespace", default="default")
+    refresh_parser.add_argument(
+        "--git-identity-mode",
+        choices=tuple(sorted(SUPPORTED_GIT_IDENTITY_MODES)),
+        default=DEFAULT_GIT_IDENTITY_MODE,
+    )
     refresh_parser.add_argument("--json", action="store_true", help="emit JSON output")
+
+    refresh_plan_parser = subparsers.add_parser(
+        "refresh-plan",
+        help="preview explicit refresh-visible path changes without mutating outputs",
+    )
+    refresh_plan_parser.add_argument("root")
+    refresh_plan_parser.add_argument("--manifest-in")
+    refresh_plan_parser.add_argument("--namespace", default="default")
+    refresh_plan_parser.add_argument(
+        "--json", action="store_true", help="emit JSON output"
+    )
+
+    refresh_status_parser = subparsers.add_parser(
+        "refresh-status", help="inspect a persisted refresh status ledger"
+    )
+    refresh_status_parser.add_argument("state")
+    refresh_status_parser.add_argument(
+        "--json", action="store_true", help="emit JSON output"
+    )
+
+    profile_init_parser = subparsers.add_parser(
+        "profile-init", help="write a repeatable explicit-refresh invocation profile"
+    )
+    profile_init_parser.add_argument("root")
+    profile_init_parser.add_argument("--out", required=True)
+    profile_init_parser.add_argument("--label", default="default")
+    profile_init_parser.add_argument("--namespace", default="default")
+    profile_init_parser.add_argument("--snapshot-out", required=True)
+    profile_init_parser.add_argument("--manifest-out", required=True)
+    profile_init_parser.add_argument("--state-out", required=True)
+    profile_init_parser.add_argument(
+        "--git-identity-mode",
+        choices=tuple(sorted(SUPPORTED_GIT_IDENTITY_MODES)),
+        default=DEFAULT_GIT_IDENTITY_MODE,
+    )
+    profile_init_parser.add_argument(
+        "--json", action="store_true", help="emit JSON output"
+    )
+
+    profile_run_parser = subparsers.add_parser(
+        "profile-run", help="run one explicit refresh from a saved invocation profile"
+    )
+    profile_run_parser.add_argument("profile")
+    profile_run_parser.add_argument(
+        "--json", action="store_true", help="emit JSON output"
+    )
 
     neighborhood_parser = subparsers.add_parser(
         "neighborhood", help="show nodes around a snapshot node"
@@ -150,11 +263,21 @@ def main(argv: list[str] | None = None) -> int:
     serve_parser.add_argument("--manifest-in")
     serve_parser.add_argument("--snapshot-out")
     serve_parser.add_argument("--manifest-out")
+    serve_parser.add_argument("--state-out")
+    serve_parser.add_argument(
+        "--git-identity-mode",
+        choices=tuple(sorted(SUPPORTED_GIT_IDENTITY_MODES)),
+        default=DEFAULT_GIT_IDENTITY_MODE,
+    )
 
     args = parser.parse_args(argv)
 
     if args.command == "index":
-        snapshot = index_path(args.root, namespace=args.namespace)
+        snapshot = index_path(
+            args.root,
+            namespace=args.namespace,
+            git_identity_mode=args.git_identity_mode,
+        )
         save_snapshot(snapshot, args.out)
         _print_payload(health(snapshot), as_json=args.json)
     elif args.command == "query":
@@ -173,6 +296,36 @@ def main(argv: list[str] | None = None) -> int:
             QueryRequest(query=args.query, max_results=args.max_results),
         )
         _print_payload(result.to_dict(), as_json=True)
+    elif args.command == "git-commits-for-path":
+        snapshot = load_snapshot(args.snapshot)
+        _print_payload(
+            recent_commits_for_path(
+                snapshot,
+                args.path,
+                max_results=args.max_results,
+            ).to_dict(),
+            as_json=True,
+        )
+    elif args.command == "git-files-for-commit":
+        snapshot = load_snapshot(args.snapshot)
+        _print_payload(
+            files_touched_by_commit(
+                snapshot,
+                args.commit_ref,
+                max_results=args.max_results,
+            ).to_dict(),
+            as_json=True,
+        )
+    elif args.command == "git-commits-for-symbol":
+        snapshot = load_snapshot(args.snapshot)
+        _print_payload(
+            commits_touching_symbol_file(
+                snapshot,
+                args.symbol_node_id,
+                max_results=args.max_results,
+            ).to_dict(),
+            as_json=True,
+        )
     elif args.command == "report":
         snapshot = load_snapshot(args.snapshot)
         report = build_report(snapshot, top_n=args.top_n)
@@ -203,6 +356,7 @@ def main(argv: list[str] | None = None) -> int:
             query_text=args.query,
             max_results=args.max_results,
             top_n=args.top_n,
+            git_identity_mode=args.git_identity_mode,
         )
         if args.json:
             _print_payload(report.to_dict(), as_json=True)
@@ -216,6 +370,7 @@ def main(argv: list[str] | None = None) -> int:
             args.root,
             namespace=args.namespace,
             previous_manifest=previous_manifest,
+            git_identity_mode=args.git_identity_mode,
         )
         save_snapshot(result.snapshot, args.out)
         save_manifest(result.manifest, args.manifest_out)
@@ -230,6 +385,35 @@ def main(argv: list[str] | None = None) -> int:
             },
             as_json=args.json,
         )
+    elif args.command == "refresh-plan":
+        previous_manifest = (
+            load_manifest(args.manifest_in) if args.manifest_in else None
+        )
+        plan = build_refresh_plan(
+            args.root,
+            namespace=args.namespace,
+            previous_manifest=previous_manifest,
+        )
+        _print_payload(plan.to_dict(), as_json=True)
+    elif args.command == "refresh-status":
+        status = load_refresh_status(args.state)
+        _print_payload(status.to_dict(), as_json=True)
+    elif args.command == "profile-init":
+        profile = build_refresh_profile(
+            label=args.label,
+            root_path=args.root,
+            snapshot_path=args.snapshot_out,
+            manifest_path=args.manifest_out,
+            state_path=args.state_out,
+            namespace=args.namespace,
+            git_identity_mode=args.git_identity_mode,
+        )
+        save_refresh_profile(profile, args.out)
+        _print_payload(profile.to_dict(), as_json=True)
+    elif args.command == "profile-run":
+        profile = load_refresh_profile(args.profile)
+        operation = run_refresh_profile(profile)
+        _print_payload(operation.to_dict(), as_json=True)
     elif args.command == "neighborhood":
         snapshot = load_snapshot(args.snapshot)
         _print_payload(
@@ -265,6 +449,8 @@ def main(argv: list[str] | None = None) -> int:
                 manifest_path=args.manifest_in,
                 snapshot_out_path=args.snapshot_out,
                 manifest_out_path=args.manifest_out,
+                state_out_path=args.state_out,
+                git_identity_mode=args.git_identity_mode,
             )
         return run_stdio_service(service)
     elif args.json:

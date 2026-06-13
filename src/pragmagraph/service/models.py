@@ -142,6 +142,10 @@ class ServiceCapabilities:
     snapshot_id: str = ""
     root_path: str = ""
     snapshot_path: str = ""
+    git_overlay_supported: bool = False
+    git_identity_mode: str = ""
+    git_commit_count: int = 0
+    git_changed_path_count: int = 0
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -179,6 +183,10 @@ class ServiceCapabilities:
             "snapshot_id": self.snapshot_id,
             "root_path": self.root_path,
             "snapshot_path": self.snapshot_path,
+            "git_overlay_supported": self.git_overlay_supported,
+            "git_identity_mode": self.git_identity_mode,
+            "git_commit_count": self.git_commit_count,
+            "git_changed_path_count": self.git_changed_path_count,
         }
 
 
