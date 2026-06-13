@@ -6,6 +6,7 @@ SERVICE_VERSION = "pragmagraph.service.v1alpha1"
 
 STARTUP_MODE_SNAPSHOT = "snapshot"
 STARTUP_MODE_ROOT = "root"
+STARTUP_MODE_WORKSPACE = "workspace"
 
 METHOD_CAPABILITIES = "capabilities"
 METHOD_EXPLAIN = "explain"
@@ -64,4 +65,5 @@ __all__ = [
     "SERVICE_VERSION",
     "STARTUP_MODE_ROOT",
     "STARTUP_MODE_SNAPSHOT",
+    "STARTUP_MODE_WORKSPACE",
 ]

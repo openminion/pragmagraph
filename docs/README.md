@@ -11,6 +11,8 @@ Package-local reference docs:
   CLI shape.
 - `docs/reference/service-mode.md` records the local service request/response
   contract.
+- `docs/reference/workspace-mode.md` records the package-owned persistent local
+  workspace contract.
 - `docs/reference/refresh-operations.md` records the package-owned explicit
   refresh/profile/status surface.
 - `docs/reference/ui-contracts.md` records the package-owned `pragmagraph.ui`
@@ -52,8 +54,8 @@ The `0.0.1` semantic alpha defines the current public package contract:
 immutable DTOs, JSON snapshots, local indexing, deterministic
 query/traversal/report/export helpers, Graphify-shaped interop, package-local
 service and UI boundary contracts, explicit refresh/profile/status helpers,
-git-aware provenance overlays, benchmark helpers, and package-owned validation
-fixtures.
+workspace persistence helpers, git-aware provenance overlays, benchmark
+helpers, and package-owned validation fixtures.
 
 Boundary shorthand:
 

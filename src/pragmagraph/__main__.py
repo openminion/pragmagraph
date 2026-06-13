@@ -39,6 +39,11 @@ from pragmagraph.report import build_report, render_markdown_report
 from pragmagraph.refresh import load_manifest, refresh_snapshot, save_manifest
 from pragmagraph.service import LocalQueryService, run_stdio_service
 from pragmagraph.storage import load_snapshot, save_snapshot
+from pragmagraph.workspace import (
+    initialize_workspace,
+    load_workspace_status,
+    refresh_workspace,
+)
 
 
 def smoke_payload() -> dict[str, object]:
@@ -259,6 +264,7 @@ def main(argv: list[str] | None = None) -> int:
     serve_group = serve_parser.add_mutually_exclusive_group(required=True)
     serve_group.add_argument("--snapshot")
     serve_group.add_argument("--root")
+    serve_group.add_argument("--workspace")
     serve_parser.add_argument("--namespace", default="default")
     serve_parser.add_argument("--manifest-in")
     serve_parser.add_argument("--snapshot-out")
@@ -268,6 +274,41 @@ def main(argv: list[str] | None = None) -> int:
         "--git-identity-mode",
         choices=tuple(sorted(SUPPORTED_GIT_IDENTITY_MODES)),
         default=DEFAULT_GIT_IDENTITY_MODE,
+    )
+
+    workspace_init_parser = subparsers.add_parser(
+        "workspace-init",
+        help="initialize a persistent local workspace directory",
+    )
+    workspace_init_parser.add_argument("root")
+    workspace_init_parser.add_argument("--workspace", required=True)
+    workspace_init_parser.add_argument("--label", default="default")
+    workspace_init_parser.add_argument("--namespace", default="default")
+    workspace_init_parser.add_argument(
+        "--git-identity-mode",
+        choices=tuple(sorted(SUPPORTED_GIT_IDENTITY_MODES)),
+        default=DEFAULT_GIT_IDENTITY_MODE,
+    )
+    workspace_init_parser.add_argument(
+        "--json", action="store_true", help="emit JSON output"
+    )
+
+    workspace_refresh_parser = subparsers.add_parser(
+        "workspace-refresh",
+        help="refresh a persistent local workspace directory",
+    )
+    workspace_refresh_parser.add_argument("workspace")
+    workspace_refresh_parser.add_argument(
+        "--json", action="store_true", help="emit JSON output"
+    )
+
+    workspace_status_parser = subparsers.add_parser(
+        "workspace-status",
+        help="inspect a persistent local workspace directory",
+    )
+    workspace_status_parser.add_argument("workspace")
+    workspace_status_parser.add_argument(
+        "--json", action="store_true", help="emit JSON output"
     )
 
     args = parser.parse_args(argv)
@@ -398,6 +439,21 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "refresh-status":
         status = load_refresh_status(args.state)
         _print_payload(status.to_dict(), as_json=True)
+    elif args.command == "workspace-init":
+        result = initialize_workspace(
+            label=args.label,
+            root_path=args.root,
+            workspace_path=args.workspace,
+            namespace=args.namespace,
+            git_identity_mode=args.git_identity_mode,
+        )
+        _print_payload(result.to_dict(), as_json=True)
+    elif args.command == "workspace-refresh":
+        result = refresh_workspace(args.workspace)
+        _print_payload(result.to_dict(), as_json=True)
+    elif args.command == "workspace-status":
+        status = load_workspace_status(args.workspace)
+        _print_payload(status.to_dict(), as_json=True)
     elif args.command == "profile-init":
         profile = build_refresh_profile(
             label=args.label,
@@ -440,7 +496,9 @@ def main(argv: list[str] | None = None) -> int:
         snapshot = load_snapshot(args.snapshot)
         _print_payload(health(snapshot), as_json=True)
     elif args.command == "serve":
-        if args.snapshot:
+        if args.workspace:
+            service = LocalQueryService.from_workspace(args.workspace)
+        elif args.snapshot:
             service = LocalQueryService.from_snapshot_path(args.snapshot)
         else:
             service = LocalQueryService.from_root(

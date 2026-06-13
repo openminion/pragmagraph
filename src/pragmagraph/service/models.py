@@ -142,6 +142,7 @@ class ServiceCapabilities:
     snapshot_id: str = ""
     root_path: str = ""
     snapshot_path: str = ""
+    workspace_path: str = ""
     git_overlay_supported: bool = False
     git_identity_mode: str = ""
     git_commit_count: int = 0
@@ -183,6 +184,7 @@ class ServiceCapabilities:
             "snapshot_id": self.snapshot_id,
             "root_path": self.root_path,
             "snapshot_path": self.snapshot_path,
+            "workspace_path": self.workspace_path,
             "git_overlay_supported": self.git_overlay_supported,
             "git_identity_mode": self.git_identity_mode,
             "git_commit_count": self.git_commit_count,

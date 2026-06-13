@@ -29,6 +29,7 @@ def test_docs_reference_surface_contains_expected_package_refs() -> None:
         "report-mode.md",
         "service-mode.md",
         "ui-contracts.md",
+        "workspace-mode.md",
     }
 
     assert expected.issubset({path.name for path in root.iterdir() if path.is_file()})

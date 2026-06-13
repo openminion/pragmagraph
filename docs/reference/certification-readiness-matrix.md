@@ -36,6 +36,7 @@ target that exercises only the public package surface.
 | Git-aware structural facts | `pragmagraph/tests/test_git_history.py` | `n/a` |
 | Graph text export mode | `pragmagraph/tests/test_export.py` | `n/a` |
 | Graphify-shaped JSON interop | `pragmagraph/tests/test_graphify_interop.py` | `n/a` |
+| Workspace persistence and `serve --workspace` | `pragmagraph/tests/test_workspace.py`, `pragmagraph/tests/test_service.py::test_service_workspace_startup_uses_persisted_workspace` | `n/a` |
 | Benchmark and medium-fixture readiness | `pragmagraph/tests/test_bench.py` | `n/a` |
 | Release and smoke contract | `pragmagraph/tests/test_standalone_smoke.py`, `pragmagraph/scripts/release_check.py` | `openminion/tests/runtime/test_bootstrap_memory_retrieve_di.py` |
 

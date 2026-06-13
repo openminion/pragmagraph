@@ -33,6 +33,7 @@ def test_package_policy_and_release_automation_docs_exist() -> None:
     assert (root / "docs" / "reference" / "graphify-interop.md").is_file()
     assert (root / "docs" / "reference" / "service-mode.md").is_file()
     assert (root / "docs" / "reference" / "ui-contracts.md").is_file()
+    assert (root / "docs" / "reference" / "workspace-mode.md").is_file()
     assert (root / "docs" / "reference" / "certification-readiness-matrix.md").is_file()
     assert (root / "tests" / "fixtures" / "repos" / "tiny_repo").is_dir()
     assert (root / "tests" / "contracts" / "capabilities.json").is_file()
@@ -53,6 +54,8 @@ def test_package_readme_mentions_policy_and_quickstart() -> None:
     assert "pragmagraph git-commits-for-symbol" in readme
     assert "pragmagraph graphify-export" in readme
     assert "pragmagraph serve" in readme
+    assert "pragmagraph workspace-init" in readme
+    assert "pragmagraph.workspace" in readme
     assert "pragmagraph.ui" in readme
 
 

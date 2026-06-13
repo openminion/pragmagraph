@@ -22,6 +22,7 @@ def test_pragmagraph_package_imports() -> None:
     import pragmagraph.service
     import pragmagraph.storage
     import pragmagraph.ui
+    import pragmagraph.workspace
 
     assert pragmagraph.__version__ == "0.0.1"
     assert pragmagraph.PACKAGE_STATUS == "semantic-alpha"
@@ -32,6 +33,7 @@ def test_pragmagraph_package_imports() -> None:
     assert "pragmagraph.report" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.service" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.ui" in pragmagraph.STABLE_IMPORT_ROOTS
+    assert "pragmagraph.workspace" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.operations" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "render_dot" in pragmagraph.export.__all__
     assert "to_graphify_payload" in pragmagraph.graphify.__all__
@@ -110,6 +112,7 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "render_markdown_report",
         "refresh_snapshot",
         "refresh_status_from_result",
+        "refresh_workspace",
         "reverse_dependencies",
         "reverse_imports",
         "run_refresh_profile",
@@ -119,6 +122,14 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "snapshot_from_graphify_payload",
         "stable_dumps",
         "to_graphify_payload",
+        "WorkspaceMetadata",
+        "WorkspacePaths",
+        "WorkspaceRefreshResult",
+        "WorkspaceStatusView",
+        "build_workspace_metadata",
+        "initialize_workspace",
+        "load_workspace_metadata",
+        "load_workspace_status",
     }
     assert all(
         not (name.startswith("_") and not name.endswith("__"))
@@ -142,6 +153,7 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     import pragmagraph.service as service
     import pragmagraph.storage as storage
     import pragmagraph.ui as ui
+    import pragmagraph.workspace as workspace
 
     assert "index_path" in adapters.__all__
     assert "render_markdown_benchmark" in bench.__all__
@@ -161,6 +173,7 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     assert "LocalQueryService" in service.__all__
     assert "save_snapshot" in storage.__all__
     assert "build_ui_screen_manifest" in ui.__all__
+    assert "initialize_workspace" in workspace.__all__
 
 
 def test_pragmagraph_package_does_not_import_openminion_from_source() -> None:

@@ -37,6 +37,7 @@ def test_python_m_pragmagraph_smoke() -> None:
             "pragmagraph.security",
             "pragmagraph.service",
             "pragmagraph.ui",
+            "pragmagraph.workspace",
         ],
         "status": "semantic-alpha",
         "version": "0.0.1",

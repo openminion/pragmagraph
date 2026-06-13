@@ -97,6 +97,7 @@ The package currently provides:
   - `pragmagraph.operations`
   - `pragmagraph.security`
   - `pragmagraph.service`
+  - `pragmagraph.workspace`
 - immutable DTOs for source refs, graph nodes, graph edges, snapshots, query
   hits, omitted diagnostics, path results, and health summaries
 - deterministic JSON snapshot load/save helpers
@@ -124,6 +125,9 @@ The package currently provides:
 - package-owned local query service contracts and a stdio runner for repeated
   snapshot-backed or root-backed sessions, including richer capabilities,
   health, refresh, and git-overlay metadata
+- package-owned persistent workspace helpers for one local root: deterministic
+  workspace metadata, saved profile/snapshot/manifest/status layout, explicit
+  workspace refresh, workspace status inspection, and `serve --workspace`
 - package-owned UI boundary contracts in `pragmagraph.ui` for the future
   OpenMinion third-brain workbench: search, result detail, neighborhood, path,
   and provider-status screens without bundling a separate UI runtime into this
@@ -136,7 +140,8 @@ The package currently provides:
 - CLI commands for `index`, `refresh`, `query`, `explain`, `report`, `export`,
   `benchmark`, `graphify-export`, `graphify-import`, `neighborhood`, `path`,
   `health`, `git-commits-for-path`, `git-files-for-commit`,
-  `git-commits-for-symbol`, and `serve`
+  `git-commits-for-symbol`, `workspace-init`, `workspace-refresh`,
+  `workspace-status`, and `serve`
 - a semantic smoke entrypoint for install validation
 - package-local tests, lint, and release-check workflow
 - API compatibility and release docs
@@ -209,6 +214,8 @@ stable import roots, and `semantic_contract: true`.
   top-level export policy.
 - `RELEASING.md` records the package-local release and PyPI publish flow.
 - `docs/reference/service-mode.md` records the local service request/response
+  contract.
+- `docs/reference/workspace-mode.md` records the persistent local workspace
   contract.
 - `docs/reference/refresh-operations.md` records the package-owned explicit
   refresh/profile/status contract.
@@ -379,11 +386,19 @@ The package can also be checked from a shell:
 python3.11 -m pragmagraph --json
 ```
 
+Workspace quickstart:
+
+```bash
+pragmagraph workspace-init /path/to/repo --workspace .pragmagraph-workspace --json
+```
+
 See [API_COMPATIBILITY.md](API_COMPATIBILITY.md) for the public import-root
 policy, [docs/reference/report-mode.md](docs/reference/report-mode.md) for the
 structural report contract, [docs/reference/export-mode.md](docs/reference/export-mode.md)
 for deterministic graph exports, [docs/reference/benchmarking.md](docs/reference/benchmarking.md)
 for the benchmark/readiness surface, [docs/reference/graphify-interop.md](docs/reference/graphify-interop.md)
-for Graphify-shaped JSON interchange, [docs/reference/certification-readiness-matrix.md](docs/reference/certification-readiness-matrix.md)
+for Graphify-shaped JSON interchange, [docs/reference/workspace-mode.md](docs/reference/workspace-mode.md)
+for the persistent local workspace contract,
+[docs/reference/certification-readiness-matrix.md](docs/reference/certification-readiness-matrix.md)
 for package/OpenMinion proof coverage, and [RELEASING.md](RELEASING.md) for
 package-local release checks.

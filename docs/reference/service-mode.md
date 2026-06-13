@@ -11,6 +11,7 @@ queries without reloading state on every call.
 
 - `pragmagraph serve --snapshot <snapshot.json>`
 - `pragmagraph serve --root <repo-root> --namespace <name>`
+- `pragmagraph serve --workspace <workspace-dir>`
 
 The service is deliberately local-first and single-process. It does not claim
 HTTP, MCP, hosted transport, background watching, auth, or daemon supervision.
@@ -18,6 +19,7 @@ HTTP, MCP, hosted transport, background watching, auth, or daemon supervision.
 Capabilities and health responses are intentionally richer than the MVP surface:
 
 - snapshot identity
+- workspace path when workspace-backed
 - manifest schema version
 - parser set
 - export and report format support
@@ -60,12 +62,12 @@ Failure:
 - `report`
 - `export`
 - `graphify_export`
-- `refresh` (root-backed startup only)
+- `refresh` (root-backed and workspace-backed startup only)
 - `shutdown`
 
-Root-backed `refresh` responses include deterministic `path_changes`,
-`snapshot_delta`, and `health` summaries so callers can inspect structural
-change without reparsing the whole service response by hand.
+Root-backed and workspace-backed `refresh` responses include deterministic
+`path_changes`, `snapshot_delta`, and `health` summaries so callers can inspect
+structural change without reparsing the whole service response by hand.
 
 ## Boundary
 

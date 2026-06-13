@@ -47,6 +47,7 @@ from pragmagraph.service.constants import (
     SERVICE_VERSION,
     STARTUP_MODE_ROOT,
     STARTUP_MODE_SNAPSHOT,
+    STARTUP_MODE_WORKSPACE,
 )
 from pragmagraph.service.models import (
     ServiceCapabilities,
@@ -54,6 +55,11 @@ from pragmagraph.service.models import (
     ServiceResponse,
 )
 from pragmagraph.storage import load_snapshot, save_snapshot, stable_dumps
+from pragmagraph.workspace import (
+    ensure_workspace_snapshot,
+    load_workspace_status,
+    refresh_workspace,
+)
 
 
 @dataclass(frozen=True)
@@ -68,6 +74,8 @@ class ServiceStartup:
     snapshot_out_path: str = ""
     manifest_out_path: str = ""
     state_out_path: str = ""
+    workspace_path: str = ""
+    profile_label: str = "service-root"
 
 
 class LocalQueryService:
@@ -127,6 +135,7 @@ class LocalQueryService:
             snapshot_out_path=str(snapshot_out_path or ""),
             manifest_out_path=str(manifest_out_path or ""),
             state_out_path=str(state_out_path or ""),
+            profile_label="service-root",
         )
         refresh_status = refresh_status_from_result(
             profile=RefreshProfile(
@@ -149,13 +158,42 @@ class LocalQueryService:
         service._persist_state()
         return service
 
+    @classmethod
+    def from_workspace(cls, workspace_path: str | Path) -> "LocalQueryService":
+        metadata = ensure_workspace_snapshot(workspace_path)
+        snapshot = load_snapshot(metadata.paths.snapshot_path)
+        manifest = None
+        if Path(metadata.paths.manifest_path).exists():
+            manifest = load_manifest(metadata.paths.manifest_path)
+        refresh_status = load_workspace_status(workspace_path).refresh_status
+        return cls(
+            snapshot=snapshot,
+            startup=ServiceStartup(
+                mode=STARTUP_MODE_WORKSPACE,
+                namespace=metadata.namespace,
+                root_path=metadata.root_path,
+                snapshot_path=metadata.paths.snapshot_path,
+                manifest_path=metadata.paths.manifest_path,
+                snapshot_out_path=metadata.paths.snapshot_path,
+                manifest_out_path=metadata.paths.manifest_path,
+                state_out_path=metadata.paths.status_path,
+                workspace_path=metadata.paths.workspace_path,
+                profile_label=metadata.label,
+            ),
+            manifest=manifest,
+            refresh_status=refresh_status,
+        )
+
     @property
     def snapshot(self) -> GraphSnapshot:
         return self._snapshot
 
     @property
     def refresh_supported(self) -> bool:
-        return self._startup.mode == STARTUP_MODE_ROOT and bool(self._startup.root_path)
+        return self._startup.mode in {
+            STARTUP_MODE_ROOT,
+            STARTUP_MODE_WORKSPACE,
+        } and bool(self._startup.root_path)
 
     def capabilities(self) -> ServiceCapabilities:
         import pragmagraph
@@ -193,6 +231,7 @@ class LocalQueryService:
             snapshot_id=_snapshot_id(self._snapshot),
             root_path=self._startup.root_path or self._snapshot.root_path,
             snapshot_path=self._startup.snapshot_path,
+            workspace_path=self._startup.workspace_path,
             git_overlay_supported=bool(
                 self._snapshot.stats.get("git_overlay_enabled", False)
             ),
@@ -244,6 +283,7 @@ class LocalQueryService:
                 "startup_mode": self._startup.mode,
                 "refresh_supported": self.refresh_supported,
                 "snapshot_id": _snapshot_id(self._snapshot),
+                "workspace_path": self._startup.workspace_path,
                 "manifest_schema_version": (
                     self._manifest.schema_version if self._manifest is not None else ""
                 ),
@@ -372,30 +412,20 @@ class LocalQueryService:
                 "refresh is unavailable for snapshot-backed service startup",
                 {"startup_mode": self._startup.mode},
             )
-        refresh = refresh_snapshot(
-            self._startup.root_path,
-            namespace=self._startup.namespace,
-            previous_manifest=self._manifest,
-            git_identity_mode=str(
-                self._snapshot.stats.get(
-                    "git_identity_mode",
-                    DEFAULT_GIT_IDENTITY_MODE,
-                )
-                or DEFAULT_GIT_IDENTITY_MODE
-            ),
-        )
-        self._snapshot = refresh.snapshot
-        self._manifest = refresh.manifest
-        self._refresh_status = refresh_status_from_result(
-            profile=RefreshProfile(
-                label="service-root",
-                root_path=self._startup.root_path,
+        if (
+            self._startup.mode == STARTUP_MODE_WORKSPACE
+            and self._startup.workspace_path
+        ):
+            workspace_result = refresh_workspace(self._startup.workspace_path)
+            refresh = workspace_result.operation.result
+            self._snapshot = refresh.snapshot
+            self._manifest = refresh.manifest
+            self._refresh_status = workspace_result.operation.status
+        else:
+            refresh = refresh_snapshot(
+                self._startup.root_path,
                 namespace=self._startup.namespace,
-                snapshot_path=self._startup.snapshot_out_path,
-                manifest_path=(
-                    self._startup.manifest_out_path or self._startup.manifest_path
-                ),
-                state_path=self._startup.state_out_path,
+                previous_manifest=self._manifest,
                 git_identity_mode=str(
                     self._snapshot.stats.get(
                         "git_identity_mode",
@@ -403,10 +433,30 @@ class LocalQueryService:
                     )
                     or DEFAULT_GIT_IDENTITY_MODE
                 ),
-            ),
-            result=refresh,
-        )
-        self._persist_state()
+            )
+            self._snapshot = refresh.snapshot
+            self._manifest = refresh.manifest
+            self._refresh_status = refresh_status_from_result(
+                profile=RefreshProfile(
+                    label=self._startup.profile_label,
+                    root_path=self._startup.root_path,
+                    namespace=self._startup.namespace,
+                    snapshot_path=self._startup.snapshot_out_path,
+                    manifest_path=(
+                        self._startup.manifest_out_path or self._startup.manifest_path
+                    ),
+                    state_path=self._startup.state_out_path,
+                    git_identity_mode=str(
+                        self._snapshot.stats.get(
+                            "git_identity_mode",
+                            DEFAULT_GIT_IDENTITY_MODE,
+                        )
+                        or DEFAULT_GIT_IDENTITY_MODE
+                    ),
+                ),
+                result=refresh,
+            )
+            self._persist_state()
         return {
             "changed_paths": list(refresh.changed_paths),
             "unchanged_paths": list(refresh.unchanged_paths),

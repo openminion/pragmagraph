@@ -72,6 +72,17 @@ from pragmagraph.operations import (
 )
 from pragmagraph.refresh import diff_snapshots, refresh_snapshot
 from pragmagraph.storage import load_snapshot, save_snapshot, stable_dumps
+from pragmagraph.workspace import (
+    WorkspaceMetadata,
+    WorkspacePaths,
+    WorkspaceRefreshResult,
+    WorkspaceStatusView,
+    build_workspace_metadata,
+    initialize_workspace,
+    load_workspace_metadata,
+    load_workspace_status,
+    refresh_workspace,
+)
 
 __version__ = "0.0.1"
 
@@ -94,6 +105,7 @@ STABLE_IMPORT_ROOTS = (
     "pragmagraph.security",
     "pragmagraph.service",
     "pragmagraph.ui",
+    "pragmagraph.workspace",
 )
 
 __all__ = [
@@ -139,6 +151,9 @@ __all__ = [
     "diff_snapshots",
     "impact",
     "index_path",
+    "initialize_workspace",
+    "load_workspace_metadata",
+    "load_workspace_status",
     "recent_commits_for_path",
     "load_snapshot",
     "render_dot",
@@ -154,6 +169,7 @@ __all__ = [
     "build_refresh_profile",
     "refresh_snapshot",
     "refresh_status_from_result",
+    "refresh_workspace",
     "reverse_dependencies",
     "reverse_imports",
     "load_refresh_profile",
@@ -165,4 +181,9 @@ __all__ = [
     "snapshot_from_graphify_payload",
     "stable_dumps",
     "to_graphify_payload",
+    "WorkspaceMetadata",
+    "WorkspacePaths",
+    "WorkspaceRefreshResult",
+    "WorkspaceStatusView",
+    "build_workspace_metadata",
 ]

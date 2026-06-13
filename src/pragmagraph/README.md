@@ -13,7 +13,8 @@ The public alpha surface is documented in:
 
 The preferred entrypoint is `pragmagraph`, with additional stable import roots
 for contracts, models, query, storage, adapters, bench, portability, parsers,
-export, graphify, report, refresh, security, service, and `pragmagraph.ui`.
+export, graphify, report, refresh, security, service, workspace, and
+`pragmagraph.ui`.
 
 ## Source-tree owner map
 
@@ -29,8 +30,10 @@ export, graphify, report, refresh, security, service, and `pragmagraph.ui`.
 7. `refresh/` owns content-hash manifest and refresh behavior.
 8. `operations.py` owns explicit refresh planning, saved invocation profiles,
    persisted status ledgers, and repeatable local ingest runs.
-9. `service/` owns the local repeated-query service boundary.
-10. `ui/` owns typed UI contracts only; runtime workbench implementation
+9. `workspace/` owns the persistent local workspace directory contract and
+   explicit workspace lifecycle helpers.
+10. `service/` owns the local repeated-query service boundary.
+11. `ui/` owns typed UI contracts only; runtime workbench implementation
    belongs in OpenMinion.
 
 ## Repo-local but not public API
