@@ -1,5 +1,8 @@
 # Refresh Operations
 
+Status: semantic alpha
+Scope: package-local refresh planning, profiles, and status surface
+
 PragmaGraph ships a package-owned explicit refresh operations layer for
 repeatable local ingest/update workflows without widening into watchers,
 schedulers, git hooks, or background daemons.

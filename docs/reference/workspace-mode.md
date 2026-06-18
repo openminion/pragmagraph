@@ -1,5 +1,8 @@
 # Workspace Mode
 
+Status: semantic alpha
+Scope: package-local persistent local workspace contract
+
 PragmaGraph ships a package-owned persistent local workspace surface for
 repeatable local operation without widening into background automation.
 

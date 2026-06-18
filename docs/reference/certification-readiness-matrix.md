@@ -1,5 +1,8 @@
 # PragmaGraph Standalone + OpenMinion Certification Readiness Matrix
 
+Status: semantic alpha
+Scope: public package proof matrix
+
 ## Purpose
 
 Single map of the current public PragmaGraph surface, the standalone package
@@ -29,8 +32,8 @@ target that exercises only the public package surface.
 
 | Lane | Standalone proof | OpenMinion direct-library proof |
 | --- | --- | --- |
-| Semantic MVP | `pragmagraph/tests/test_semantic_mvp.py` | `openminion/tests/knowledge_graphs/test_pragmagraph_adapter.py` |
-| Graphify-parity package expansion | `pragmagraph/tests/test_graphify_parity_expansion.py` | `openminion/tests/knowledge_graphs/test_pragmagraph_provider_swap.py` |
+| Semantic MVP | `pragmagraph/tests/test_semantic_mvp.py` | `openminion/tests/context/knowledge_graphs/test_pragmagraph_adapter.py` |
+| Graphify-parity package expansion | `pragmagraph/tests/test_graphify_parity_expansion.py` | `openminion/tests/context/knowledge_graphs/test_pragmagraph_provider_swap.py` |
 | Core features depth lane | `pragmagraph/tests/test_core_features.py` | `n/a` |
 | Structural report mode | `pragmagraph/tests/test_report.py` | `n/a` |
 | Git-aware structural facts | `pragmagraph/tests/test_git_history.py` | `n/a` |
@@ -51,8 +54,8 @@ python3.11 scripts/release_check.py
 ```bash
 cd openminion
 PYTHONPATH=src:../pragmagraph/src .venv/bin/python3.11 -m pytest -q \
-  tests/knowledge_graphs/test_pragmagraph_adapter.py \
-  tests/knowledge_graphs/test_pragmagraph_provider_swap.py \
+  tests/context/knowledge_graphs/test_pragmagraph_adapter.py \
+  tests/context/knowledge_graphs/test_pragmagraph_provider_swap.py \
   tests/runtime/test_bootstrap_memory_retrieve_di.py
 .venv/bin/python3.11 -m ruff check .
 make lint

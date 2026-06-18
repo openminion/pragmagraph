@@ -1,7 +1,7 @@
 # PragmaGraph Structural Report Mode
 
-Last updated: 2026-06-06
-Status: Active
+Status: semantic alpha
+Scope: deterministic structural report and Markdown rendering contract
 
 ## Purpose
 

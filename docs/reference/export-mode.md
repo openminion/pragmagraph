@@ -1,6 +1,7 @@
 # PragmaGraph Export Mode
 
 Status: semantic alpha
+Scope: deterministic graph text export contracts
 
 ## Purpose
 

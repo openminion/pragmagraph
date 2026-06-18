@@ -1,5 +1,8 @@
 # Service Mode
 
+Status: semantic alpha
+Scope: local single-process query service contract
+
 PragmaGraph now ships a package-owned local service surface for repeated graph
 queries without reloading state on every call.
 
