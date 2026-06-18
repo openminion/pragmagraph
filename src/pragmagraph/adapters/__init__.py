@@ -8,6 +8,12 @@ import tomllib
 from pathlib import Path
 from typing import Any, Iterable
 
+from pragmagraph.adapters.git_history import (
+    DEFAULT_GIT_IDENTITY_MODE,
+    SUPPORTED_GIT_IDENTITY_MODES,
+    collect_git_overlay,
+    validate_git_identity_mode,
+)
 from pragmagraph.contracts import (
     EDGE_CONTAINS,
     EDGE_DEFINES,
@@ -77,6 +83,30 @@ def _add_edge(edges: dict[str, GraphEdge], edge: GraphEdge) -> None:
     edges.setdefault(edge.id, edge)
 
 
+def _parser_provenance(
+    nodes: dict[str, GraphNode],
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    parser_set = tuple(
+        sorted(
+            {
+                str(node.metadata.get("parser"))
+                for node in nodes.values()
+                if node.metadata.get("parser")
+            }
+        )
+    )
+    parser_versions = tuple(
+        sorted(
+            {
+                f"{node.metadata.get('parser')}:{node.metadata.get('parser_version')}"
+                for node in nodes.values()
+                if node.metadata.get("parser") and node.metadata.get("parser_version")
+            }
+        )
+    )
+    return parser_set, parser_versions
+
+
 def _iter_paths(
     root: Path, policy: ScopePolicy
 ) -> Iterable[tuple[Path, OmittedDiagnostic | None]]:
@@ -109,11 +139,13 @@ def index_path(
     created_at: str = "",
     policy: ScopePolicy | None = None,
     parser_registry: ParserRegistry | None = None,
+    git_identity_mode: str = DEFAULT_GIT_IDENTITY_MODE,
 ) -> GraphSnapshot:
     """Index a local code/docs root into a deterministic snapshot."""
     root = Path(root_path).resolve()
     scope = policy or ScopePolicy(ignore_names=ignore_names)
     registry = parser_registry or get_default_registry()
+    identity_mode = validate_git_identity_mode(git_identity_mode)
     nodes: dict[str, GraphNode] = {}
     edges: dict[str, GraphEdge] = {}
     omitted: list[OmittedDiagnostic] = []
@@ -202,10 +234,31 @@ def index_path(
         )
 
     _resolve_local_imports(namespace, nodes, edges, omitted)
+    git_nodes, git_edges, git_omitted, git_stats = collect_git_overlay(
+        root=root,
+        namespace=namespace,
+        nodes_by_id=nodes,
+        git_identity_mode=identity_mode,
+    )
+    for node in git_nodes:
+        _add_node(nodes, node)
+    for edge in git_edges:
+        _add_edge(edges, edge)
+    omitted.extend(git_omitted)
+    parser_set, parser_versions = _parser_provenance(nodes)
     stats = {
         "edge_count": len(edges),
+        "git_changed_path_count": int(git_stats.get("git_changed_path_count", 0)),
+        "git_commit_count": int(git_stats.get("git_commit_count", 0)),
+        "git_identity_mode": str(git_stats.get("git_identity_mode", identity_mode)),
+        "git_overlay_enabled": bool(git_stats.get("git_overlay_enabled", False)),
+        "git_repo_root": str(git_stats.get("git_repo_root", "")),
+        "git_root_prefix": str(git_stats.get("git_root_prefix", "")),
+        "git_shallow_repository": bool(git_stats.get("git_shallow_repository", False)),
         "node_count": len(nodes),
         "omitted_count": len(omitted),
+        "parser_set": parser_set,
+        "parser_versions": parser_versions,
         "root_exists": root.exists(),
         "parser_count": len(registry.parsers),
         "scope_max_file_bytes": scope.max_file_bytes,
@@ -290,17 +343,17 @@ def _index_file(
         _index_markdown(namespace, rel, file_id, text, nodes, edges, omitted)
     if path.name in CONFIG_NAMES or path.suffix.lower() in CONFIG_SUFFIXES:
         _index_config(namespace, rel, file_id, text, nodes, edges, omitted)
-    parser = registry.parser_for(path)
-    if parser is None:
-        optional_diagnostic = registry.unavailable_parser_diagnostic(path, rel=rel)
-        if optional_diagnostic is not None:
-            omitted.append(
-                OmittedDiagnostic(
-                    reason=optional_diagnostic.code,
-                    item_id=optional_diagnostic.path or rel,
-                    details=optional_diagnostic.to_dict(),
-                )
+    selection = registry.select_parser(path, rel=rel)
+    parser = selection.parser
+    for diagnostic in selection.diagnostics:
+        omitted.append(
+            OmittedDiagnostic(
+                reason=diagnostic.code,
+                item_id=diagnostic.path or rel,
+                details=diagnostic.to_dict(),
             )
+        )
+    if parser is None:
         return
     result = parser.parse(namespace=namespace, rel=rel, file_id=file_id, text=text)
     for node in result.nodes:
@@ -680,6 +733,9 @@ __all__ = [
     "CONFIG_NAMES",
     "CONFIG_SUFFIXES",
     "DEFAULT_IGNORES",
+    "DEFAULT_GIT_IDENTITY_MODE",
+    "SUPPORTED_GIT_IDENTITY_MODES",
     "TEXT_SUFFIXES",
     "index_path",
+    "validate_git_identity_mode",
 ]

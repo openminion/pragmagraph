@@ -1,36 +1,47 @@
 # PragmaGraph Package Docs
 
-This package-local docs directory is reserved for standalone `pragmagraph`
-documentation and public release references.
+Status: semantic alpha
 
-Package-local reference docs:
+This directory holds the public package documentation for standalone
+`pragmagraph`.
 
-- `docs/reference/report-mode.md` records the structural report contract and
-  CLI shape.
-- `docs/reference/export-mode.md` records DOT/Mermaid text export contracts and
-  CLI shape.
-- `docs/reference/service-mode.md` records the local service request/response
-  contract.
-- `docs/reference/ui-contracts.md` records the package-owned `pragmagraph.ui`
-  boundary for the future OpenMinion workbench surface.
-- `docs/reference/benchmarking.md` records the package-owned benchmark surface
-  and repo-local regression fixture policy.
-- `docs/reference/graphify-interop.md` records the deterministic
-  Graphify-shaped JSON import/export contract.
-- `docs/reference/certification-readiness-matrix.md` records the current
-  standalone and OpenMinion proof targets for the public package surface.
+## Package-local references
 
-Package-local code/docs boundaries:
+- [`reference/report-mode.md`](reference/report-mode.md) records the structural
+  report contract and CLI shape.
+- [`reference/export-mode.md`](reference/export-mode.md) records DOT/Mermaid
+  text export contracts and CLI shape.
+- [`reference/service-mode.md`](reference/service-mode.md) records the local
+  service request/response contract.
+- [`reference/workspace-mode.md`](reference/workspace-mode.md) records the
+  package-owned persistent local workspace contract.
+- [`reference/refresh-operations.md`](reference/refresh-operations.md) records
+  the package-owned explicit refresh/profile/status surface.
+- [`reference/ui-contracts.md`](reference/ui-contracts.md) records the
+  package-owned `pragmagraph.ui` boundary for the future OpenMinion workbench
+  surface.
+- [`reference/benchmarking.md`](reference/benchmarking.md) records the
+  package-owned benchmark surface and repo-local regression fixture policy.
+- [`reference/graphify-interop.md`](reference/graphify-interop.md) records the
+  deterministic Graphify-shaped JSON import/export contract.
+- [`reference/git-history-mode.md`](reference/git-history-mode.md) records the
+  local git-overlay contract, privacy posture, and CLI shape.
+- [`reference/certification-readiness-matrix.md`](reference/certification-readiness-matrix.md)
+  records the current standalone and OpenMinion proof targets for the public
+  package surface.
+
+## Package-local code/docs boundaries
 
 1. `README.md` is the public package contract and install surface.
-2. `API_COMPATIBILITY.md` records the supported public import roots and
-   top-level export policy.
-3. `src/pragmagraph/README.md` explains the source-tree owner map and
-   public-vs-repo-local boundary.
-4. `RELEASING.md` records the package-local release and PyPI publish flow.
+2. [`../API_COMPATIBILITY.md`](../API_COMPATIBILITY.md) records the supported
+   public import roots and top-level export policy.
+3. [`../src/pragmagraph/README.md`](../src/pragmagraph/README.md) explains the
+   source-tree owner map and public-vs-repo-local boundary.
+4. [`../RELEASING.md`](../RELEASING.md) records the package-local release and
+   PyPI publish flow.
 5. `scripts/release_check.py` is the canonical package release smoke entrypoint.
 
-Repository-local but not package API:
+## Repository-local but not package API
 
 1. `tests/fixtures/repos/` holds regression fixtures used by benchmarks,
    examples, and deterministic package tests.
@@ -39,18 +50,16 @@ Repository-local but not package API:
 3. Host-framework planning, tracker, and swapability docs remain in the
    workspace-root `docs/` tree rather than this package-local docs directory.
 
-Host-repository planning docs remain outside this package-local public-docs
-surface. They define OpenMinion adoption, tracker history, and broader
-second-brain versus third-brain planning; they are not part of the packaged
-PragmaGraph API contract.
+## Public package stance
 
 The `0.0.1` semantic alpha defines the current public package contract:
 immutable DTOs, JSON snapshots, local indexing, deterministic
 query/traversal/report/export helpers, Graphify-shaped interop, package-local
-service and UI boundary contracts, benchmark helpers, and package-owned
-validation fixtures.
+service and UI boundary contracts, explicit refresh/profile/status helpers,
+workspace persistence helpers, git-aware provenance overlays, benchmark
+helpers, and package-owned validation fixtures.
 
-Boundary shorthand:
+## Boundary shorthand
 
 1. PragmaGraph is the third brain for static, observed, reproducible facts from
    code, docs, artifacts, and history.
@@ -58,7 +67,7 @@ Boundary shorthand:
    operator pins, summaries, decisions, and judgments.
 3. Sophia may cite Pragma; Pragma never stores Sophia's judgments.
 
-Tracker split:
+## Tracker split
 
 1. PragmaGraph package tracker owns package contracts, snapshots, indexing,
    query APIs, CLI, tests, and OpenMinion contract snapshots.

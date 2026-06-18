@@ -25,6 +25,7 @@ from pragmagraph.service.constants import (
     SERVICE_VERSION,
     STARTUP_MODE_ROOT,
     STARTUP_MODE_SNAPSHOT,
+    STARTUP_MODE_WORKSPACE,
 )
 from pragmagraph.service.models import (
     ServiceCapabilities,
@@ -59,6 +60,7 @@ __all__ = [
     "SERVICE_VERSION",
     "STARTUP_MODE_ROOT",
     "STARTUP_MODE_SNAPSHOT",
+    "STARTUP_MODE_WORKSPACE",
     "ServiceCapabilities",
     "ServiceError",
     "ServiceRequest",

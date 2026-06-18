@@ -137,11 +137,17 @@ class ServiceCapabilities:
     export_schema_version: str = ""
     manifest_schema_version: str = ""
     parser_set: tuple[str, ...] = ()
+    parser_versions: tuple[str, ...] = ()
     export_formats: tuple[str, ...] = ()
     report_formats: tuple[str, ...] = ()
     snapshot_id: str = ""
     root_path: str = ""
     snapshot_path: str = ""
+    workspace_path: str = ""
+    git_overlay_supported: bool = False
+    git_identity_mode: str = ""
+    git_commit_count: int = 0
+    git_changed_path_count: int = 0
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -151,6 +157,9 @@ class ServiceCapabilities:
         )
         object.__setattr__(
             self, "parser_set", tuple(sorted(_tuple_str(self.parser_set)))
+        )
+        object.__setattr__(
+            self, "parser_versions", tuple(sorted(_tuple_str(self.parser_versions)))
         )
         object.__setattr__(
             self, "export_formats", tuple(sorted(_tuple_str(self.export_formats)))
@@ -174,11 +183,17 @@ class ServiceCapabilities:
             "export_schema_version": self.export_schema_version,
             "manifest_schema_version": self.manifest_schema_version,
             "parser_set": list(self.parser_set),
+            "parser_versions": list(self.parser_versions),
             "export_formats": list(self.export_formats),
             "report_formats": list(self.report_formats),
             "snapshot_id": self.snapshot_id,
             "root_path": self.root_path,
             "snapshot_path": self.snapshot_path,
+            "workspace_path": self.workspace_path,
+            "git_overlay_supported": self.git_overlay_supported,
+            "git_identity_mode": self.git_identity_mode,
+            "git_commit_count": self.git_commit_count,
+            "git_changed_path_count": self.git_changed_path_count,
         }
 
 

@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 
 from pragmagraph.adapters import index_path
+from pragmagraph.adapters.git_history import DEFAULT_GIT_IDENTITY_MODE
+from pragmagraph.parsers import ParserRegistry, get_default_registry
 from pragmagraph.models import (
     GraphSnapshot,
     RefreshManifest,
@@ -23,10 +25,12 @@ def build_manifest(
     root_path: str | Path,
     *,
     policy: ScopePolicy | None = None,
+    parser_registry: ParserRegistry | None = None,
 ) -> RefreshManifest:
     """Build a deterministic content-hash manifest for indexable files."""
     root = Path(root_path).resolve()
     scope = policy or ScopePolicy()
+    registry = parser_registry or get_default_registry()
     gitignore_patterns = load_gitignore(root) if scope.respect_gitignore else ()
     entries: list[RefreshManifestEntry] = []
     for path in sorted(root.rglob("*")):
@@ -43,8 +47,8 @@ def build_manifest(
             RefreshManifestEntry(
                 path=rel,
                 content_hash=hashlib.sha256(path.read_bytes()).hexdigest(),
-                parser=_parser_name(path),
-                parser_version=_parser_version(path),
+                parser=_parser_name(path, registry=registry),
+                parser_version=_parser_version(path, registry=registry),
                 size_bytes=path.stat().st_size,
                 file_kind=_file_kind(path),
             )
@@ -60,15 +64,20 @@ def refresh_snapshot(
     previous_snapshot: GraphSnapshot | None = None,
     policy: ScopePolicy | None = None,
     created_at: str = "",
+    git_identity_mode: str = DEFAULT_GIT_IDENTITY_MODE,
+    parser_registry: ParserRegistry | None = None,
 ) -> RefreshResult:
     """Index ``root_path`` and report content changes since ``previous_manifest``."""
     root = Path(root_path).resolve()
-    manifest = build_manifest(root_path, policy=policy)
+    registry = parser_registry or get_default_registry()
+    manifest = build_manifest(root_path, policy=policy, parser_registry=registry)
     snapshot = index_path(
         root,
         namespace=namespace,
         policy=policy,
         created_at=created_at,
+        git_identity_mode=git_identity_mode,
+        parser_registry=registry,
     )
     previous = (previous_manifest or RefreshManifest()).by_path()
     current = manifest.by_path()
@@ -118,11 +127,12 @@ def save_manifest(manifest: RefreshManifest, path: str | Path) -> None:
     )
 
 
-def _parser_name(path: Path) -> str:
+def _parser_name(path: Path, *, registry: ParserRegistry) -> str:
+    selection = registry.select_parser(path)
+    if selection.parser is not None:
+        return selection.parser.name
     if path.suffix.lower() == ".py":
         return "python_ast"
-    if path.suffix.lower() in {".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx"}:
-        return "script_lexical"
     return "raw_file"
 
 
@@ -141,12 +151,10 @@ def _file_kind(path: Path) -> str:
     return "text"
 
 
-def _parser_version(path: Path) -> str:
-    parser = _parser_name(path)
-    if parser == "script_lexical":
-        return "pragmagraph.script_lexical.v1alpha1"
-    if parser == "python_ast":
-        return "pragmagraph.parser.v1alpha1"
+def _parser_version(path: Path, *, registry: ParserRegistry) -> str:
+    selection = registry.select_parser(path)
+    if selection.parser is not None:
+        return selection.parser.version
     return "pragmagraph.raw_file.v1alpha1"
 
 
@@ -203,6 +211,14 @@ def _path_changes(
     return statuses
 
 
+def describe_manifest_changes(
+    previous_manifest: RefreshManifest,
+    current_manifest: RefreshManifest,
+) -> tuple[RefreshPathChange, ...]:
+    """Describe deterministic path-level differences between two manifests."""
+    return tuple(_path_changes(previous_manifest.by_path(), current_manifest.by_path()))
+
+
 def diff_snapshots(
     before: GraphSnapshot,
     after: GraphSnapshot,
@@ -226,6 +242,7 @@ def diff_snapshots(
 
 __all__ = [
     "build_manifest",
+    "describe_manifest_changes",
     "diff_snapshots",
     "load_manifest",
     "refresh_snapshot",

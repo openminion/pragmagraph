@@ -5,6 +5,13 @@ from __future__ import annotations
 import re
 from collections import deque
 
+from pragmagraph.contracts import (
+    EDGE_GIT_CHANGES_PATH,
+    EDGE_GIT_TOUCHES,
+    NODE_FILE,
+    NODE_GIT_CHANGED_PATH,
+    NODE_GIT_COMMIT,
+)
 from pragmagraph.models import (
     GraphEdge,
     GraphNode,
@@ -455,6 +462,167 @@ def impact(
     )
 
 
+def recent_commits_for_path(
+    snapshot: GraphSnapshot,
+    target_path: str,
+    *,
+    max_results: int = 10,
+) -> QueryResult:
+    """Return recent git commit nodes affecting one relative path."""
+    normalized_path = target_path.strip().strip("/")
+    node_map = snapshot.node_map()
+    commit_ids: set[str] = set()
+    commit_edges: dict[str, list[GraphEdge]] = {}
+    for edge in sorted(snapshot.edges, key=lambda item: item.id):
+        if edge.kind not in {EDGE_GIT_TOUCHES, EDGE_GIT_CHANGES_PATH}:
+            continue
+        target = node_map.get(edge.target_id)
+        if target is None:
+            continue
+        edge_path = target.source_ref.path or target.label
+        if edge_path != normalized_path:
+            continue
+        source = node_map.get(edge.source_id)
+        if source is None or source.kind != NODE_GIT_COMMIT:
+            continue
+        commit_ids.add(source.id)
+        commit_edges.setdefault(source.id, []).append(edge)
+    commits = sorted(
+        (node_map[commit_id] for commit_id in commit_ids if commit_id in node_map),
+        key=_git_commit_sort_key,
+    )
+    hits = tuple(
+        QueryHit(
+            node=node,
+            score=float(max(max_results - index, 1)),
+            edges=tuple(
+                sorted(commit_edges.get(node.id, ()), key=lambda item: item.id)
+            ),
+            snippet=node.text or node.label,
+            explanation=QueryExplanation(
+                matched_fields=("edge.git_path",),
+                score_parts={"git_path_commit": 100.0},
+                exact_match="path",
+            ),
+        )
+        for index, node in enumerate(commits[:max_results])
+    )
+    return QueryResult(
+        query=normalized_path,
+        hits=hits,
+        omitted=_max_results_omitted(normalized_path, len(commits), max_results),
+        diagnostics={
+            "resolution_kind": "static_git_overlay",
+            "target_path": normalized_path,
+        },
+    )
+
+
+def files_touched_by_commit(
+    snapshot: GraphSnapshot,
+    commit_ref: str,
+    *,
+    max_results: int = 50,
+) -> QueryResult:
+    """Return file/path nodes touched by one git commit."""
+    commit_node = _resolve_commit_node(snapshot, commit_ref)
+    if commit_node is None:
+        return QueryResult(
+            query=commit_ref,
+            omitted=(
+                OmittedDiagnostic(
+                    reason="git_commit_not_found",
+                    item_id=commit_ref,
+                ),
+            ),
+            diagnostics={"resolution_kind": "missing_git_commit"},
+        )
+    node_map = snapshot.node_map()
+    hits: list[QueryHit] = []
+    candidate_edges = sorted(
+        (
+            edge
+            for edge in snapshot.edges
+            if edge.source_id == commit_node.id
+            and edge.kind in {EDGE_GIT_TOUCHES, EDGE_GIT_CHANGES_PATH}
+        ),
+        key=lambda item: (0 if item.kind == EDGE_GIT_TOUCHES else 1, item.id),
+    )
+    seen_paths: set[str] = set()
+    for edge in candidate_edges:
+        if edge.source_id != commit_node.id:
+            continue
+        node = node_map.get(edge.target_id)
+        if node is None or node.kind not in {NODE_FILE, NODE_GIT_CHANGED_PATH}:
+            continue
+        path_key = node.source_ref.path or node.label
+        if path_key in seen_paths:
+            continue
+        seen_paths.add(path_key)
+        hits.append(
+            QueryHit(
+                node=node,
+                score=100.0 if node.kind == NODE_FILE else 90.0,
+                edges=(edge,),
+                snippet=_snippet(node),
+                explanation=QueryExplanation(
+                    matched_fields=(f"edge.{edge.kind}",),
+                    score_parts={"git_commit_path": 100.0},
+                    exact_match="commit",
+                ),
+            )
+        )
+    return QueryResult(
+        query=commit_ref,
+        hits=tuple(hits[:max_results]),
+        omitted=_max_results_omitted(commit_ref, len(hits), max_results),
+        diagnostics={"resolution_kind": "static_git_overlay", "commit_ref": commit_ref},
+    )
+
+
+def commits_touching_symbol_file(
+    snapshot: GraphSnapshot,
+    symbol_node_id: str,
+    *,
+    max_results: int = 10,
+) -> QueryResult:
+    """Return recent commits touching the file that owns one symbol node."""
+    node = snapshot.node_map().get(symbol_node_id)
+    if node is None:
+        return QueryResult(
+            query=symbol_node_id,
+            omitted=(
+                OmittedDiagnostic(
+                    reason="symbol_not_found",
+                    item_id=symbol_node_id,
+                ),
+            ),
+            diagnostics={"resolution_kind": "missing_symbol"},
+        )
+    path_value = node.source_ref.path
+    if not path_value:
+        return QueryResult(
+            query=symbol_node_id,
+            omitted=(
+                OmittedDiagnostic(
+                    reason="symbol_has_no_source_path",
+                    item_id=symbol_node_id,
+                ),
+            ),
+            diagnostics={"resolution_kind": "missing_symbol_path"},
+        )
+    result = recent_commits_for_path(snapshot, path_value, max_results=max_results)
+    return QueryResult(
+        query=symbol_node_id,
+        hits=result.hits,
+        omitted=result.omitted,
+        diagnostics={
+            **dict(result.diagnostics),
+            "symbol_path": path_value,
+        },
+    )
+
+
 def _edge_resolution_kind(
     edge: GraphEdge,
     node_map: dict[str, GraphNode],
@@ -477,6 +645,33 @@ def _edge_resolution_kind(
             return "static"
         return "heuristic"
     return "unsupported"
+
+
+def _resolve_commit_node(
+    snapshot: GraphSnapshot,
+    commit_ref: str,
+) -> GraphNode | None:
+    node_map = snapshot.node_map()
+    if commit_ref in node_map and node_map[commit_ref].kind == NODE_GIT_COMMIT:
+        return node_map[commit_ref]
+    matches = [
+        node
+        for node in snapshot.nodes
+        if node.kind == NODE_GIT_COMMIT
+        and (
+            str(node.metadata.get("commit_hash", "")) == commit_ref
+            or str(node.metadata.get("short_commit_hash", "")) == commit_ref
+        )
+    ]
+    if len(matches) == 1:
+        return matches[0]
+    return None
+
+
+def _git_commit_sort_key(node: GraphNode) -> tuple[int, str, str]:
+    committer_epoch = int(node.metadata.get("committer_time_epoch", 0) or 0)
+    author_epoch = int(node.metadata.get("author_time_epoch", 0) or 0)
+    return (-committer_epoch, -author_epoch, node.id)
 
 
 def _max_results_omitted(
@@ -512,6 +707,9 @@ __all__ = [
     "backlinks",
     "health",
     "impact",
+    "recent_commits_for_path",
+    "files_touched_by_commit",
+    "commits_touching_symbol_file",
     "neighborhood",
     "path",
     "query",

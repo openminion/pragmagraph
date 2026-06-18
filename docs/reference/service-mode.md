@@ -1,5 +1,8 @@
 # Service Mode
 
+Status: semantic alpha
+Scope: local single-process query service contract
+
 PragmaGraph now ships a package-owned local service surface for repeated graph
 queries without reloading state on every call.
 
@@ -11,6 +14,7 @@ queries without reloading state on every call.
 
 - `pragmagraph serve --snapshot <snapshot.json>`
 - `pragmagraph serve --root <repo-root> --namespace <name>`
+- `pragmagraph serve --workspace <workspace-dir>`
 
 The service is deliberately local-first and single-process. It does not claim
 HTTP, MCP, hosted transport, background watching, auth, or daemon supervision.
@@ -18,11 +22,16 @@ HTTP, MCP, hosted transport, background watching, auth, or daemon supervision.
 Capabilities and health responses are intentionally richer than the MVP surface:
 
 - snapshot identity
+- workspace path when workspace-backed
 - manifest schema version
 - parser set
+- parser versions
 - export and report format support
 - refresh support posture
 - diagnostic counts
+- git overlay support posture
+- git identity mode
+- git commit and changed-path counts
 
 ## Request envelope
 
@@ -57,15 +66,23 @@ Failure:
 - `report`
 - `export`
 - `graphify_export`
-- `refresh` (root-backed startup only)
+- `refresh` (root-backed and workspace-backed startup only)
 - `shutdown`
 
-Root-backed `refresh` responses include deterministic `path_changes`,
-`snapshot_delta`, and `health` summaries so callers can inspect structural
-change without reparsing the whole service response by hand.
+Root-backed and workspace-backed `refresh` responses include deterministic
+`path_changes`, `snapshot_delta`, and `health` summaries so callers can inspect
+structural change without reparsing the whole service response by hand.
 
 ## Boundary
 
 The service only returns deterministic structural facts derived from the loaded
 snapshot or indexed root. It does not perform LLM inference, memory writes, or
 OpenMinion runtime wiring.
+
+When the loaded snapshot contains git overlays, capabilities and health payloads
+surface only observed git facts and the active privacy posture:
+
+1. commit/path counts,
+2. whether git overlays are enabled,
+3. the active identity mode (`name_email_hash` by default, `full` only when
+   explicitly enabled).

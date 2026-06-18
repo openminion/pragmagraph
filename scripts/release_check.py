@@ -58,9 +58,11 @@ def _assert_smoke_payload(stdout: str) -> None:
         "pragmagraph.graphify",
         "pragmagraph.report",
         "pragmagraph.refresh",
+        "pragmagraph.operations",
         "pragmagraph.security",
         "pragmagraph.service",
         "pragmagraph.ui",
+        "pragmagraph.workspace",
     ]
     if payload.get("package") != "pragmagraph":
         raise RuntimeError(f"unexpected smoke package: {payload!r}")
@@ -80,6 +82,7 @@ def _assert_package_docs_shape(root: Path) -> None:
         root / "docs" / "reference" / "report-mode.md",
         root / "docs" / "reference" / "service-mode.md",
         root / "docs" / "reference" / "ui-contracts.md",
+        root / "docs" / "reference" / "workspace-mode.md",
         root / "src" / "pragmagraph" / "README.md",
         root / "tests" / "fixtures" / "repos",
         root / "tests" / "contracts",
@@ -152,6 +155,7 @@ def main(argv: list[str] | None = None) -> int:
                         "from pragmagraph.graphify import to_graphify_payload; "
                         "from pragmagraph.service import LocalQueryService; "
                         "from pragmagraph.ui import build_ui_screen_manifest; "
+                        "from pragmagraph.workspace import initialize_workspace; "
                         "from pragmagraph.report import build_report, "
                         "render_markdown_report"
                     ),

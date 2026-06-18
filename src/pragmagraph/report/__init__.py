@@ -8,6 +8,8 @@ from typing import Any, Mapping
 
 from pragmagraph.contracts import (
     EDGE_DEPENDS_ON,
+    NODE_GIT_CHANGED_PATH,
+    NODE_GIT_COMMIT,
     NODE_DOC_SECTION,
     NODE_PYTHON_CLASS,
     NODE_PYTHON_FUNCTION,
@@ -46,6 +48,9 @@ class GraphReportSummary:
     omitted_count: int
     dependency_count: int = 0
     config_count: int = 0
+    git_commit_count: int = 0
+    git_changed_path_count: int = 0
+    git_identity_mode: str = ""
     node_kinds: Mapping[str, int] = field(default_factory=dict)
     edge_kinds: Mapping[str, int] = field(default_factory=dict)
     omitted_reasons: Mapping[str, int] = field(default_factory=dict)
@@ -68,6 +73,9 @@ class GraphReportSummary:
             "omitted_count": self.omitted_count,
             "dependency_count": self.dependency_count,
             "config_count": self.config_count,
+            "git_commit_count": self.git_commit_count,
+            "git_changed_path_count": self.git_changed_path_count,
+            "git_identity_mode": self.git_identity_mode,
             "node_kinds": dict(self.node_kinds),
             "edge_kinds": dict(self.edge_kinds),
             "omitted_reasons": dict(self.omitted_reasons),
@@ -140,6 +148,39 @@ class GraphReportDependency:
 
 
 @dataclass(frozen=True)
+class GraphReportGitCommit:
+    """One recent git commit surfaced in a structural report."""
+
+    node_id: str
+    commit_hash: str
+    short_commit_hash: str
+    subject: str
+    author_name: str
+    author_email_hash: str = ""
+    author_email: str = ""
+    committer_time_epoch: int = 0
+    committer_time_offset: str = ""
+    touched_path_count: int = 0
+
+    def to_dict(self) -> dict[str, Any]:
+        payload = {
+            "node_id": self.node_id,
+            "commit_hash": self.commit_hash,
+            "short_commit_hash": self.short_commit_hash,
+            "subject": self.subject,
+            "author_name": self.author_name,
+            "committer_time_epoch": self.committer_time_epoch,
+            "committer_time_offset": self.committer_time_offset,
+            "touched_path_count": self.touched_path_count,
+        }
+        if self.author_email_hash:
+            payload["author_email_hash"] = self.author_email_hash
+        if self.author_email:
+            payload["author_email"] = self.author_email
+        return payload
+
+
+@dataclass(frozen=True)
 class GraphReport:
     """Deterministic structural report over a graph snapshot."""
 
@@ -149,6 +190,7 @@ class GraphReport:
     orphan_nodes: tuple[GraphReportFinding, ...] = ()
     unresolved_items: tuple[GraphReportFinding, ...] = ()
     dependencies: tuple[GraphReportDependency, ...] = ()
+    git_commits: tuple[GraphReportGitCommit, ...] = ()
     structural_summary: tuple[str, ...] = ()
     suggested_queries: tuple[str, ...] = ()
 
@@ -158,6 +200,7 @@ class GraphReport:
         object.__setattr__(self, "orphan_nodes", tuple(self.orphan_nodes))
         object.__setattr__(self, "unresolved_items", tuple(self.unresolved_items))
         object.__setattr__(self, "dependencies", tuple(self.dependencies))
+        object.__setattr__(self, "git_commits", tuple(self.git_commits))
         object.__setattr__(
             self, "structural_summary", _tuple_str(self.structural_summary)
         )
@@ -173,6 +216,7 @@ class GraphReport:
             "orphan_nodes": [item.to_dict() for item in self.orphan_nodes],
             "unresolved_items": [item.to_dict() for item in self.unresolved_items],
             "dependencies": [item.to_dict() for item in self.dependencies],
+            "git_commits": [item.to_dict() for item in self.git_commits],
             "structural_summary": list(self.structural_summary),
             "suggested_queries": list(self.suggested_queries),
         }
@@ -224,13 +268,21 @@ def build_report(snapshot: GraphSnapshot, *, top_n: int = 10) -> GraphReport:
     )
     unresolved_items = tuple(_finding_from_omitted(item) for item in snapshot.omitted)
     dependencies = _dependencies(snapshot, node_map)
+    git_commits = _git_commits(snapshot, top_n=top_n)
     structural_summary = _structural_summary(
         top_nodes=top_nodes,
         orphan_nodes=orphan_nodes,
         unresolved_items=unresolved_items,
         dependencies=dependencies,
+        git_commits=git_commits,
+        git_identity_mode=str(snapshot.stats.get("git_identity_mode", "") or ""),
     )
-    suggested_queries = _suggested_queries(snapshot, dependencies, unresolved_items)
+    suggested_queries = _suggested_queries(
+        snapshot,
+        dependencies,
+        unresolved_items,
+        git_commits,
+    )
 
     return GraphReport(
         summary=GraphReportSummary(
@@ -243,6 +295,13 @@ def build_report(snapshot: GraphSnapshot, *, top_n: int = 10) -> GraphReport:
             omitted_count=len(snapshot.omitted),
             dependency_count=len(dependencies),
             config_count=sum(1 for node in snapshot.nodes if node.kind == "config"),
+            git_commit_count=sum(
+                1 for node in snapshot.nodes if node.kind == NODE_GIT_COMMIT
+            ),
+            git_changed_path_count=sum(
+                1 for node in snapshot.nodes if node.kind == NODE_GIT_CHANGED_PATH
+            ),
+            git_identity_mode=str(snapshot.stats.get("git_identity_mode", "") or ""),
             node_kinds=node_kinds,
             edge_kinds=edge_kinds,
             omitted_reasons=omitted_reasons,
@@ -252,6 +311,7 @@ def build_report(snapshot: GraphSnapshot, *, top_n: int = 10) -> GraphReport:
         orphan_nodes=orphan_nodes,
         unresolved_items=unresolved_items,
         dependencies=dependencies,
+        git_commits=git_commits,
         structural_summary=structural_summary,
         suggested_queries=suggested_queries,
     )
@@ -272,6 +332,9 @@ def render_markdown_report(report: GraphReport) -> str:
         f"- Omitted count: `{summary.omitted_count}`",
         f"- Dependency count: `{summary.dependency_count}`",
         f"- Config count: `{summary.config_count}`",
+        f"- Git commit count: `{summary.git_commit_count}`",
+        f"- Git changed-path count: `{summary.git_changed_path_count}`",
+        f"- Git identity mode: `{summary.git_identity_mode or 'disabled'}`",
         "",
         "## Node Kinds",
         "",
@@ -303,6 +366,18 @@ def render_markdown_report(report: GraphReport) -> str:
             path = item.source_ref.path or str(item.details.get("source_path") or "")
             suffix = f" via `{path}`" if path else ""
             lines.append(f"- `{item.category}`: `{item.item_id}`{suffix}")
+    else:
+        lines.append("- none")
+    lines.extend(["", "## Git Overlay", ""])
+    if report.git_commits:
+        for item in report.git_commits:
+            author_identity = item.author_email_hash or item.author_email or "n/a"
+            lines.append(
+                f"- `{item.short_commit_hash}` touched `{item.touched_path_count}` paths "
+                f"(author=`{item.author_name}`, author_id=`{author_identity}`, "
+                f"epoch=`{item.committer_time_epoch}`, offset=`{item.committer_time_offset}`): "
+                f"{item.subject}"
+            )
     else:
         lines.append("- none")
     lines.extend(["", "## Structural Summary", ""])
@@ -377,6 +452,7 @@ def _suggested_queries(
     snapshot: GraphSnapshot,
     dependencies: tuple[GraphReportDependency, ...],
     unresolved_items: tuple[GraphReportFinding, ...],
+    git_commits: tuple[GraphReportGitCommit, ...],
 ) -> tuple[str, ...]:
     suggestions: list[str] = []
     preferred_kinds = (
@@ -399,6 +475,10 @@ def _suggested_queries(
         suggestions.append(
             f"What package dependencies are declared in `{dependencies[0].config_path}`?"
         )
+    if git_commits:
+        suggestions.append(
+            f"What files did `{git_commits[0].short_commit_hash}` touch most recently?"
+        )
     if any(item.category.startswith("unresolved_") for item in unresolved_items):
         suggestions.append("What unresolved imports or doc links exist?")
     return tuple(dict.fromkeys(suggestions))
@@ -410,6 +490,8 @@ def _structural_summary(
     orphan_nodes: tuple[GraphReportFinding, ...],
     unresolved_items: tuple[GraphReportFinding, ...],
     dependencies: tuple[GraphReportDependency, ...],
+    git_commits: tuple[GraphReportGitCommit, ...],
+    git_identity_mode: str,
 ) -> tuple[str, ...]:
     lines: list[str] = []
     if top_nodes:
@@ -420,7 +502,46 @@ def _structural_summary(
     lines.append(f"Orphan node count: {len(orphan_nodes)}.")
     lines.append(f"Unresolved structural item count: {len(unresolved_items)}.")
     lines.append(f"Declared dependency count: {len(dependencies)}.")
+    lines.append(
+        f"Git overlay commit count: {len(git_commits)} (identity mode: {git_identity_mode or 'disabled'})."
+    )
     return tuple(lines)
+
+
+def _git_commits(
+    snapshot: GraphSnapshot,
+    *,
+    top_n: int,
+) -> tuple[GraphReportGitCommit, ...]:
+    commits = sorted(
+        (node for node in snapshot.nodes if node.kind == NODE_GIT_COMMIT),
+        key=lambda node: (
+            -int(node.metadata.get("committer_time_epoch", 0) or 0),
+            -int(node.metadata.get("author_time_epoch", 0) or 0),
+            node.id,
+        ),
+    )
+    items: list[GraphReportGitCommit] = []
+    for node in commits[: max(1, top_n)]:
+        items.append(
+            GraphReportGitCommit(
+                node_id=node.id,
+                commit_hash=str(node.metadata.get("commit_hash", "") or ""),
+                short_commit_hash=str(node.metadata.get("short_commit_hash", "") or ""),
+                subject=str(node.metadata.get("subject", node.text) or ""),
+                author_name=str(node.metadata.get("author_name", "") or ""),
+                author_email_hash=str(node.metadata.get("author_email_hash", "") or ""),
+                author_email=str(node.metadata.get("author_email", "") or ""),
+                committer_time_epoch=int(
+                    node.metadata.get("committer_time_epoch", 0) or 0
+                ),
+                committer_time_offset=str(
+                    node.metadata.get("committer_time_offset", "") or ""
+                ),
+                touched_path_count=int(node.metadata.get("touched_path_count", 0) or 0),
+            )
+        )
+    return tuple(items)
 
 
 def _markdown_count_lines(counts: Mapping[str, int]) -> list[str]:
@@ -433,6 +554,7 @@ __all__ = [
     "GraphReport",
     "GraphReportDependency",
     "GraphReportFinding",
+    "GraphReportGitCommit",
     "GraphReportNode",
     "GraphReportSummary",
     "build_report",

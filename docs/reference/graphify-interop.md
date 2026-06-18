@@ -1,6 +1,7 @@
 # PragmaGraph Graphify Interop
 
 Status: semantic alpha
+Scope: deterministic Graphify-shaped JSON interchange
 
 ## Purpose
 

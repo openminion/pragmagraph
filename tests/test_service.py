@@ -161,6 +161,7 @@ def test_service_stdio_runner_supports_snapshot_sessions(tmp_path: Path) -> None
     )
     assert capabilities["result"]["snapshot_id"]
     assert capabilities["result"]["parser_set"]
+    assert capabilities["result"]["parser_versions"]
     assert first["result"] == second["result"]
     assert shutdown["result"]["shutdown"] == "accepted"
     assert proc.returncode == 0
@@ -192,6 +193,35 @@ def test_service_stdio_runner_supports_root_refresh_sessions(tmp_path: Path) -> 
     assert refreshed["result"]["path_changes"]
     assert queried["result"]["hits"][0]["node"]["label"] == "OperatorGraph"
     assert proc.returncode == 0
+
+
+def test_service_workspace_startup_uses_persisted_workspace(tmp_path: Path) -> None:
+    from pragmagraph.workspace import initialize_workspace
+
+    root = _repo_root(tmp_path)
+    workspace = tmp_path / "workspace"
+    initialize_workspace(
+        label="demo",
+        root_path=root,
+        workspace_path=workspace,
+        namespace="fixture",
+    )
+
+    proc = _serve_process("--workspace", str(workspace))
+    try:
+        capabilities = _roundtrip(proc, {"id": "1", "method": METHOD_CAPABILITIES})
+        query_result = _roundtrip(
+            proc,
+            {"id": "2", "method": METHOD_QUERY, "params": {"text": "RuntimeGraph"}},
+        )
+        _roundtrip(proc, {"id": "3", "method": METHOD_SHUTDOWN})
+    finally:
+        proc.wait(timeout=5)
+
+    assert capabilities["result"]["startup_mode"] == "workspace"
+    assert capabilities["result"]["refresh_supported"] is True
+    assert capabilities["result"]["workspace_path"] == str(workspace.resolve())
+    assert query_result["result"]["hits"][0]["node"]["label"] == "RuntimeGraph"
 
 
 def test_service_invalid_requests_return_typed_errors(tmp_path: Path) -> None:
@@ -238,6 +268,7 @@ def test_service_health_and_export_surface_richer_metadata(tmp_path: Path) -> No
     assert health_response.ok is True
     assert health_response.to_dict()["result"]["service"]["snapshot_id"]
     assert "diagnostic_counts" in health_response.to_dict()["result"]["service"]
+    assert health_response.to_dict()["result"]["service"]["parser_versions"]
     assert export_response.ok is True
     assert export_response.to_dict()["result"]["export_schema_version"].startswith(
         "pragmagraph.export."

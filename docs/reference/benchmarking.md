@@ -1,6 +1,7 @@
 # PragmaGraph Benchmarking
 
 Status: semantic alpha
+Scope: package-local benchmark helpers and readiness checks
 
 ## Purpose
 

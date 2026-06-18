@@ -13,21 +13,27 @@ The public alpha surface is documented in:
 
 The preferred entrypoint is `pragmagraph`, with additional stable import roots
 for contracts, models, query, storage, adapters, bench, portability, parsers,
-export, graphify, report, refresh, security, service, and `pragmagraph.ui`.
+export, graphify, report, refresh, security, service, workspace, and
+`pragmagraph.ui`.
 
 ## Source-tree owner map
 
 1. `contracts/` owns schema/version constants and typed package errors.
 2. `models/` owns immutable DTOs.
-3. `adapters/` owns local indexing from source roots into snapshots.
-4. `query/` owns deterministic search, explain, neighborhood, path, and
-   health helpers.
+3. `adapters/` owns local indexing from source roots into snapshots,
+   including git-history overlays.
+4. `query/` owns deterministic search, explain, neighborhood, path,
+   health, and git-aware lookup helpers.
 5. `storage/` owns snapshot load/save and stable JSON encoding.
 6. `report/`, `export/`, and `graphify/` own derived structural views over
-   snapshots.
+   snapshots, including structural git-overlay summaries.
 7. `refresh/` owns content-hash manifest and refresh behavior.
-8. `service/` owns the local repeated-query service boundary.
-9. `ui/` owns typed UI contracts only; runtime workbench implementation
+8. `operations.py` owns explicit refresh planning, saved invocation profiles,
+   persisted status ledgers, and repeatable local ingest runs.
+9. `workspace/` owns the persistent local workspace directory contract and
+   explicit workspace lifecycle helpers.
+10. `service/` owns the local repeated-query service boundary.
+11. `ui/` owns typed UI contracts only; runtime workbench implementation
    belongs in OpenMinion.
 
 ## Repo-local but not public API

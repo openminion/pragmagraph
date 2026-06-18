@@ -14,6 +14,7 @@ CAPABILITY_CITATIONS = "citations"
 CAPABILITY_PROVENANCE = "provenance"
 CAPABILITY_EXPLAIN = "explain"
 CAPABILITY_SECURITY_POLICY = "security_policy"
+CAPABILITY_GIT_HISTORY = "git_history"
 
 CAPABILITIES = frozenset(
     {
@@ -26,6 +27,7 @@ CAPABILITIES = frozenset(
         CAPABILITY_PROVENANCE,
         CAPABILITY_EXPLAIN,
         CAPABILITY_SECURITY_POLICY,
+        CAPABILITY_GIT_HISTORY,
     }
 )
 
@@ -45,6 +47,8 @@ NODE_SCRIPT_EXPORT = "script_export"
 NODE_IMPORT = "import"
 NODE_CONFIG = "config"
 NODE_CONFIG_KEY = "config_key"
+NODE_GIT_COMMIT = "git_commit"
+NODE_GIT_CHANGED_PATH = "git_changed_path"
 
 NODE_KINDS = frozenset(
     {
@@ -64,6 +68,8 @@ NODE_KINDS = frozenset(
         NODE_IMPORT,
         NODE_CONFIG,
         NODE_CONFIG_KEY,
+        NODE_GIT_COMMIT,
+        NODE_GIT_CHANGED_PATH,
     }
 )
 
@@ -78,6 +84,9 @@ EDGE_PARENT_SYMBOL = "parent_symbol"
 EDGE_REFERENCES_DOC = "references_doc"
 EDGE_HAS_KEY = "has_key"
 EDGE_DEPENDS_ON = "depends_on"
+EDGE_GIT_PARENT = "git_parent"
+EDGE_GIT_CHANGES_PATH = "git_changes_path"
+EDGE_GIT_TOUCHES = "git_touches"
 
 EDGE_KINDS = frozenset(
     {
@@ -92,6 +101,9 @@ EDGE_KINDS = frozenset(
         EDGE_REFERENCES_DOC,
         EDGE_HAS_KEY,
         EDGE_DEPENDS_ON,
+        EDGE_GIT_PARENT,
+        EDGE_GIT_CHANGES_PATH,
+        EDGE_GIT_TOUCHES,
     }
 )
 
@@ -99,6 +111,7 @@ __all__ = [
     "CAPABILITIES",
     "CAPABILITY_CITATIONS",
     "CAPABILITY_EXPLAIN",
+    "CAPABILITY_GIT_HISTORY",
     "CAPABILITY_HEALTH",
     "CAPABILITY_NEIGHBORHOOD",
     "CAPABILITY_PATH",
@@ -110,6 +123,9 @@ __all__ = [
     "EDGE_CONTAINS",
     "EDGE_DEPENDS_ON",
     "EDGE_DEFINES",
+    "EDGE_GIT_CHANGES_PATH",
+    "EDGE_GIT_PARENT",
+    "EDGE_GIT_TOUCHES",
     "EDGE_HAS_KEY",
     "EDGE_INHERITS",
     "EDGE_IMPORTS",
@@ -124,6 +140,8 @@ __all__ = [
     "NODE_DIRECTORY",
     "NODE_DOC_SECTION",
     "NODE_FILE",
+    "NODE_GIT_CHANGED_PATH",
+    "NODE_GIT_COMMIT",
     "NODE_IMPORT",
     "NODE_KINDS",
     "NODE_PROJECT",

@@ -27,9 +27,11 @@ External consumers should treat these import roots as the supported public API:
 - `pragmagraph.graphify`
 - `pragmagraph.report`
 - `pragmagraph.refresh`
+- `pragmagraph.operations`
 - `pragmagraph.security`
 - `pragmagraph.service`
 - `pragmagraph.ui`
+- `pragmagraph.workspace`
 
 The top-level `pragmagraph` package is the preferred entrypoint for package
 metadata and smoke validation.
@@ -55,6 +57,10 @@ The following top-level exports are part of the current public contract:
 - structural navigation helpers `reverse_imports`, `reverse_dependencies`,
   `backlinks`, and `impact`
 - service contracts `ServiceRequest`, `ServiceResponse`, and `LocalQueryService`
+- workspace contracts `WorkspaceMetadata`, `WorkspacePaths`,
+  `WorkspaceStatusView`, `WorkspaceRefreshResult`, and helpers such as
+  `initialize_workspace`, `refresh_workspace`, `load_workspace_metadata`, and
+  `load_workspace_status`
 - typed UI boundary contracts such as `UiTransportBoundary`,
   `UiScreenDefinition`, and `build_ui_screen_manifest`
 - parser/scope DTOs such as `ParserDiagnostic`, `ParserResult`,
@@ -114,7 +120,9 @@ Public-contract confidence should be enforced by tests that cover:
 11. incremental refresh manifest/delta determinism over repeated refreshes,
 12. benchmark behavior over the package-owned medium fixture,
 13. deterministic stdio service behavior for snapshot-backed and root-backed
-    repeated-request sessions.
+    repeated-request sessions,
+14. deterministic workspace init/status/refresh behavior and
+    `serve --workspace` startup.
 
 ## Non-goals
 
