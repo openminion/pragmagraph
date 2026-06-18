@@ -161,6 +161,7 @@ def test_service_stdio_runner_supports_snapshot_sessions(tmp_path: Path) -> None
     )
     assert capabilities["result"]["snapshot_id"]
     assert capabilities["result"]["parser_set"]
+    assert capabilities["result"]["parser_versions"]
     assert first["result"] == second["result"]
     assert shutdown["result"]["shutdown"] == "accepted"
     assert proc.returncode == 0
@@ -267,6 +268,7 @@ def test_service_health_and_export_surface_richer_metadata(tmp_path: Path) -> No
     assert health_response.ok is True
     assert health_response.to_dict()["result"]["service"]["snapshot_id"]
     assert "diagnostic_counts" in health_response.to_dict()["result"]["service"]
+    assert health_response.to_dict()["result"]["service"]["parser_versions"]
     assert export_response.ok is True
     assert export_response.to_dict()["result"]["export_schema_version"].startswith(
         "pragmagraph.export."

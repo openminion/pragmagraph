@@ -202,11 +202,23 @@ class LocalQueryService:
         if not self.refresh_supported:
             methods.remove(METHOD_REFRESH)
         parser_set = tuple(
-            sorted(
+            self._snapshot.stats.get("parser_set", ())
+            or sorted(
                 {
                     str(node.metadata.get("parser"))
                     for node in self._snapshot.nodes
                     if node.metadata.get("parser")
+                }
+            )
+        )
+        parser_versions = tuple(
+            self._snapshot.stats.get("parser_versions", ())
+            or sorted(
+                {
+                    f"{node.metadata.get('parser')}:{node.metadata.get('parser_version')}"
+                    for node in self._snapshot.nodes
+                    if node.metadata.get("parser")
+                    and node.metadata.get("parser_version")
                 }
             )
         )
@@ -226,6 +238,7 @@ class LocalQueryService:
                 self._manifest.schema_version if self._manifest is not None else ""
             ),
             parser_set=parser_set,
+            parser_versions=parser_versions,
             export_formats=("dot", "mermaid"),
             report_formats=("json", "markdown"),
             snapshot_id=_snapshot_id(self._snapshot),
@@ -288,6 +301,7 @@ class LocalQueryService:
                     self._manifest.schema_version if self._manifest is not None else ""
                 ),
                 "parser_set": self.capabilities().parser_set,
+                "parser_versions": self.capabilities().parser_versions,
                 "diagnostic_counts": _diagnostic_counts(self._snapshot),
                 "git_overlay": {
                     "enabled": bool(

@@ -57,6 +57,7 @@ def test_package_readme_mentions_policy_and_quickstart() -> None:
     assert "pragmagraph workspace-init" in readme
     assert "pragmagraph.workspace" in readme
     assert "pragmagraph.ui" in readme
+    assert '".[precise]"' in readme
 
 
 def test_package_metadata_declares_public_urls() -> None:

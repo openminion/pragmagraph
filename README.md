@@ -104,6 +104,8 @@ The package currently provides:
 - a local indexer for directories, files, Markdown headings and references,
   Python AST modules/classes/functions/methods/imports/calls/inheritance,
   lexical TypeScript/JavaScript modules/functions/classes/imports/exports,
+  optional precise Tree-sitter-backed TypeScript/JavaScript structure when the
+  `precise` extra is installed,
   selected JSON/TOML/YAML config metadata, lexical snippets, and local
   git-history overlays for commits and changed paths
 - query, explain, neighborhood, path, reverse-import, reverse-dependency,
@@ -184,6 +186,12 @@ Install with development tools:
 python3.11 -m pip install -e ".[dev]"
 ```
 
+Install with the optional precise TypeScript/JavaScript parser family:
+
+```bash
+python3.11 -m pip install -e ".[precise]"
+```
+
 Wheel build:
 
 ```bash
@@ -214,7 +222,7 @@ stable import roots, and `semantic_contract: true`.
   top-level export policy.
 - `RELEASING.md` records the package-local release and PyPI publish flow.
 - `docs/reference/service-mode.md` records the local service request/response
-  contract.
+  contract, including parser provenance in capabilities and health payloads.
 - `docs/reference/workspace-mode.md` records the persistent local workspace
   contract.
 - `docs/reference/refresh-operations.md` records the package-owned explicit

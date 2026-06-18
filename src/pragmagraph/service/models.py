@@ -137,6 +137,7 @@ class ServiceCapabilities:
     export_schema_version: str = ""
     manifest_schema_version: str = ""
     parser_set: tuple[str, ...] = ()
+    parser_versions: tuple[str, ...] = ()
     export_formats: tuple[str, ...] = ()
     report_formats: tuple[str, ...] = ()
     snapshot_id: str = ""
@@ -156,6 +157,9 @@ class ServiceCapabilities:
         )
         object.__setattr__(
             self, "parser_set", tuple(sorted(_tuple_str(self.parser_set)))
+        )
+        object.__setattr__(
+            self, "parser_versions", tuple(sorted(_tuple_str(self.parser_versions)))
         )
         object.__setattr__(
             self, "export_formats", tuple(sorted(_tuple_str(self.export_formats)))
@@ -179,6 +183,7 @@ class ServiceCapabilities:
             "export_schema_version": self.export_schema_version,
             "manifest_schema_version": self.manifest_schema_version,
             "parser_set": list(self.parser_set),
+            "parser_versions": list(self.parser_versions),
             "export_formats": list(self.export_formats),
             "report_formats": list(self.report_formats),
             "snapshot_id": self.snapshot_id,

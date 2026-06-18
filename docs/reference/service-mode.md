@@ -22,6 +22,7 @@ Capabilities and health responses are intentionally richer than the MVP surface:
 - workspace path when workspace-backed
 - manifest schema version
 - parser set
+- parser versions
 - export and report format support
 - refresh support posture
 - diagnostic counts

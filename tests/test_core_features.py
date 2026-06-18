@@ -2,10 +2,17 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from pragmagraph.adapters import index_path
 from pragmagraph.models import GraphEdge, GraphNode, GraphSnapshot, SourceRef
 from pragmagraph.query import neighborhood
-from pragmagraph.parsers import OptionalParserFamily, ParserRegistry, PythonAstParser
+from pragmagraph.parsers import (
+    OptionalParserFamily,
+    ParserRegistry,
+    PythonAstParser,
+    ScriptLexicalParser,
+)
 from pragmagraph.query import backlinks, impact, reverse_dependencies, reverse_imports
 from pragmagraph.refresh import refresh_snapshot
 
@@ -40,6 +47,28 @@ def _script_repo(tmp_path: Path) -> Path:
     return root
 
 
+def _precise_script_repo(tmp_path: Path) -> Path:
+    root = tmp_path / "precise-script-repo"
+    (root / "src").mkdir(parents=True)
+    (root / "src" / "index.ts").write_text(
+        "import {\n"
+        "  makeValue,\n"
+        "} from './util';\n\n"
+        "export function buildRuntimeGraph() {\n"
+        "  return makeValue();\n"
+        "}\n\n"
+        "export {\n"
+        "  makeValue,\n"
+        "};\n",
+        encoding="utf-8",
+    )
+    (root / "src" / "util.ts").write_text(
+        "export const makeValue = () => true;\n",
+        encoding="utf-8",
+    )
+    return root
+
+
 def test_script_parser_extracts_modules_imports_and_exports(tmp_path: Path) -> None:
     snapshot = index_path(_script_repo(tmp_path), namespace="fixture")
 
@@ -62,12 +91,14 @@ def test_optional_parser_unavailable_surfaces_typed_diagnostic(
     tmp_path: Path,
 ) -> None:
     registry = ParserRegistry(
-        parsers=(PythonAstParser(),),
+        parsers=(PythonAstParser(), ScriptLexicalParser()),
         optional_families=(
             OptionalParserFamily(
-                name="tree_sitter_typescript",
-                suffixes=frozenset({".ts"}),
-                dependency="tree_sitter",
+                name="tree_sitter_script_precise",
+                suffixes=frozenset({".cjs", ".js", ".jsx", ".mjs", ".ts", ".tsx"}),
+                dependency="pragmagraph[precise]",
+                preferred_parser="script_tree_sitter",
+                fallback_parser="script_lexical",
             ),
         ),
     )
@@ -80,6 +111,50 @@ def test_optional_parser_unavailable_surfaces_typed_diagnostic(
 
     assert any(
         item.reason == "optional_parser_unavailable" for item in snapshot.omitted
+    )
+    assert any(
+        item.reason == "optional_parser_unavailable"
+        and item.details.get("details", {}).get("fallback_parser") == "script_lexical"
+        for item in snapshot.omitted
+    )
+    assert any(
+        node.kind == "script_module" and node.metadata.get("parser") == "script_lexical"
+        for node in snapshot.nodes
+    )
+
+
+def test_precise_script_parser_handles_multiline_imports_when_available(
+    tmp_path: Path,
+) -> None:
+    pytest.importorskip("tree_sitter_language_pack")
+
+    snapshot = index_path(_precise_script_repo(tmp_path), namespace="fixture")
+
+    assert any(
+        node.kind == "script_module"
+        and node.metadata.get("parser") == "script_tree_sitter"
+        for node in snapshot.nodes
+    )
+    assert any(
+        node.kind == "import"
+        and node.label == "./util"
+        and node.metadata.get("parser") == "script_tree_sitter"
+        for node in snapshot.nodes
+    )
+    assert any(
+        node.kind == "script_export"
+        and node.label == "makeValue"
+        and node.metadata.get("parser") == "script_tree_sitter"
+        for node in snapshot.nodes
+    )
+    assert any(
+        edge.kind == "imports" and edge.metadata.get("resolved") is True
+        for edge in snapshot.edges
+    )
+    assert "script_tree_sitter" in snapshot.stats.get("parser_set", ())
+    assert (
+        "script_tree_sitter:pragmagraph.script_tree_sitter.v1alpha1"
+        in snapshot.stats.get("parser_versions", ())
     )
 
 
