@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 
 def test_root_layout_stays_clean_and_intentional() -> None:
@@ -24,6 +25,7 @@ def test_docs_reference_surface_contains_expected_package_refs() -> None:
         "benchmarking.md",
         "certification-readiness-matrix.md",
         "export-mode.md",
+        "refresh-operations.md",
         "git-history-mode.md",
         "graphify-interop.md",
         "report-mode.md",
@@ -33,3 +35,28 @@ def test_docs_reference_surface_contains_expected_package_refs() -> None:
     }
 
     assert expected.issubset({path.name for path in root.iterdir() if path.is_file()})
+
+
+def test_public_markdown_docs_do_not_use_machine_local_paths() -> None:
+    root = Path(__file__).resolve().parents[1]
+    markdown_files = [
+        root / "README.md",
+        root / "API_COMPATIBILITY.md",
+        root / "RELEASING.md",
+        root / "docs" / "README.md",
+        *sorted((root / "docs" / "reference").glob("*.md")),
+    ]
+
+    local_path_markers = ("/Users/", "file://")
+    relative_link_pattern = re.compile(r"\]\((?!https?://|mailto:|#)([^)]+)\)")
+
+    for markdown_file in markdown_files:
+        content = markdown_file.read_text()
+        assert not any(marker in content for marker in local_path_markers), (
+            f"{markdown_file} contains a machine-local path"
+        )
+
+        for target in relative_link_pattern.findall(content):
+            assert not target.startswith("/"), (
+                f"{markdown_file} contains an absolute local link target: {target}"
+            )
