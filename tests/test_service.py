@@ -22,23 +22,22 @@ from pragmagraph.service import (
     request_from_json_line,
 )
 from pragmagraph.storage import save_snapshot
+from .package_paths import build_fixture_repo
 
 
 def _repo_root(tmp_path: Path) -> Path:
-    root = tmp_path / "repo"
-    (root / "src").mkdir(parents=True)
-    (root / "README.md").write_text(
-        "# Runtime Graph\n\n## Usage\n\nStatic facts only.\n",
-        encoding="utf-8",
+    return build_fixture_repo(
+        tmp_path,
+        files={
+            "README.md": "# Runtime Graph\n\n## Usage\n\nStatic facts only.\n",
+            "src/app.py": (
+                "class RuntimeGraph:\n"
+                "    pass\n\n"
+                "def build_runtime_graph():\n"
+                "    return RuntimeGraph()\n"
+            ),
+        },
     )
-    (root / "src" / "app.py").write_text(
-        "class RuntimeGraph:\n"
-        "    pass\n\n"
-        "def build_runtime_graph():\n"
-        "    return RuntimeGraph()\n",
-        encoding="utf-8",
-    )
-    return root
 
 
 def _serve_process(*args: str) -> subprocess.Popen[str]:

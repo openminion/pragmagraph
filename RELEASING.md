@@ -17,9 +17,9 @@ A publishable release must satisfy all of the following:
 3. `README.md` describes install, quickstart, smoke, name meaning, and
    import-boundary expectations for external consumers.
 4. `API_COMPATIBILITY.md` names the stable import roots and deprecation policy.
-5. `docs/reference/` remains the canonical package-local reference-docs root.
-6. `src/pragmagraph/README.md` continues to document the source-tree owner map
-   and repo-local validation assets.
+5. `docs/` remains the canonical package-local docs root.
+6. `docs/source-tree-owner-map.md` continues to document the
+   source-tree owner map and repo-local validation assets.
 7. `pragmagraph.service` and `pragmagraph serve` remain documented when
    present in the public alpha contract.
 8. `pragmagraph.ui` remains documented as a typed boundary contract when
@@ -43,13 +43,13 @@ If the release changes the external consumer contract, also update:
 - `README.md`
 - `API_COMPATIBILITY.md`
 - `docs/README.md`
-- `src/pragmagraph/README.md`
-- `docs/reference/report-mode.md`
-- `docs/reference/export-mode.md`
-- `docs/reference/graphify-interop.md`
-- `docs/reference/benchmarking.md`
-- `docs/reference/service-mode.md`
-- `docs/reference/ui-contracts.md`
+- `docs/source-tree-owner-map.md`
+- `docs/report-mode.md`
+- `docs/export-mode.md`
+- `docs/graphify-interop.md`
+- `docs/benchmarking.md`
+- `docs/service-mode.md`
+- `docs/ui-contracts.md`
 
 ## Build and Validation
 

@@ -14,17 +14,17 @@ from pragmagraph.operations import (
 )
 from pragmagraph.refresh import build_manifest
 from pragmagraph.service import LocalQueryService, METHOD_REFRESH, ServiceRequest
+from .package_paths import build_fixture_repo
 
 
 def _repo_root(tmp_path: Path) -> Path:
-    root = tmp_path / "repo"
-    (root / "src").mkdir(parents=True)
-    (root / "README.md").write_text("# Demo\n", encoding="utf-8")
-    (root / "src" / "app.py").write_text(
-        "class RuntimeGraph:\n    pass\n",
-        encoding="utf-8",
+    return build_fixture_repo(
+        tmp_path,
+        files={
+            "README.md": "# Demo\n",
+            "src/app.py": "class RuntimeGraph:\n    pass\n",
+        },
     )
-    return root
 
 
 def test_build_refresh_plan_surfaces_changed_and_removed_paths(

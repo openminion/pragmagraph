@@ -1,7 +1,9 @@
-# PragmaGraph Package Layout
+# PragmaGraph Source Tree Owner Map
 
-`pragmagraph` is the standalone observed-fact graph package for local source,
-doc, and artifact structure.
+Status: semantic alpha
+
+Purpose: explain the `pragmagraph` source-tree owners without treating deep
+imports as blanket public promises.
 
 ## Public contract
 
@@ -20,10 +22,10 @@ export, graphify, report, refresh, security, service, workspace, and
 
 1. `contracts/` owns schema/version constants and typed package errors.
 2. `models/` owns immutable DTOs.
-3. `adapters/` owns local indexing from source roots into snapshots,
-   including git-history overlays.
-4. `query/` owns deterministic search, explain, neighborhood, path,
-   health, and git-aware lookup helpers.
+3. `adapters/` owns local indexing from source roots into snapshots, including
+   git-history overlays.
+4. `query/` owns deterministic search, explain, neighborhood, path, health,
+   and git-aware lookup helpers.
 5. `storage/` owns snapshot load/save and stable JSON encoding.
 6. `report/`, `export/`, and `graphify/` own derived structural views over
    snapshots, including structural git-overlay summaries.

@@ -6,20 +6,8 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Any, Mapping
 
+from pragmagraph._immutables import frozen_mapping, tuple_str
 from pragmagraph.contracts import INDEXER_VERSION, SCHEMA_VERSION
-
-
-def _frozen_mapping(value: Mapping[str, Any] | None) -> Mapping[str, Any]:
-    return MappingProxyType(dict(value or {}))
-
-
-def _tuple_str(value: object) -> tuple[str, ...]:
-    if value is None:
-        return ()
-    if isinstance(value, (str, bytes)):
-        text = str(value).strip()
-        return (text,) if text else ()
-    return tuple(str(item) for item in value)  # type: ignore[arg-type]
 
 
 @dataclass(frozen=True)
@@ -32,7 +20,7 @@ class PragmaGraphError(RuntimeError):
 
     def __post_init__(self) -> None:
         RuntimeError.__init__(self, self.message)
-        object.__setattr__(self, "details", _frozen_mapping(self.details))
+        object.__setattr__(self, "details", frozen_mapping(self.details))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -95,7 +83,7 @@ class GraphNode:
         object.__setattr__(self, "kind", str(self.kind))
         object.__setattr__(self, "label", str(self.label))
         object.__setattr__(self, "text", str(self.text or ""))
-        object.__setattr__(self, "metadata", _frozen_mapping(self.metadata))
+        object.__setattr__(self, "metadata", frozen_mapping(self.metadata))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -135,7 +123,7 @@ class GraphEdge:
         object.__setattr__(self, "kind", str(self.kind))
         object.__setattr__(self, "source_id", str(self.source_id))
         object.__setattr__(self, "target_id", str(self.target_id))
-        object.__setattr__(self, "metadata", _frozen_mapping(self.metadata))
+        object.__setattr__(self, "metadata", frozen_mapping(self.metadata))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -170,7 +158,7 @@ class OmittedDiagnostic:
     def __post_init__(self) -> None:
         object.__setattr__(self, "reason", str(self.reason))
         object.__setattr__(self, "item_id", str(self.item_id or ""))
-        object.__setattr__(self, "details", _frozen_mapping(self.details))
+        object.__setattr__(self, "details", frozen_mapping(self.details))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -202,7 +190,7 @@ class ParserDiagnostic:
         object.__setattr__(self, "code", str(self.code))
         object.__setattr__(self, "message", str(self.message))
         object.__setattr__(self, "path", str(self.path or ""))
-        object.__setattr__(self, "details", _frozen_mapping(self.details))
+        object.__setattr__(self, "details", frozen_mapping(self.details))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -265,7 +253,7 @@ class GraphSnapshot:
         object.__setattr__(self, "nodes", tuple(self.nodes))
         object.__setattr__(self, "edges", tuple(self.edges))
         object.__setattr__(self, "omitted", tuple(self.omitted))
-        object.__setattr__(self, "stats", _frozen_mapping(self.stats))
+        object.__setattr__(self, "stats", frozen_mapping(self.stats))
 
     def node_map(self) -> dict[str, GraphNode]:
         return {node.id: node for node in self.nodes}
@@ -311,7 +299,7 @@ class QueryRequest:
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "query", str(self.query or ""))
-        object.__setattr__(self, "node_ids", _tuple_str(self.node_ids))
+        object.__setattr__(self, "node_ids", tuple_str(self.node_ids))
         object.__setattr__(self, "max_results", max(1, int(self.max_results or 1)))
 
 
@@ -326,8 +314,8 @@ class QueryExplanation:
     omitted_reasons: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "matched_fields", _tuple_str(self.matched_fields))
-        object.__setattr__(self, "matched_tokens", _tuple_str(self.matched_tokens))
+        object.__setattr__(self, "matched_fields", tuple_str(self.matched_fields))
+        object.__setattr__(self, "matched_tokens", tuple_str(self.matched_tokens))
         object.__setattr__(self, "exact_match", str(self.exact_match or ""))
         object.__setattr__(
             self,
@@ -336,7 +324,7 @@ class QueryExplanation:
                 {str(key): float(value) for key, value in self.score_parts.items()}
             ),
         )
-        object.__setattr__(self, "omitted_reasons", _tuple_str(self.omitted_reasons))
+        object.__setattr__(self, "omitted_reasons", tuple_str(self.omitted_reasons))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -384,7 +372,7 @@ class QueryResult:
     def __post_init__(self) -> None:
         object.__setattr__(self, "hits", tuple(self.hits))
         object.__setattr__(self, "omitted", tuple(self.omitted))
-        object.__setattr__(self, "diagnostics", _frozen_mapping(self.diagnostics))
+        object.__setattr__(self, "diagnostics", frozen_mapping(self.diagnostics))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -428,7 +416,7 @@ class HealthSummary:
     stats: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "stats", _frozen_mapping(self.stats))
+        object.__setattr__(self, "stats", frozen_mapping(self.stats))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -546,7 +534,7 @@ class RefreshPathChange:
     def __post_init__(self) -> None:
         object.__setattr__(self, "path", str(self.path or ""))
         object.__setattr__(self, "status", str(self.status or ""))
-        object.__setattr__(self, "reasons", _tuple_str(self.reasons))
+        object.__setattr__(self, "reasons", tuple_str(self.reasons))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -576,15 +564,13 @@ class SnapshotStructuralDelta:
     removed_omitted_ids: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "added_node_ids", _tuple_str(self.added_node_ids))
-        object.__setattr__(self, "removed_node_ids", _tuple_str(self.removed_node_ids))
-        object.__setattr__(self, "added_edge_ids", _tuple_str(self.added_edge_ids))
-        object.__setattr__(self, "removed_edge_ids", _tuple_str(self.removed_edge_ids))
+        object.__setattr__(self, "added_node_ids", tuple_str(self.added_node_ids))
+        object.__setattr__(self, "removed_node_ids", tuple_str(self.removed_node_ids))
+        object.__setattr__(self, "added_edge_ids", tuple_str(self.added_edge_ids))
+        object.__setattr__(self, "removed_edge_ids", tuple_str(self.removed_edge_ids))
+        object.__setattr__(self, "added_omitted_ids", tuple_str(self.added_omitted_ids))
         object.__setattr__(
-            self, "added_omitted_ids", _tuple_str(self.added_omitted_ids)
-        )
-        object.__setattr__(
-            self, "removed_omitted_ids", _tuple_str(self.removed_omitted_ids)
+            self, "removed_omitted_ids", tuple_str(self.removed_omitted_ids)
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -613,9 +599,9 @@ class RefreshResult:
     )
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "changed_paths", _tuple_str(self.changed_paths))
-        object.__setattr__(self, "unchanged_paths", _tuple_str(self.unchanged_paths))
-        object.__setattr__(self, "removed_paths", _tuple_str(self.removed_paths))
+        object.__setattr__(self, "changed_paths", tuple_str(self.changed_paths))
+        object.__setattr__(self, "unchanged_paths", tuple_str(self.unchanged_paths))
+        object.__setattr__(self, "removed_paths", tuple_str(self.removed_paths))
         object.__setattr__(self, "path_changes", tuple(self.path_changes))
 
     def to_dict(self) -> dict[str, Any]:

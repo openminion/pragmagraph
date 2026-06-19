@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from types import MappingProxyType
 from typing import Any, Mapping
 
+from pragmagraph._immutables import frozen_mapping, tuple_str
 from pragmagraph.contracts import (
     EDGE_DEPENDS_ON,
     NODE_GIT_CHANGED_PATH,
@@ -16,19 +16,6 @@ from pragmagraph.contracts import (
     NODE_PYTHON_METHOD,
 )
 from pragmagraph.models import GraphNode, GraphSnapshot, OmittedDiagnostic, SourceRef
-
-
-def _frozen_mapping(value: Mapping[str, Any] | None) -> Mapping[str, Any]:
-    return MappingProxyType(dict(value or {}))
-
-
-def _tuple_str(value: object) -> tuple[str, ...]:
-    if value is None:
-        return ()
-    if isinstance(value, (str, bytes)):
-        text = str(value).strip()
-        return (text,) if text else ()
-    return tuple(str(item) for item in value)  # type: ignore[arg-type]
 
 
 def _source_ref_payload(source_ref: SourceRef) -> dict[str, Any]:
@@ -56,10 +43,10 @@ class GraphReportSummary:
     omitted_reasons: Mapping[str, int] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "node_kinds", _frozen_mapping(self.node_kinds))
-        object.__setattr__(self, "edge_kinds", _frozen_mapping(self.edge_kinds))
+        object.__setattr__(self, "node_kinds", frozen_mapping(self.node_kinds))
+        object.__setattr__(self, "edge_kinds", frozen_mapping(self.edge_kinds))
         object.__setattr__(
-            self, "omitted_reasons", _frozen_mapping(self.omitted_reasons)
+            self, "omitted_reasons", frozen_mapping(self.omitted_reasons)
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -117,7 +104,7 @@ class GraphReportFinding:
     details: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "details", _frozen_mapping(self.details))
+        object.__setattr__(self, "details", frozen_mapping(self.details))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -202,11 +189,9 @@ class GraphReport:
         object.__setattr__(self, "dependencies", tuple(self.dependencies))
         object.__setattr__(self, "git_commits", tuple(self.git_commits))
         object.__setattr__(
-            self, "structural_summary", _tuple_str(self.structural_summary)
+            self, "structural_summary", tuple_str(self.structural_summary)
         )
-        object.__setattr__(
-            self, "suggested_queries", _tuple_str(self.suggested_queries)
-        )
+        object.__setattr__(self, "suggested_queries", tuple_str(self.suggested_queries))
 
     def to_dict(self) -> dict[str, Any]:
         return {

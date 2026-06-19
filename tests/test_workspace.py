@@ -18,17 +18,17 @@ from pragmagraph.workspace import (
     initialize_workspace,
     load_workspace_status,
 )
+from .package_paths import build_fixture_repo
 
 
 def _repo_root(tmp_path: Path) -> Path:
-    root = tmp_path / "repo"
-    (root / "src").mkdir(parents=True)
-    (root / "README.md").write_text("# Runtime Graph\n", encoding="utf-8")
-    (root / "src" / "app.py").write_text(
-        "class RuntimeGraph:\n    pass\n",
-        encoding="utf-8",
+    return build_fixture_repo(
+        tmp_path,
+        files={
+            "README.md": "# Runtime Graph\n",
+            "src/app.py": "class RuntimeGraph:\n    pass\n",
+        },
     )
-    return root
 
 
 def test_workspace_init_persists_expected_files_and_status(tmp_path: Path) -> None:

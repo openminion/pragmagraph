@@ -1091,13 +1091,7 @@ class _PythonFactVisitor(ast.NodeVisitor):
         parent_id, parent_kind = self.parents[-1]
         qualified = ".".join([*self._parent_labels(), label])
         symbol_id = node_id(self.namespace, kind, f"{self.rel}:{qualified}")
-        source_ref = SourceRef(
-            path=self.rel,
-            line=getattr(node, "lineno", None),
-            column=getattr(node, "col_offset", None),
-            end_line=getattr(node, "end_lineno", None),
-            end_column=getattr(node, "end_col_offset", None),
-        )
+        source_ref = self._source_ref(node)
         metadata = {
             "qualified_name": qualified,
             "parent_id": parent_id,
@@ -1117,7 +1111,7 @@ class _PythonFactVisitor(ast.NodeVisitor):
             symbol_id,
             NODE_PYTHON_SYMBOL,
             label,
-            SourceRef(path=self.rel, line=getattr(node, "lineno", None)),
+            self._line_source_ref(node),
             {"symbol_type": symbol_type, "legacy_compat": True},
         )
         self._edge(self.file_id, EDGE_DEFINES, symbol_id, node)
@@ -1128,7 +1122,7 @@ class _PythonFactVisitor(ast.NodeVisitor):
             import_id,
             NODE_IMPORT,
             module,
-            SourceRef(path=self.rel, line=getattr(node, "lineno", None)),
+            self._line_source_ref(node),
             {"external": True},
         )
         self._edge(self.file_id, EDGE_IMPORTS, import_id, node)
@@ -1137,7 +1131,7 @@ class _PythonFactVisitor(ast.NodeVisitor):
             legacy_id,
             NODE_PYTHON_SYMBOL,
             module,
-            SourceRef(path=self.rel, line=getattr(node, "lineno", None)),
+            self._line_source_ref(node),
             {"external": True, "symbol_type": "import", "legacy_compat": True},
         )
         self._edge(self.file_id, EDGE_IMPORTS, legacy_id, node)
@@ -1148,7 +1142,7 @@ class _PythonFactVisitor(ast.NodeVisitor):
             target_id,
             kind,
             label,
-            SourceRef(path=self.rel, line=getattr(node, "lineno", None)),
+            self._line_source_ref(node),
             {"external": True},
         )
         return target_id
@@ -1159,7 +1153,7 @@ class _PythonFactVisitor(ast.NodeVisitor):
             kind=kind,
             source_id=source_id,
             target_id=target_id,
-            source_ref=SourceRef(path=self.rel, line=getattr(node, "lineno", None)),
+            source_ref=self._line_source_ref(node),
         )
         self.edges.setdefault(edge.id, edge)
 
@@ -1181,6 +1175,18 @@ class _PythonFactVisitor(ast.NodeVisitor):
                 text=escape_label(label),
                 metadata=metadata,
             ),
+        )
+
+    def _line_source_ref(self, node: ast.AST) -> SourceRef:
+        return SourceRef(path=self.rel, line=getattr(node, "lineno", None))
+
+    def _source_ref(self, node: ast.AST) -> SourceRef:
+        return SourceRef(
+            path=self.rel,
+            line=getattr(node, "lineno", None),
+            column=getattr(node, "col_offset", None),
+            end_line=getattr(node, "end_lineno", None),
+            end_column=getattr(node, "end_col_offset", None),
         )
 
     def _parent_labels(self) -> list[str]:

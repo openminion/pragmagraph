@@ -122,6 +122,28 @@ def _snippet(node: GraphNode) -> str:
     return node.text or node.label or node.source_ref.path or node.id
 
 
+def _static_hit(
+    node: GraphNode,
+    *,
+    score: float,
+    edges: tuple[GraphEdge, ...],
+    matched_field: str,
+    score_key: str,
+    exact_match: str = "",
+) -> QueryHit:
+    return QueryHit(
+        node=node,
+        score=score,
+        edges=edges,
+        snippet=_snippet(node),
+        explanation=QueryExplanation(
+            matched_fields=(matched_field,),
+            score_parts={score_key: score},
+            exact_match=exact_match,
+        ),
+    )
+
+
 def query(snapshot: GraphSnapshot, request: QueryRequest | str) -> QueryResult:
     """Run deterministic lexical/structural search over a snapshot."""
     req = request if isinstance(request, QueryRequest) else QueryRequest(query=request)
@@ -296,15 +318,12 @@ def reverse_dependencies(
         if node is None:
             continue
         hits.append(
-            QueryHit(
-                node=node,
+            _static_hit(
+                node,
                 score=100.0,
                 edges=(edge,),
-                snippet=_snippet(node),
-                explanation=QueryExplanation(
-                    matched_fields=("edge.depends_on",),
-                    score_parts={"reverse_dependency": 100.0},
-                ),
+                matched_field="edge.depends_on",
+                score_key="reverse_dependency",
             )
         )
     return QueryResult(
@@ -354,15 +373,12 @@ def reverse_imports(
         if node is None:
             continue
         hits.append(
-            QueryHit(
-                node=node,
+            _static_hit(
+                node,
                 score=100.0,
                 edges=_incident_edges(snapshot, node.id),
-                snippet=_snippet(node),
-                explanation=QueryExplanation(
-                    matched_fields=("edge.imports",),
-                    score_parts={"resolved_reverse_import": 100.0},
-                ),
+                matched_field="edge.imports",
+                score_key="resolved_reverse_import",
             )
         )
     return QueryResult(
@@ -391,15 +407,12 @@ def backlinks(
         if node is None:
             continue
         hits.append(
-            QueryHit(
-                node=node,
+            _static_hit(
+                node,
                 score=100.0,
                 edges=(edge,),
-                snippet=_snippet(node),
-                explanation=QueryExplanation(
-                    matched_fields=("edge.backlink",),
-                    score_parts={"backlink": 100.0},
-                ),
+                matched_field="edge.backlink",
+                score_key="backlink",
             )
         )
     return QueryResult(
@@ -440,16 +453,13 @@ def impact(
         if node is None:
             continue
         hits.append(
-            QueryHit(
-                node=node,
+            _static_hit(
+                node,
                 score=100.0,
                 edges=(edge,),
-                snippet=_snippet(node),
-                explanation=QueryExplanation(
-                    matched_fields=(f"edge.{edge.kind}",),
-                    score_parts={"impact": 100.0},
-                    exact_match=resolution_kind,
-                ),
+                matched_field=f"edge.{edge.kind}",
+                score_key="impact",
+                exact_match=resolution_kind,
             )
         )
     if len(hits) > max_results:
@@ -492,18 +502,15 @@ def recent_commits_for_path(
         key=_git_commit_sort_key,
     )
     hits = tuple(
-        QueryHit(
-            node=node,
+        _static_hit(
+            node,
             score=float(max(max_results - index, 1)),
             edges=tuple(
                 sorted(commit_edges.get(node.id, ()), key=lambda item: item.id)
             ),
-            snippet=node.text or node.label,
-            explanation=QueryExplanation(
-                matched_fields=("edge.git_path",),
-                score_parts={"git_path_commit": 100.0},
-                exact_match="path",
-            ),
+            matched_field="edge.git_path",
+            score_key="git_path_commit",
+            exact_match="path",
         )
         for index, node in enumerate(commits[:max_results])
     )
@@ -560,16 +567,13 @@ def files_touched_by_commit(
             continue
         seen_paths.add(path_key)
         hits.append(
-            QueryHit(
-                node=node,
+            _static_hit(
+                node,
                 score=100.0 if node.kind == NODE_FILE else 90.0,
                 edges=(edge,),
-                snippet=_snippet(node),
-                explanation=QueryExplanation(
-                    matched_fields=(f"edge.{edge.kind}",),
-                    score_parts={"git_commit_path": 100.0},
-                    exact_match="commit",
-                ),
+                matched_field=f"edge.{edge.kind}",
+                score_key="git_commit_path",
+                exact_match="commit",
             )
         )
     return QueryResult(

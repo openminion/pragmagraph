@@ -6,7 +6,7 @@ import json
 import re
 import tomllib
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
 from pragmagraph.adapters.git_history import (
     DEFAULT_GIT_IDENTITY_MODE,
@@ -83,6 +83,15 @@ def _add_edge(edges: dict[str, GraphEdge], edge: GraphEdge) -> None:
     edges.setdefault(edge.id, edge)
 
 
+def _omitted(
+    *,
+    reason: str,
+    item_id: str,
+    details: Mapping[str, Any] | None = None,
+) -> OmittedDiagnostic:
+    return OmittedDiagnostic(reason=reason, item_id=item_id, details=details or {})
+
+
 def _parser_provenance(
     nodes: dict[str, GraphNode],
 ) -> tuple[tuple[str, ...], tuple[str, ...]]:
@@ -121,7 +130,7 @@ def _iter_paths(
         if diagnostic is not None:
             yield (
                 path,
-                OmittedDiagnostic(
+                _omitted(
                     reason=diagnostic.code,
                     item_id=diagnostic.path,
                     details=diagnostic.to_dict(),
@@ -313,7 +322,7 @@ def _resolve_local_imports(
             )
         elif "." in node.label or str(node.metadata.get("source_path", "")).strip():
             omitted.append(
-                OmittedDiagnostic(
+                _omitted(
                     reason="unresolved_local_import",
                     item_id=node.label,
                     details={"source_path": node.source_ref.path},
@@ -347,7 +356,7 @@ def _index_file(
     parser = selection.parser
     for diagnostic in selection.diagnostics:
         omitted.append(
-            OmittedDiagnostic(
+            _omitted(
                 reason=diagnostic.code,
                 item_id=diagnostic.path or rel,
                 details=diagnostic.to_dict(),
@@ -362,7 +371,7 @@ def _index_file(
         _add_edge(edges, edge)
     for diagnostic in result.diagnostics:
         omitted.append(
-            OmittedDiagnostic(
+            _omitted(
                 reason=diagnostic.code,
                 item_id=diagnostic.path or rel,
                 details=diagnostic.to_dict(),
@@ -388,9 +397,7 @@ def _resolve_relative_module_id(
         if candidate in modules_by_path:
             return modules_by_path[candidate]
     for suffix in (".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx"):
-        trimmed = candidate = (
-            target.removesuffix(suffix) if target.endswith(suffix) else ""
-        )
+        trimmed = target.removesuffix(suffix) if target.endswith(suffix) else ""
         if trimmed and trimmed in modules_by_path:
             return modules_by_path[trimmed]
     return None
@@ -532,7 +539,7 @@ def _add_doc_reference(
         ),
     )
     omitted.append(
-        OmittedDiagnostic(
+        _omitted(
             reason="unresolved_markdown_reference",
             item_id=target_key,
             details={"source_path": rel, "line": line, "target": target},
@@ -555,7 +562,7 @@ def _index_local_anchor_links(
             target_id = section_by_slug.get(slug)
             if not target_id:
                 omitted.append(
-                    OmittedDiagnostic(
+                    _omitted(
                         reason="unresolved_markdown_anchor",
                         item_id=f"{rel}#{slug}",
                         details={"source_path": rel, "line": number},
@@ -669,7 +676,7 @@ def _config_items(
             return ()
     except (json.JSONDecodeError, tomllib.TOMLDecodeError, ValueError) as exc:
         omitted.append(
-            OmittedDiagnostic(
+            _omitted(
                 reason="config_parse_error",
                 item_id=rel,
                 details={"message": str(exc)},

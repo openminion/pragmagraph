@@ -221,24 +221,24 @@ stable import roots, and `semantic_contract: true`.
 - `API_COMPATIBILITY.md` records the supported public import roots and
   top-level export policy.
 - `RELEASING.md` records the package-local release and PyPI publish flow.
-- `docs/reference/service-mode.md` records the local service request/response
+- `docs/service-mode.md` records the local service request/response
   contract, including parser provenance in capabilities and health payloads.
-- `docs/reference/workspace-mode.md` records the persistent local workspace
+- `docs/workspace-mode.md` records the persistent local workspace
   contract.
-- `docs/reference/refresh-operations.md` records the package-owned explicit
+- `docs/refresh-operations.md` records the package-owned explicit
   refresh/profile/status contract.
-- `docs/reference/report-mode.md` records the structural report contract.
-- `docs/reference/export-mode.md` records the deterministic export contract.
-- `docs/reference/graphify-interop.md` records the deterministic Graphify
+- `docs/report-mode.md` records the structural report contract.
+- `docs/export-mode.md` records the deterministic export contract.
+- `docs/graphify-interop.md` records the deterministic Graphify
   interchange contract.
-- `docs/reference/benchmarking.md` records the benchmark surface and readiness
+- `docs/benchmarking.md` records the benchmark surface and readiness
   posture.
-- `docs/reference/git-history-mode.md` records the local git-overlay contract,
+- `docs/git-history-mode.md` records the local git-overlay contract,
   privacy posture, and CLI shape.
-- `docs/reference/ui-contracts.md` records the package-owned UI boundary
+- `docs/ui-contracts.md` records the package-owned UI boundary
   contract.
-- `src/pragmagraph/README.md` explains the source-tree module layout and
-  public-vs-repo-local boundary.
+- `docs/source-tree-owner-map.md` explains the source-tree module
+  layout and public-vs-repo-local boundary.
 - `scripts/release_check.py` is the canonical release smoke entrypoint.
 - `tests/fixtures/repos/` and `tests/contracts/` hold repo-local regression
   fixtures and OpenMinion contract snapshots; they are validation assets, not
@@ -401,12 +401,12 @@ pragmagraph workspace-init /path/to/repo --workspace .pragmagraph-workspace --js
 ```
 
 See [API_COMPATIBILITY.md](API_COMPATIBILITY.md) for the public import-root
-policy, [docs/reference/report-mode.md](docs/reference/report-mode.md) for the
-structural report contract, [docs/reference/export-mode.md](docs/reference/export-mode.md)
-for deterministic graph exports, [docs/reference/benchmarking.md](docs/reference/benchmarking.md)
-for the benchmark/readiness surface, [docs/reference/graphify-interop.md](docs/reference/graphify-interop.md)
-for Graphify-shaped JSON interchange, [docs/reference/workspace-mode.md](docs/reference/workspace-mode.md)
+policy, [docs/report-mode.md](docs/report-mode.md) for the
+structural report contract, [docs/export-mode.md](docs/export-mode.md)
+for deterministic graph exports, [docs/benchmarking.md](docs/benchmarking.md)
+for the benchmark/readiness surface, [docs/graphify-interop.md](docs/graphify-interop.md)
+for Graphify-shaped JSON interchange, [docs/workspace-mode.md](docs/workspace-mode.md)
 for the persistent local workspace contract,
-[docs/reference/certification-readiness-matrix.md](docs/reference/certification-readiness-matrix.md)
+[docs/certification-readiness-matrix.md](docs/certification-readiness-matrix.md)
 for package/OpenMinion proof coverage, and [RELEASING.md](RELEASING.md) for
 package-local release checks.
