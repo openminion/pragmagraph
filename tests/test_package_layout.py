@@ -8,18 +8,19 @@ def test_root_layout_stays_clean_and_intentional() -> None:
     root = Path(__file__).resolve().parents[1]
 
     assert (root / "docs" / "README.md").is_file()
-    assert (root / "docs" / "reference").is_dir()
+    assert (root / "docs" / "source-tree-owner-map.md").is_file()
     assert (root / "src" / "pragmagraph" / "README.md").is_file()
     assert (root / "tests" / "fixtures" / "repos").is_dir()
     assert (root / "tests" / "contracts").is_dir()
 
     assert not (root / "fixtures").exists()
     assert not (root / "handoff").exists()
+    assert not (root / "docs" / "reference").exists()
     assert not (root / "docs" / "public-package-readme-template.md").exists()
 
 
 def test_docs_reference_surface_contains_expected_package_refs() -> None:
-    root = Path(__file__).resolve().parents[1] / "docs" / "reference"
+    root = Path(__file__).resolve().parents[1] / "docs"
 
     expected = {
         "benchmarking.md",
@@ -44,7 +45,7 @@ def test_public_markdown_docs_do_not_use_machine_local_paths() -> None:
         root / "API_COMPATIBILITY.md",
         root / "RELEASING.md",
         root / "docs" / "README.md",
-        *sorted((root / "docs" / "reference").glob("*.md")),
+        *sorted((root / "docs").glob("*.md")),
     ]
 
     local_path_markers = ("/Users/", "file://")

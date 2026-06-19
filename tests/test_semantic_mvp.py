@@ -14,22 +14,23 @@ from pragmagraph.portability import node_id, pragma_uri
 from pragmagraph.query import health, neighborhood, path, query
 from pragmagraph.storage import load_snapshot, save_snapshot, stable_dumps
 
-from .package_paths import contract_path, fixture_repo
+from .package_paths import build_fixture_repo, contract_path, fixture_repo
 
 
 def _fixture_root(tmp_path: Path) -> Path:
-    root = tmp_path / "repo"
-    (root / "src").mkdir(parents=True)
-    (root / "README.md").write_text(
-        "# PragmaGraph Fixture\n\n## Runtime Wiring\n\nStatic graph facts.\n",
-        encoding="utf-8",
+    return build_fixture_repo(
+        tmp_path,
+        files={
+            "README.md": (
+                "# PragmaGraph Fixture\n\n## Runtime Wiring\n\nStatic graph facts.\n"
+            ),
+            "src/app.py": (
+                "import json\n\n"
+                "class RuntimeGraph:\n    pass\n\n"
+                "def build_runtime_graph():\n    return RuntimeGraph()\n"
+            ),
+        },
     )
-    (root / "src" / "app.py").write_text(
-        "import json\n\nclass RuntimeGraph:\n    pass\n\n"
-        "def build_runtime_graph():\n    return RuntimeGraph()\n",
-        encoding="utf-8",
-    )
-    return root
 
 
 def test_models_storage_and_uri_helpers_round_trip(tmp_path: Path) -> None:

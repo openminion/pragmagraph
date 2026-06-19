@@ -7,38 +7,37 @@ This directory holds the public package documentation for standalone
 
 ## Package-local references
 
-- [`reference/report-mode.md`](reference/report-mode.md) records the structural
+- [`report-mode.md`](report-mode.md) records the structural
   report contract and CLI shape.
-- [`reference/export-mode.md`](reference/export-mode.md) records DOT/Mermaid
+- [`export-mode.md`](export-mode.md) records DOT/Mermaid
   text export contracts and CLI shape.
-- [`reference/service-mode.md`](reference/service-mode.md) records the local
+- [`service-mode.md`](service-mode.md) records the local
   service request/response contract.
-- [`reference/workspace-mode.md`](reference/workspace-mode.md) records the
+- [`workspace-mode.md`](workspace-mode.md) records the
   package-owned persistent local workspace contract.
-- [`reference/refresh-operations.md`](reference/refresh-operations.md) records
+- [`refresh-operations.md`](refresh-operations.md) records
   the package-owned explicit refresh/profile/status surface.
-- [`reference/ui-contracts.md`](reference/ui-contracts.md) records the
+- [`ui-contracts.md`](ui-contracts.md) records the
   package-owned `pragmagraph.ui` boundary for the future OpenMinion workbench
   surface.
-- [`reference/benchmarking.md`](reference/benchmarking.md) records the
+- [`benchmarking.md`](benchmarking.md) records the
   package-owned benchmark surface and repo-local regression fixture policy.
-- [`reference/graphify-interop.md`](reference/graphify-interop.md) records the
+- [`graphify-interop.md`](graphify-interop.md) records the
   deterministic Graphify-shaped JSON import/export contract.
-- [`reference/git-history-mode.md`](reference/git-history-mode.md) records the
+- [`git-history-mode.md`](git-history-mode.md) records the
   local git-overlay contract, privacy posture, and CLI shape.
-- [`reference/certification-readiness-matrix.md`](reference/certification-readiness-matrix.md)
+- [`certification-readiness-matrix.md`](certification-readiness-matrix.md)
   records the current standalone and OpenMinion proof targets for the public
   package surface.
 
 ## Package-local code/docs boundaries
 
 1. `README.md` is the public package contract and install surface.
-2. [`../API_COMPATIBILITY.md`](../API_COMPATIBILITY.md) records the supported
-   public import roots and top-level export policy.
-3. [`../src/pragmagraph/README.md`](../src/pragmagraph/README.md) explains the
-   source-tree owner map and public-vs-repo-local boundary.
-4. [`../RELEASING.md`](../RELEASING.md) records the package-local release and
-   PyPI publish flow.
+2. `API_COMPATIBILITY.md` records the supported public import roots and
+   top-level export policy.
+3. The Source Tree Owner Map reference explains the source-tree owner map and
+   public-vs-repo-local boundary.
+4. `RELEASING.md` records the package-local release and PyPI publish flow.
 5. `scripts/release_check.py` is the canonical package release smoke entrypoint.
 
 ## Repository-local but not package API

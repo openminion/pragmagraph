@@ -8,36 +8,26 @@ from pathlib import Path
 from pragmagraph.adapters import index_path
 from pragmagraph.report import build_report, render_markdown_report
 from pragmagraph.storage import save_snapshot
+from .package_paths import build_fixture_repo
 
 
 def _report_fixture_root(tmp_path: Path) -> Path:
-    root = tmp_path / "report-repo"
-    (root / "src").mkdir(parents=True)
-    (root / "docs").mkdir()
-    (root / "README.md").write_text(
-        "# Demo\n\nSee [Guide](docs/guide.md#Install).\n",
-        encoding="utf-8",
+    return build_fixture_repo(
+        tmp_path,
+        repo_name="report-repo",
+        files={
+            "README.md": "# Demo\n\nSee [Guide](docs/guide.md#Install).\n",
+            "docs/guide.md": "# Guide\n\n## Install\n\nSee [Missing](missing.md#Nope).\n",
+            "pyproject.toml": '[project]\nname = "demo"\ndependencies = ["ruff"]\n',
+            "src/app.py": (
+                "from helper import make_value\n\n"
+                "class RuntimeGraph:\n"
+                "    def build(self):\n"
+                "        return make_value()\n"
+            ),
+            "src/helper.py": "def make_value():\n    return True\n",
+        },
     )
-    (root / "docs" / "guide.md").write_text(
-        "# Guide\n\n## Install\n\nSee [Missing](missing.md#Nope).\n",
-        encoding="utf-8",
-    )
-    (root / "pyproject.toml").write_text(
-        '[project]\nname = "demo"\ndependencies = ["ruff"]\n',
-        encoding="utf-8",
-    )
-    (root / "src" / "app.py").write_text(
-        "from helper import make_value\n\n"
-        "class RuntimeGraph:\n"
-        "    def build(self):\n"
-        "        return make_value()\n",
-        encoding="utf-8",
-    )
-    (root / "src" / "helper.py").write_text(
-        "def make_value():\n    return True\n",
-        encoding="utf-8",
-    )
-    return root
 
 
 def test_build_report_returns_structural_summary(tmp_path: Path) -> None:

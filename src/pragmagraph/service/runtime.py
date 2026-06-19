@@ -291,37 +291,19 @@ class LocalQueryService:
         if method == METHOD_CAPABILITIES:
             return self.capabilities().to_dict()
         if method == METHOD_HEALTH:
+            capabilities = self.capabilities()
             summary = health(self._snapshot).to_dict()
             summary["service"] = {
                 "startup_mode": self._startup.mode,
                 "refresh_supported": self.refresh_supported,
                 "snapshot_id": _snapshot_id(self._snapshot),
                 "workspace_path": self._startup.workspace_path,
-                "manifest_schema_version": (
-                    self._manifest.schema_version if self._manifest is not None else ""
-                ),
-                "parser_set": self.capabilities().parser_set,
-                "parser_versions": self.capabilities().parser_versions,
+                "manifest_schema_version": self._manifest_schema_version(),
+                "parser_set": capabilities.parser_set,
+                "parser_versions": capabilities.parser_versions,
                 "diagnostic_counts": _diagnostic_counts(self._snapshot),
-                "git_overlay": {
-                    "enabled": bool(
-                        self._snapshot.stats.get("git_overlay_enabled", False)
-                    ),
-                    "identity_mode": str(
-                        self._snapshot.stats.get("git_identity_mode", "") or ""
-                    ),
-                    "commit_count": int(
-                        self._snapshot.stats.get("git_commit_count", 0) or 0
-                    ),
-                    "changed_path_count": int(
-                        self._snapshot.stats.get("git_changed_path_count", 0) or 0
-                    ),
-                },
-                "refresh_state": (
-                    self._refresh_status.to_dict()
-                    if self._refresh_status is not None
-                    else None
-                ),
+                "git_overlay": self._git_overlay_summary(),
+                "refresh_state": self._refresh_state_payload(),
             }
             return summary
         if method in {METHOD_QUERY, METHOD_EXPLAIN}:
@@ -440,13 +422,7 @@ class LocalQueryService:
                 self._startup.root_path,
                 namespace=self._startup.namespace,
                 previous_manifest=self._manifest,
-                git_identity_mode=str(
-                    self._snapshot.stats.get(
-                        "git_identity_mode",
-                        DEFAULT_GIT_IDENTITY_MODE,
-                    )
-                    or DEFAULT_GIT_IDENTITY_MODE
-                ),
+                git_identity_mode=self._git_identity_mode(),
             )
             self._snapshot = refresh.snapshot
             self._manifest = refresh.manifest
@@ -460,13 +436,7 @@ class LocalQueryService:
                         self._startup.manifest_out_path or self._startup.manifest_path
                     ),
                     state_path=self._startup.state_out_path,
-                    git_identity_mode=str(
-                        self._snapshot.stats.get(
-                            "git_identity_mode",
-                            DEFAULT_GIT_IDENTITY_MODE,
-                        )
-                        or DEFAULT_GIT_IDENTITY_MODE
-                    ),
+                    git_identity_mode=self._git_identity_mode(),
                 ),
                 result=refresh,
             )
@@ -478,11 +448,7 @@ class LocalQueryService:
             "path_changes": [item.to_dict() for item in refresh.path_changes],
             "snapshot_delta": refresh.snapshot_delta.to_dict(),
             "health": health(refresh.snapshot).to_dict(),
-            "refresh_state": (
-                self._refresh_status.to_dict()
-                if self._refresh_status is not None
-                else None
-            ),
+            "refresh_state": self._refresh_state_payload(),
         }
 
     def _persist_state(self) -> None:
@@ -574,6 +540,35 @@ class LocalQueryService:
         details: Mapping[str, Any] | None = None,
     ) -> PragmaGraphError:
         return PragmaGraphError(message, code=code, details=details or {})
+
+    def _manifest_schema_version(self) -> str:
+        return self._manifest.schema_version if self._manifest is not None else ""
+
+    def _refresh_state_payload(self) -> dict[str, Any] | None:
+        return (
+            self._refresh_status.to_dict() if self._refresh_status is not None else None
+        )
+
+    def _git_identity_mode(self) -> str:
+        return str(
+            self._snapshot.stats.get(
+                "git_identity_mode",
+                DEFAULT_GIT_IDENTITY_MODE,
+            )
+            or DEFAULT_GIT_IDENTITY_MODE
+        )
+
+    def _git_overlay_summary(self) -> dict[str, Any]:
+        return {
+            "enabled": bool(self._snapshot.stats.get("git_overlay_enabled", False)),
+            "identity_mode": str(
+                self._snapshot.stats.get("git_identity_mode", "") or ""
+            ),
+            "commit_count": int(self._snapshot.stats.get("git_commit_count", 0) or 0),
+            "changed_path_count": int(
+                self._snapshot.stats.get("git_changed_path_count", 0) or 0
+            ),
+        }
 
 
 def _snapshot_id(snapshot: GraphSnapshot) -> str:

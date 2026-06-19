@@ -12,21 +12,21 @@ from pragmagraph.graphify import (
     to_graphify_payload,
 )
 from pragmagraph.storage import load_snapshot, save_snapshot
+from .package_paths import build_fixture_repo
 
 
 def _graphify_fixture_root(tmp_path: Path) -> Path:
-    root = tmp_path / "graphify-repo"
-    (root / "src").mkdir(parents=True)
-    (root / "README.md").write_text("# Demo\n\nSee [App](src/app.py).\n")
-    (root / "src" / "app.py").write_text(
-        "from helper import make_value\n\ndef run():\n    return make_value()\n",
-        encoding="utf-8",
+    return build_fixture_repo(
+        tmp_path,
+        repo_name="graphify-repo",
+        files={
+            "README.md": "# Demo\n\nSee [App](src/app.py).\n",
+            "src/app.py": (
+                "from helper import make_value\n\ndef run():\n    return make_value()\n"
+            ),
+            "src/helper.py": "def make_value():\n    return 42\n",
+        },
     )
-    (root / "src" / "helper.py").write_text(
-        "def make_value():\n    return 42\n",
-        encoding="utf-8",
-    )
-    return root
 
 
 def test_graphify_payload_is_deterministic_subset(tmp_path: Path) -> None:

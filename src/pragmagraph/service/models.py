@@ -3,23 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from types import MappingProxyType
 from typing import Any, Mapping
 
+from pragmagraph._immutables import frozen_mapping, tuple_str
 from pragmagraph.models import PragmaGraphError
-
-
-def _frozen_mapping(value: Mapping[str, Any] | None) -> Mapping[str, Any]:
-    return MappingProxyType(dict(value or {}))
-
-
-def _tuple_str(value: object) -> tuple[str, ...]:
-    if value is None:
-        return ()
-    if isinstance(value, (str, bytes)):
-        text = str(value).strip()
-        return (text,) if text else ()
-    return tuple(str(item) for item in value)  # type: ignore[arg-type]
 
 
 @dataclass(frozen=True)
@@ -33,7 +20,7 @@ class ServiceError:
     def __post_init__(self) -> None:
         object.__setattr__(self, "code", str(self.code))
         object.__setattr__(self, "message", str(self.message))
-        object.__setattr__(self, "details", _frozen_mapping(self.details))
+        object.__setattr__(self, "details", frozen_mapping(self.details))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -54,7 +41,7 @@ class ServiceRequest:
     def __post_init__(self) -> None:
         object.__setattr__(self, "id", str(self.id or ""))
         object.__setattr__(self, "method", str(self.method or ""))
-        object.__setattr__(self, "params", _frozen_mapping(self.params))
+        object.__setattr__(self, "params", frozen_mapping(self.params))
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, Any]) -> "ServiceRequest":
@@ -153,19 +140,19 @@ class ServiceCapabilities:
         object.__setattr__(
             self,
             "supported_methods",
-            tuple(sorted(_tuple_str(self.supported_methods))),
+            tuple(sorted(tuple_str(self.supported_methods))),
         )
         object.__setattr__(
-            self, "parser_set", tuple(sorted(_tuple_str(self.parser_set)))
+            self, "parser_set", tuple(sorted(tuple_str(self.parser_set)))
         )
         object.__setattr__(
-            self, "parser_versions", tuple(sorted(_tuple_str(self.parser_versions)))
+            self, "parser_versions", tuple(sorted(tuple_str(self.parser_versions)))
         )
         object.__setattr__(
-            self, "export_formats", tuple(sorted(_tuple_str(self.export_formats)))
+            self, "export_formats", tuple(sorted(tuple_str(self.export_formats)))
         )
         object.__setattr__(
-            self, "report_formats", tuple(sorted(_tuple_str(self.report_formats)))
+            self, "report_formats", tuple(sorted(tuple_str(self.report_formats)))
         )
 
     def to_dict(self) -> dict[str, Any]:

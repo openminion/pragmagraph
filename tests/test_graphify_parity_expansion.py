@@ -22,53 +22,47 @@ from pragmagraph.query import query
 from pragmagraph.refresh import refresh_snapshot
 from pragmagraph.security import ScopePolicy
 
-from .package_paths import contract_path, fixture_repo
+from .package_paths import build_fixture_repo, contract_path, fixture_repo
 
 
 def _mixed_repo(tmp_path: Path) -> Path:
-    root = tmp_path / "mixed"
-    (root / "src").mkdir(parents=True)
-    (root / "docs").mkdir()
-    (root / ".gitignore").write_text("ignored.md\n", encoding="utf-8")
-    (root / "README.md").write_text(
-        "# Project\n\nSee [Usage](#usage) and [[docs/guide.md#Install]].\n\n## Usage\n",
-        encoding="utf-8",
+    return build_fixture_repo(
+        tmp_path,
+        repo_name="mixed",
+        files={
+            ".gitignore": "ignored.md\n",
+            "README.md": (
+                "# Project\n\nSee [Usage](#usage) and [[docs/guide.md#Install]].\n\n## Usage\n"
+            ),
+            "docs/guide.md": (
+                "# Guide\n\n## Install\n\nBack to [missing](missing.md#Nope).\n"
+            ),
+            "ignored.md": "# Ignored\n",
+            "pyproject.toml": '[project]\nname = "demo"\ndependencies = ["ruff"]\n',
+            "package.json": json.dumps({"dependencies": {"left-pad": "1.0.0"}}),
+            "src/app.py": (
+                "import json\n"
+                "import missing.module\n"
+                "from helper import make_value\n\n"
+                "class Base:\n"
+                "    pass\n\n"
+                "class RuntimeGraph(Base):\n"
+                "    def build(self):\n"
+                "        return json.dumps({'ok': make_value()})\n"
+            ),
+            "src/helper.py": "def make_value():\n    return True\n",
+        },
     )
-    (root / "docs" / "guide.md").write_text(
-        "# Guide\n\n## Install\n\nBack to [missing](missing.md#Nope).\n",
-        encoding="utf-8",
-    )
-    (root / "ignored.md").write_text("# Ignored\n", encoding="utf-8")
-    (root / "pyproject.toml").write_text(
-        '[project]\nname = "demo"\ndependencies = ["ruff"]\n',
-        encoding="utf-8",
-    )
-    (root / "package.json").write_text(
-        json.dumps({"dependencies": {"left-pad": "1.0.0"}}),
-        encoding="utf-8",
-    )
-    (root / "src" / "app.py").write_text(
-        "import json\n"
-        "import missing.module\n"
-        "from helper import make_value\n\n"
-        "class Base:\n"
-        "    pass\n\n"
-        "class RuntimeGraph(Base):\n"
-        "    def build(self):\n"
-        "        return json.dumps({'ok': make_value()})\n",
-        encoding="utf-8",
-    )
-    (root / "src" / "helper.py").write_text(
-        "def make_value():\n    return True\n",
-        encoding="utf-8",
-    )
-    return root
+
+
+def _mixed_snapshot(tmp_path: Path) -> object:
+    return index_path(_mixed_repo(tmp_path), namespace="fixture")
 
 
 def test_expanded_indexer_extracts_python_markdown_and_config_facts(
     tmp_path: Path,
 ) -> None:
-    snapshot = index_path(_mixed_repo(tmp_path), namespace="fixture")
+    snapshot = _mixed_snapshot(tmp_path)
 
     assert any(
         node.kind == NODE_PYTHON_CLASS and node.label == "RuntimeGraph"
@@ -104,7 +98,7 @@ def test_expanded_indexer_extracts_python_markdown_and_config_facts(
 
 
 def test_query_hits_include_score_explanations(tmp_path: Path) -> None:
-    snapshot = index_path(_mixed_repo(tmp_path), namespace="fixture")
+    snapshot = _mixed_snapshot(tmp_path)
 
     result = query(snapshot, QueryRequest(query="RuntimeGraph", max_results=3))
 

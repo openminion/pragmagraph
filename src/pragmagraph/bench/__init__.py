@@ -5,9 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 from time import perf_counter_ns
-from types import MappingProxyType
 from typing import Any, Callable, Mapping, TypeVar
 
+from pragmagraph._immutables import frozen_mapping
 from pragmagraph.adapters import DEFAULT_GIT_IDENTITY_MODE, index_path
 from pragmagraph.export import render_dot, render_mermaid
 from pragmagraph.graphify import to_graphify_payload
@@ -20,10 +20,6 @@ from pragmagraph.storage import stable_dumps
 _T = TypeVar("_T")
 
 
-def _frozen_mapping(value: Mapping[str, Any] | None) -> Mapping[str, Any]:
-    return MappingProxyType(dict(value or {}))
-
-
 @dataclass(frozen=True)
 class BenchmarkMeasurement:
     """One timed package operation."""
@@ -33,7 +29,7 @@ class BenchmarkMeasurement:
     details: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "details", _frozen_mapping(self.details))
+        object.__setattr__(self, "details", frozen_mapping(self.details))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -181,14 +177,6 @@ def benchmark_root(
         },
     )
 
-    _ = (
-        query_result,
-        report_result,
-        dot_text,
-        mermaid_text,
-        graphify_payload,
-        refresh_result,
-    )
     return BenchmarkReport(
         root_path=str(root),
         namespace=snapshot.namespace,

@@ -98,10 +98,6 @@ def snapshot_from_graphify_payload(
         schema_version = SCHEMA_VERSION
         indexer_version = INDEXER_VERSION
 
-    _ = str(
-        payload.get("interop_schema_version", "") or GRAPHIFY_INTEROP_SCHEMA_VERSION
-    )
-
     nodes = []
     for item in payload.get("nodes", ()):
         if not isinstance(item, Mapping):

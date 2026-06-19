@@ -46,14 +46,14 @@ target that exercises only the public package surface.
 ## Run-the-suite commands
 
 ```bash
-cd pragmagraph
 make check
 python3.11 scripts/release_check.py
 ```
 
+From the `openminion` package root, with PragmaGraph source available on disk:
+
 ```bash
-cd openminion
-PYTHONPATH=src:../pragmagraph/src .venv/bin/python3.11 -m pytest -q \
+PYTHONPATH=src:<pragmagraph-src> .venv/bin/python3.11 -m pytest -q \
   tests/context/knowledge_graphs/test_pragmagraph_adapter.py \
   tests/context/knowledge_graphs/test_pragmagraph_provider_swap.py \
   tests/runtime/test_bootstrap_memory_retrieve_di.py

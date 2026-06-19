@@ -10,7 +10,7 @@ def test_ui_import_root_and_boundary_contract_are_stable() -> None:
     assert boundary.transport == "openminion_workbench"
     assert boundary.transport_status == "planned_not_implemented"
     assert boundary.ui_owner_surface == "openminion third-brain workbench"
-    assert boundary.api_surface == "openminion.modules.knowledge_graphs"
+    assert boundary.api_surface == "openminion.modules.context.knowledge_graphs"
     assert boundary.imports_openminion is False
     assert boundary.imports_runtime_package is False
 

@@ -16,61 +16,65 @@ from pragmagraph.parsers import (
 from pragmagraph.query import backlinks, impact, reverse_dependencies, reverse_imports
 from pragmagraph.refresh import refresh_snapshot
 
+from .package_paths import build_fixture_repo
+
 
 def _script_repo(tmp_path: Path) -> Path:
-    root = tmp_path / "script-repo"
-    (root / "src").mkdir(parents=True)
-    (root / "docs").mkdir()
-    (root / "README.md").write_text(
-        "# Runtime Graph\n\nSee [Guide](docs/guide.md#Install).\n",
-        encoding="utf-8",
+    return build_fixture_repo(
+        tmp_path,
+        repo_name="script-repo",
+        files={
+            "README.md": "# Runtime Graph\n\nSee [Guide](docs/guide.md#Install).\n",
+            "docs/guide.md": (
+                "# Guide\n\n## Install\n\nSee [Runtime](../README.md#Runtime-Graph).\n"
+            ),
+            "src/index.ts": (
+                "import { makeValue } from './util';\n"
+                "export function buildRuntimeGraph() {\n"
+                "  return makeValue();\n"
+                "}\n"
+            ),
+            "src/util.ts": "export function makeValue() {\n  return true;\n}\n",
+            "package.json": '{"dependencies":{"left-pad":"1.0.0"}}\n',
+        },
     )
-    (root / "docs" / "guide.md").write_text(
-        "# Guide\n\n## Install\n\nSee [Runtime](../README.md#Runtime-Graph).\n",
-        encoding="utf-8",
-    )
-    (root / "src" / "index.ts").write_text(
-        "import { makeValue } from './util';\n"
-        "export function buildRuntimeGraph() {\n"
-        "  return makeValue();\n"
-        "}\n",
-        encoding="utf-8",
-    )
-    (root / "src" / "util.ts").write_text(
-        "export function makeValue() {\n  return true;\n}\n",
-        encoding="utf-8",
-    )
-    (root / "package.json").write_text(
-        '{"dependencies":{"left-pad":"1.0.0"}}\n',
-        encoding="utf-8",
-    )
-    return root
 
 
 def _precise_script_repo(tmp_path: Path) -> Path:
-    root = tmp_path / "precise-script-repo"
-    (root / "src").mkdir(parents=True)
-    (root / "src" / "index.ts").write_text(
-        "import {\n"
-        "  makeValue,\n"
-        "} from './util';\n\n"
-        "export function buildRuntimeGraph() {\n"
-        "  return makeValue();\n"
-        "}\n\n"
-        "export {\n"
-        "  makeValue,\n"
-        "};\n",
-        encoding="utf-8",
+    return build_fixture_repo(
+        tmp_path,
+        repo_name="precise-script-repo",
+        files={
+            "src/index.ts": (
+                "import {\n"
+                "  makeValue,\n"
+                "} from './util';\n\n"
+                "export function buildRuntimeGraph() {\n"
+                "  return makeValue();\n"
+                "}\n\n"
+                "export {\n"
+                "  makeValue,\n"
+                "};\n"
+            ),
+            "src/util.ts": "export const makeValue = () => true;\n",
+        },
     )
-    (root / "src" / "util.ts").write_text(
-        "export const makeValue = () => true;\n",
-        encoding="utf-8",
+
+
+def _script_snapshot(
+    tmp_path: Path,
+    *,
+    parser_registry: ParserRegistry | None = None,
+) -> GraphSnapshot:
+    return index_path(
+        _script_repo(tmp_path),
+        namespace="fixture",
+        parser_registry=parser_registry,
     )
-    return root
 
 
 def test_script_parser_extracts_modules_imports_and_exports(tmp_path: Path) -> None:
-    snapshot = index_path(_script_repo(tmp_path), namespace="fixture")
+    snapshot = _script_snapshot(tmp_path)
 
     assert any(node.kind == "script_module" for node in snapshot.nodes)
     assert any(
@@ -103,11 +107,7 @@ def test_optional_parser_unavailable_surfaces_typed_diagnostic(
         ),
     )
 
-    snapshot = index_path(
-        _script_repo(tmp_path),
-        namespace="fixture",
-        parser_registry=registry,
-    )
+    snapshot = _script_snapshot(tmp_path, parser_registry=registry)
 
     assert any(
         item.reason == "optional_parser_unavailable" for item in snapshot.omitted
@@ -186,7 +186,7 @@ def test_refresh_result_exposes_path_change_reasons_and_snapshot_delta(
 def test_structural_navigation_helpers_return_high_confidence_results(
     tmp_path: Path,
 ) -> None:
-    snapshot = index_path(_script_repo(tmp_path), namespace="fixture")
+    snapshot = _script_snapshot(tmp_path)
 
     util_module = next(
         node.id
@@ -257,7 +257,7 @@ def test_impact_surfaces_heuristic_edges_as_diagnostics() -> None:
 
 
 def test_neighborhood_filters_stay_deterministic(tmp_path: Path) -> None:
-    snapshot = index_path(_script_repo(tmp_path), namespace="fixture")
+    snapshot = _script_snapshot(tmp_path)
     target = next(
         node.id
         for node in snapshot.nodes
