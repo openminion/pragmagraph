@@ -35,6 +35,16 @@ query service surface, deterministic graph reports and exports, Graphify-shaped
 interop, benchmark helpers, and CLI commands for local observed-fact graph
 work.
 
+## Trust and Brand Safety
+
+- Official GitHub: `https://github.com/openminion/pragmagraph`
+- Official website: `https://www.openminion.com`
+- Official X account: `https://x.com/OpenMinion`
+
+`pragmagraph` has no official token, coin, NFT, airdrop, staking program,
+treasury product, or investment offering. Any claim otherwise is unauthorized
+and should be treated as a scam.
+
 ## Boundary
 
 - **Sophiagraph** owns inferred, judged, lossy durable memory.
@@ -219,16 +229,6 @@ stable import roots, and `semantic_contract: true`.
 - `tests/fixtures/repos/` and `tests/contracts/` hold repo-local regression
   fixtures and OpenMinion contract snapshots; they are validation assets, not
   public package API.
-
-## Trust and Brand Safety
-
-- Official GitHub: `https://github.com/openminion/pragmagraph`
-- Official website: `https://www.openminion.com`
-- Official X account: `https://x.com/OpenMinion`
-
-`pragmagraph` has no official token, coin, NFT, airdrop, staking program,
-treasury product, or investment offering. Any claim otherwise is unauthorized
-and should be treated as a scam.
 
 ## License and brand-use boundary
 
