@@ -51,30 +51,6 @@ consolidation decision, it belongs in Sophiagraph. Sophiagraph may cite
 PragmaGraph with `pragma://...` evidence references; PragmaGraph never stores
 Sophiagraph's judgments.
 
-## Trust and Brand Safety
-
-- Official GitHub: `https://github.com/openminion/pragmagraph`
-- Official PyPI: `https://pypi.org/project/pragmagraph/`
-- Official website: `https://www.openminion.com`
-- Official X account: `https://x.com/OpenMinion`
-
-`pragmagraph` has no official token, coin, NFT, airdrop, staking program,
-treasury product, or investment offering. Any claim otherwise is unauthorized
-and should be treated as a scam.
-
-## License and brand-use boundary
-
-- Source code license: `Apache-2.0`
-- Brand/trademark grant: `none`
-
-The software license grants rights to use, modify, and redistribute the code.
-It does **not** grant rights to use the PragmaGraph, Sophiagraph, or OpenMinion
-names, logos, branding, website identity, or social identity except for
-truthful attribution. Forks, clones, and derivative distributions must not
-present themselves as the official PragmaGraph project or imply affiliation,
-endorsement, or maintenance by PragmaGraph or OpenMinion contributors unless
-that is actually true.
-
 ## What the package provides
 
 The package currently provides:
@@ -243,6 +219,29 @@ stable import roots, and `semantic_contract: true`.
 - `tests/fixtures/repos/` and `tests/contracts/` hold repo-local regression
   fixtures and OpenMinion contract snapshots; they are validation assets, not
   public package API.
+
+## Trust and Brand Safety
+
+- Official GitHub: `https://github.com/openminion/pragmagraph`
+- Official website: `https://www.openminion.com`
+- Official X account: `https://x.com/OpenMinion`
+
+`pragmagraph` has no official token, coin, NFT, airdrop, staking program,
+treasury product, or investment offering. Any claim otherwise is unauthorized
+and should be treated as a scam.
+
+## License and brand-use boundary
+
+- Source code license: `Apache-2.0`
+- Brand/trademark grant: `none`
+
+The software license grants rights to use, modify, and redistribute the code.
+It does **not** grant rights to use the PragmaGraph, Sophiagraph, or OpenMinion
+names, logos, branding, website identity, or social identity except for
+truthful attribution. Forks, clones, and derivative distributions must not
+present themselves as the official PragmaGraph project or imply affiliation,
+endorsement, or maintenance by PragmaGraph or OpenMinion contributors unless
+that is actually true.
 
 ## CLI Quickstart
 
