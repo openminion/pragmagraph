@@ -28,6 +28,16 @@ deed, matter, fact, or thing done; in this package it frames the third brain as
 a graph of reproducible structure: files, symbols, document sections, artifacts,
 references, commits, and other facts an indexer can recover from source.
 
+## Docs and release
+
+- [`docs/README.md`](docs/README.md) is the package-local docs entrypoint.
+- [`API_COMPATIBILITY.md`](API_COMPATIBILITY.md) records the supported public
+  import roots and top-level export policy.
+- [`RELEASING.md`](RELEASING.md) records the package-local release and publish
+  flow.
+- [`docs/source-tree-owner-map.md`](docs/source-tree-owner-map.md) explains the
+  source-tree module layout and public-vs-repo-local boundary.
+
 This semantic alpha provides a local observed-fact source-graph surface:
 deterministic DTOs, JSON snapshots, a local code/document indexer, incremental
 refresh manifests and structural deltas, structural query helpers, a local
@@ -116,10 +126,12 @@ The package currently provides:
 - package-owned persistent workspace helpers for one local root: deterministic
   workspace metadata, saved profile/snapshot/manifest/status layout, explicit
   workspace refresh, workspace status inspection, and `serve --workspace`
-- package-owned UI boundary contracts in `pragmagraph.ui` for the future
-  OpenMinion third-brain workbench: search, result detail, neighborhood, path,
-  and provider-status screens without bundling a separate UI runtime into this
-  package
+- package-owned UI boundary contracts and a local visual preview in
+  `pragmagraph.ui` for third-brain graph exploration: search, result detail,
+  neighborhood, path, and provider-status screens without bundling a hosted UI
+  runtime into this package; the package also exposes
+  `pragmagraph.ui.local_server` as the same reusable local visual server
+  primitive used by Sophiagraph
 - package-owned benchmark helpers plus repo-local regression fixtures for
   readiness review, fixture profiling, refresh benchmarking, and omitted-rate
   tracking
@@ -129,7 +141,7 @@ The package currently provides:
   `benchmark`, `graphify-export`, `graphify-import`, `neighborhood`, `path`,
   `health`, `git-commits-for-path`, `git-files-for-commit`,
   `git-commits-for-symbol`, `workspace-init`, `workspace-refresh`,
-  `workspace-status`, and `serve`
+  `workspace-status`, `serve`, and `ui-preview`
 - a semantic smoke entrypoint for install validation
 - package-local tests, lint, and release-check workflow
 - API compatibility and release docs
@@ -144,8 +156,9 @@ This package does **not** currently provide:
 - MCP, HTTP, WebSocket, or hosted service transports
 - OpenMinion runtime provider wiring
 - prompt context merging
-- the actual operator-facing workbench runtime UI (that belongs to OpenMinion;
-  `pragmagraph.ui` only defines the typed package boundary)
+- the actual hosted operator-facing workbench runtime UI (that belongs to
+  OpenMinion; `pragmagraph.ui` owns the package-local visual preview and typed
+  boundary)
 - semantic inference from prose or model output
 - automatic Sophiagraph memory writes or promotion
 
@@ -312,6 +325,16 @@ Run the local query service against a saved snapshot:
 pragmagraph serve --snapshot .pragmagraph/snapshot.json
 ```
 
+Open the local visual UI against a saved snapshot:
+
+```bash
+pragmagraph-ui \
+  --snapshot .pragmagraph/snapshot.json \
+  --screen search \
+  --serve \
+  --open
+```
+
 Run the local query service against a repo root with explicit refresh support:
 
 ```bash
@@ -397,6 +420,12 @@ Workspace quickstart:
 
 ```bash
 pragmagraph workspace-init /path/to/repo --workspace .pragmagraph-workspace --json
+```
+
+Workspace visual UI:
+
+```bash
+pragmagraph-ui --workspace .pragmagraph-workspace --screen provider_status --serve
 ```
 
 See [API_COMPATIBILITY.md](API_COMPATIBILITY.md) for the public import-root

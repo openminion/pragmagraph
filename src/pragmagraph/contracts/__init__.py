@@ -107,6 +107,38 @@ EDGE_KINDS = frozenset(
     }
 )
 
+# Evidence-bridge freshness states (PGSIM-01). Package-owned *structural* status
+# for one cited evidence reference — never an LLM judgment. See
+# docs/specs/pragmagraph-self-improving-memory-evidence-bridge-spec.md.
+FRESHNESS_FRESH = "fresh"
+FRESHNESS_STALE = "stale"
+FRESHNESS_MISSING = "missing"
+FRESHNESS_CHANGED = "changed"
+
+FRESHNESS_STATES = frozenset(
+    {
+        FRESHNESS_FRESH,
+        FRESHNESS_STALE,
+        FRESHNESS_MISSING,
+        FRESHNESS_CHANGED,
+    }
+)
+
+# Evidence-bridge query kinds (PGSIM-01 DTO surface; PGSIM-02 resolves them).
+EVIDENCE_QUERY_SUPPORT_CANDIDATE = "support_candidate"
+EVIDENCE_QUERY_VERIFY_CITATION = "verify_citation"
+EVIDENCE_QUERY_RECHECK_STALENESS = "recheck_staleness"
+EVIDENCE_QUERY_COLLECT_RELATED = "collect_related_evidence"
+
+EVIDENCE_QUERY_KINDS = frozenset(
+    {
+        EVIDENCE_QUERY_SUPPORT_CANDIDATE,
+        EVIDENCE_QUERY_VERIFY_CITATION,
+        EVIDENCE_QUERY_RECHECK_STALENESS,
+        EVIDENCE_QUERY_COLLECT_RELATED,
+    }
+)
+
 __all__ = [
     "CAPABILITIES",
     "CAPABILITY_CITATIONS",
@@ -134,6 +166,16 @@ __all__ = [
     "EDGE_PARENT_SYMBOL",
     "EDGE_REFERENCES_DOC",
     "EDGE_REFERENCES_SECTION",
+    "EVIDENCE_QUERY_COLLECT_RELATED",
+    "EVIDENCE_QUERY_KINDS",
+    "EVIDENCE_QUERY_RECHECK_STALENESS",
+    "EVIDENCE_QUERY_SUPPORT_CANDIDATE",
+    "EVIDENCE_QUERY_VERIFY_CITATION",
+    "FRESHNESS_CHANGED",
+    "FRESHNESS_FRESH",
+    "FRESHNESS_MISSING",
+    "FRESHNESS_STALE",
+    "FRESHNESS_STATES",
     "INDEXER_VERSION",
     "NODE_CONFIG",
     "NODE_CONFIG_KEY",

@@ -55,6 +55,7 @@ def _assert_smoke_payload(stdout: str) -> None:
         "pragmagraph.portability",
         "pragmagraph.parsers",
         "pragmagraph.export",
+        "pragmagraph.evidence",
         "pragmagraph.graphify",
         "pragmagraph.report",
         "pragmagraph.refresh",
@@ -146,6 +147,7 @@ def main(argv: list[str] | None = None) -> int:
             _run([python, "-m", "venv", str(venv_dir)], cwd=root)
             pip = venv_dir / "bin" / "pip"
             smoke = venv_dir / "bin" / "pragmagraph-smoke"
+            ui_preview = venv_dir / "bin" / "pragmagraph-ui"
             wheel = sorted((root / "dist").glob("pragmagraph-*.whl"))[-1]
             _run([str(pip), "install", str(wheel)], cwd=root)
             _run(
@@ -167,6 +169,17 @@ def main(argv: list[str] | None = None) -> int:
             )
             stdout = _run_capture([str(smoke), "--json"], cwd=root)
             _assert_smoke_payload(stdout)
+            _run_capture(
+                [
+                    str(ui_preview),
+                    "--screen",
+                    "provider_status",
+                    "--html-out",
+                    str(tmp / "pragmagraph-ui.html"),
+                    "--json",
+                ],
+                cwd=root,
+            )
     return 0
 
 

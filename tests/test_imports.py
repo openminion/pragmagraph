@@ -9,6 +9,7 @@ def test_pragmagraph_package_imports() -> None:
     import pragmagraph.adapters
     import pragmagraph.bench
     import pragmagraph.contracts
+    import pragmagraph.evidence
     import pragmagraph.export
     import pragmagraph.graphify
     import pragmagraph.models
@@ -28,6 +29,7 @@ def test_pragmagraph_package_imports() -> None:
     assert pragmagraph.PACKAGE_STATUS == "semantic-alpha"
     assert "pragmagraph.bench" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.models" in pragmagraph.STABLE_IMPORT_ROOTS
+    assert "pragmagraph.evidence" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.export" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.graphify" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.report" in pragmagraph.STABLE_IMPORT_ROOTS
@@ -59,6 +61,8 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "CAPABILITIES",
         "BenchmarkMeasurement",
         "BenchmarkReport",
+        "MemoryEvidenceBundle",
+        "MemoryEvidenceRef",
         "GraphEdge",
         "GraphNode",
         "GraphReport",
@@ -96,8 +100,11 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "build_report",
         "build_refresh_plan",
         "build_refresh_profile",
+        "collect_memory_evidence",
+        "collect_related_memory_evidence",
         "commits_touching_symbol_file",
         "diff_snapshots",
+        "evidence_ref_for_node",
         "files_touched_by_commit",
         "impact",
         "index_path",
@@ -119,9 +126,12 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "save_refresh_profile",
         "save_refresh_status",
         "save_snapshot",
+        "snapshot_evidence_id",
         "snapshot_from_graphify_payload",
         "stable_dumps",
         "to_graphify_payload",
+        "verify_memory_evidence_ref",
+        "verify_memory_evidence_refs",
         "WorkspaceMetadata",
         "WorkspacePaths",
         "WorkspaceRefreshResult",
@@ -141,6 +151,7 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     import pragmagraph.adapters as adapters
     import pragmagraph.bench as bench
     import pragmagraph.contracts as contracts
+    import pragmagraph.evidence as evidence
     import pragmagraph.export as export
     import pragmagraph.graphify as graphify
     import pragmagraph.models as models
@@ -158,6 +169,7 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     assert "index_path" in adapters.__all__
     assert "render_markdown_benchmark" in bench.__all__
     assert "SCHEMA_VERSION" in contracts.__all__
+    assert "collect_memory_evidence" in evidence.__all__
     assert "render_mermaid" in export.__all__
     assert "snapshot_from_graphify_payload" in graphify.__all__
     assert "GraphSnapshot" in models.__all__
