@@ -214,6 +214,7 @@ def _render_page(snapshot: GraphSnapshot, request: UiPreviewRequest) -> str:
         f"{_render_nav(active)}"
         "<main class='pg-content'>"
         f"{_render_header(snapshot, request)}"
+        f"{_render_integration_panel(request)}"
         f"{_render_screen(snapshot, request)}"
         "</main></div></body></html>"
     )
@@ -246,6 +247,7 @@ def _render_header(snapshot: GraphSnapshot, request: UiPreviewRequest) -> str:
         f"{_badge(f'{len(snapshot.nodes)} nodes', 'accent')}"
         f"{_badge(f'{len(snapshot.edges)} edges', 'blue')}"
         f"{_badge(snapshot.namespace, 'neutral')}"
+        f"{_badge(_source_label(request), 'neutral')}"
         "</div></header>"
     )
 
@@ -257,6 +259,41 @@ def _screen_titles() -> tuple[tuple[str, str], ...]:
         ("neighborhood", "Neighborhood"),
         ("path", "Path Explorer"),
         ("provider_status", "Provider Status"),
+    )
+
+
+def _source_label(request: UiPreviewRequest) -> str:
+    if request.workspace:
+        return "workspace"
+    if request.snapshot:
+        return "snapshot"
+    return "demo"
+
+
+def _render_integration_panel(request: UiPreviewRequest) -> str:
+    source_command = (
+        f"pragmagraph-ui --workspace {request.workspace} --screen search --serve --open"
+        if request.workspace
+        else (
+            f"pragmagraph-ui --snapshot {request.snapshot} --screen search --serve --open"
+            if request.snapshot
+            else "pragmagraph workspace-init <repo-root> --workspace .pragmagraph-workspace --json"
+        )
+    )
+    commands = (
+        source_command,
+        "pragmagraph-ui --workspace .pragmagraph-workspace --screen provider_status --serve",
+    )
+    command_list = "".join(
+        f"<code>{escape(command)}</code>" for command in commands
+    )
+    return (
+        "<section class='pg-panel pg-integration' aria-label='OpenMinion integration'>"
+        "<div><h3>OpenMinion Integration</h3>"
+        "<p class='pg-empty'>Third-brain observed source graph.</p>"
+        f"{_badge('public query APIs', 'accent')}{_badge('provider-ready', 'blue')}"
+        "</div><div class='pg-code-list'>"
+        f"{command_list}</div></section>"
     )
 
 
@@ -639,6 +676,12 @@ body.pg-page {
   gap: 16px;
   align-items: start;
 }
+.pg-integration {
+  display: grid;
+  grid-template-columns: minmax(220px, .7fr) minmax(0, 1.3fr);
+  gap: 12px;
+  align-items: start;
+}
 .pg-panel {
   background: var(--pg-panel);
   border: 1px solid var(--pg-line);
@@ -754,6 +797,22 @@ body.pg-page {
   margin: 0;
   color: var(--pg-muted);
 }
+.pg-code-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+.pg-code-list code {
+  display: block;
+  border: 1px solid var(--pg-line);
+  border-radius: 8px;
+  background: #fbfcfa;
+  padding: 9px 10px;
+  color: var(--pg-ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
 a {
   color: var(--pg-accent);
   text-decoration: none;
@@ -762,6 +821,7 @@ a {
   .pg-shell { grid-template-columns: 1fr; }
   .pg-nav { border-right: 0; border-bottom: 1px solid var(--pg-line); }
   .pg-layout,
+  .pg-integration,
   .pg-header { grid-template-columns: 1fr; }
   .pg-summary { justify-content: flex-start; }
 }
