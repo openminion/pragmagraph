@@ -7,7 +7,13 @@ from types import MappingProxyType
 from typing import Any, Mapping
 
 from pragmagraph._immutables import frozen_mapping, tuple_str
-from pragmagraph.contracts import INDEXER_VERSION, SCHEMA_VERSION
+from pragmagraph.contracts import (
+    EVIDENCE_QUERY_KINDS,
+    FRESHNESS_FRESH,
+    FRESHNESS_STATES,
+    INDEXER_VERSION,
+    SCHEMA_VERSION,
+)
 
 
 @dataclass(frozen=True)
@@ -616,11 +622,181 @@ class RefreshResult:
         }
 
 
+def _require_text(value: str, *, field_name: str, code: str) -> str:
+    text = str(value or "")
+    if not text:
+        raise PragmaGraphError(
+            message=f"{field_name} is required",
+            code=code,
+            details={"field": field_name},
+        )
+    return text
+
+
+@dataclass(frozen=True)
+class MemoryEvidenceRef:
+    """Deterministic source-backed evidence reference for self-improving memory.
+
+    Bridges a durable memory candidate (OpenMinion online loop / Sophiagraph
+    durable record) to one reproducible observed fact in a PragmaGraph snapshot.
+    See `docs/specs/pragmagraph-self-improving-memory-evidence-bridge-spec.md`.
+
+    `freshness_state` is package-owned *structural* status drawn from
+    `pragmagraph.contracts.FRESHNESS_STATES` (`fresh`/`stale`/`missing`/
+    `changed`) — never an LLM judgment. This DTO carries no semantic memory
+    meaning; PragmaGraph only proves what a memory is grounded on, not whether
+    the memory is good.
+    """
+
+    ref_uri: str
+    node_id: str
+    source_ref_id: str
+    snapshot_id: str
+    observed_at_iso: str
+    freshness_state: str = FRESHNESS_FRESH
+    content_hash: str | None = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "ref_uri",
+            _require_text(
+                self.ref_uri,
+                field_name="ref_uri",
+                code="PRAGMAGRAPH_EVIDENCE_REF_REQUIRED",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "node_id",
+            _require_text(
+                self.node_id,
+                field_name="node_id",
+                code="PRAGMAGRAPH_EVIDENCE_NODE_REQUIRED",
+            ),
+        )
+        object.__setattr__(self, "source_ref_id", str(self.source_ref_id or ""))
+        object.__setattr__(
+            self,
+            "snapshot_id",
+            _require_text(
+                self.snapshot_id,
+                field_name="snapshot_id",
+                code="PRAGMAGRAPH_EVIDENCE_SNAPSHOT_REQUIRED",
+            ),
+        )
+        object.__setattr__(self, "observed_at_iso", str(self.observed_at_iso or ""))
+        state = str(self.freshness_state or FRESHNESS_FRESH)
+        if state not in FRESHNESS_STATES:
+            raise PragmaGraphError(
+                message=f"unknown freshness_state: {state!r}",
+                code="PRAGMAGRAPH_EVIDENCE_BAD_FRESHNESS",
+                details={"allowed": sorted(FRESHNESS_STATES)},
+            )
+        object.__setattr__(self, "freshness_state", state)
+        if self.content_hash is not None:
+            object.__setattr__(self, "content_hash", str(self.content_hash))
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "ref_uri": self.ref_uri,
+            "node_id": self.node_id,
+            "source_ref_id": self.source_ref_id,
+            "snapshot_id": self.snapshot_id,
+            "observed_at_iso": self.observed_at_iso,
+            "freshness_state": self.freshness_state,
+            "content_hash": self.content_hash,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "MemoryEvidenceRef":
+        data = dict(payload or {})
+        content_hash = data.get("content_hash")
+        return cls(
+            ref_uri=str(data.get("ref_uri", "") or ""),
+            node_id=str(data.get("node_id", "") or ""),
+            source_ref_id=str(data.get("source_ref_id", "") or ""),
+            snapshot_id=str(data.get("snapshot_id", "") or ""),
+            observed_at_iso=str(data.get("observed_at_iso", "") or ""),
+            freshness_state=str(
+                data.get("freshness_state", FRESHNESS_FRESH) or FRESHNESS_FRESH
+            ),
+            content_hash=None if content_hash is None else str(content_hash),
+        )
+
+
+@dataclass(frozen=True)
+class MemoryEvidenceBundle:
+    """Deterministic, evidence-oriented result bundle for a memory-support query.
+
+    Carries only cited `MemoryEvidenceRef` rows plus structural diagnostics — it
+    must not contain new semantic memory judgments. `query_kind` is drawn from
+    `pragmagraph.contracts.EVIDENCE_QUERY_KINDS`.
+    """
+
+    bundle_id: str
+    query_kind: str
+    refs: tuple[MemoryEvidenceRef, ...] = ()
+    omitted_reason_codes: tuple[str, ...] = ()
+    diagnostics: Mapping[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "bundle_id",
+            _require_text(
+                self.bundle_id,
+                field_name="bundle_id",
+                code="PRAGMAGRAPH_EVIDENCE_BUNDLE_REQUIRED",
+            ),
+        )
+        query_kind = str(self.query_kind or "")
+        if query_kind not in EVIDENCE_QUERY_KINDS:
+            raise PragmaGraphError(
+                message=f"unknown query_kind: {query_kind!r}",
+                code="PRAGMAGRAPH_EVIDENCE_BAD_QUERY_KIND",
+                details={"allowed": sorted(EVIDENCE_QUERY_KINDS)},
+            )
+        object.__setattr__(self, "query_kind", query_kind)
+        object.__setattr__(self, "refs", tuple(self.refs))
+        object.__setattr__(
+            self, "omitted_reason_codes", tuple_str(self.omitted_reason_codes)
+        )
+        object.__setattr__(
+            self,
+            "diagnostics",
+            frozen_mapping({str(k): str(v) for k, v in dict(self.diagnostics).items()}),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "bundle_id": self.bundle_id,
+            "query_kind": self.query_kind,
+            "refs": [ref.to_dict() for ref in self.refs],
+            "omitted_reason_codes": list(self.omitted_reason_codes),
+            "diagnostics": dict(self.diagnostics),
+        }
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "MemoryEvidenceBundle":
+        data = dict(payload or {})
+        raw_refs = data.get("refs") or ()
+        return cls(
+            bundle_id=str(data.get("bundle_id", "") or ""),
+            query_kind=str(data.get("query_kind", "") or ""),
+            refs=tuple(MemoryEvidenceRef.from_dict(item) for item in raw_refs),
+            omitted_reason_codes=tuple(data.get("omitted_reason_codes") or ()),
+            diagnostics=dict(data.get("diagnostics") or {}),
+        )
+
+
 __all__ = [
     "GraphEdge",
     "GraphNode",
     "GraphSnapshot",
     "HealthSummary",
+    "MemoryEvidenceBundle",
+    "MemoryEvidenceRef",
     "OmittedDiagnostic",
     "PathResult",
     "ParserDiagnostic",

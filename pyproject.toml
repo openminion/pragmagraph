@@ -45,6 +45,7 @@ dev = [
 [project.scripts]
 pragmagraph = "pragmagraph.__main__:main"
 pragmagraph-smoke = "pragmagraph.__main__:main"
+pragmagraph-ui = "pragmagraph.__main__:ui_preview_main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

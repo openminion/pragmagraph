@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 
 from pragmagraph import PACKAGE_STATUS, STABLE_IMPORT_ROOTS, __version__
 from pragmagraph.adapters import (
@@ -39,6 +40,7 @@ from pragmagraph.report import build_report, render_markdown_report
 from pragmagraph.refresh import load_manifest, refresh_snapshot, save_manifest
 from pragmagraph.service import LocalQueryService, run_stdio_service
 from pragmagraph.storage import load_snapshot, save_snapshot
+from pragmagraph.ui import UiPreviewRequest, serve_ui_preview, write_ui_preview
 from pragmagraph.workspace import (
     initialize_workspace,
     load_workspace_status,
@@ -311,6 +313,34 @@ def main(argv: list[str] | None = None) -> int:
         "--json", action="store_true", help="emit JSON output"
     )
 
+    ui_parser = subparsers.add_parser(
+        "ui-preview",
+        help="open the package-local visual graph preview",
+    )
+    ui_parser.add_argument("--workspace")
+    ui_parser.add_argument("--snapshot")
+    ui_parser.add_argument(
+        "--screen",
+        choices=(
+            "search",
+            "result_detail",
+            "neighborhood",
+            "path",
+            "provider_status",
+        ),
+        default="search",
+    )
+    ui_parser.add_argument("--html-out", default="pragmagraph-ui-preview.html")
+    ui_parser.add_argument("--query", default="RuntimeGraph")
+    ui_parser.add_argument("--node-id")
+    ui_parser.add_argument("--source-id")
+    ui_parser.add_argument("--target-id")
+    ui_parser.add_argument("--open", action="store_true")
+    ui_parser.add_argument("--serve", action="store_true")
+    ui_parser.add_argument("--host", default="127.0.0.1")
+    ui_parser.add_argument("--port", type=int, default=8766)
+    ui_parser.add_argument("--json", action="store_true", help="emit JSON output")
+
     args = parser.parse_args(argv)
 
     if args.command == "index":
@@ -511,11 +541,38 @@ def main(argv: list[str] | None = None) -> int:
                 git_identity_mode=args.git_identity_mode,
             )
         return run_stdio_service(service)
+    elif args.command == "ui-preview":
+        request = UiPreviewRequest(
+            screen=args.screen,
+            workspace=args.workspace,
+            snapshot=args.snapshot,
+            output_path=args.html_out,
+            query=args.query,
+            node_id=args.node_id,
+            source_id=args.source_id,
+            target_id=args.target_id,
+            open_browser=args.open,
+        )
+        if args.serve:
+            result = serve_ui_preview(
+                request,
+                host=args.host,
+                port=args.port,
+            )
+            _print_payload(result.to_dict(), as_json=args.json)
+            return 0
+        result = write_ui_preview(request)
+        _print_payload(result.to_dict(), as_json=args.json)
     elif args.json:
         print(json.dumps(smoke_payload(), sort_keys=True))
     else:
         print(f"pragmagraph semantic alpha OK: {smoke_payload()}")
     return 0
+
+
+def ui_preview_main(argv: list[str] | None = None) -> int:
+    """Console entrypoint for the package-local visual graph preview."""
+    return main(["ui-preview", *list(sys.argv[1:] if argv is None else argv)])
 
 
 if __name__ == "__main__":

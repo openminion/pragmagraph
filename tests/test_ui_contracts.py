@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+from threading import Thread
+from urllib.request import urlopen
+
+import pytest
+
 
 def test_ui_import_root_and_boundary_contract_are_stable() -> None:
     import pragmagraph.ui as ui
@@ -36,3 +41,45 @@ def test_ui_screen_manifest_covers_workbench_mvp_routes() -> None:
     assert [screen.screen_id for screen in screens if screen.mutating] == [
         "provider_status"
     ]
+
+
+def test_ui_local_visual_server_is_reusable_for_pragmagraph_renderers() -> None:
+    from pragmagraph.ui import make_local_visual_server
+
+    try:
+        server = make_local_visual_server(
+            render_path=lambda path, query: (
+                "<!doctype html><title>PragmaGraph</title>"
+                f"<main data-path='{path}'>{query.get('q', [''])[0]}</main>"
+            ),
+            default_path="/search",
+            port=0,
+        )
+    except PermissionError:
+        pytest.skip("local socket binding is unavailable in this sandbox")
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        with urlopen(f"{server.preview_url}?q=RuntimeGraph", timeout=5) as response:
+            html = response.read().decode("utf-8")
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+    assert "/search" in server.preview_url
+    assert "PragmaGraph" in html
+    assert "RuntimeGraph" in html
+
+
+def test_ui_preview_exports_match_sophiagraph_local_visual_pattern() -> None:
+    from pragmagraph.ui import UiPreviewRequest, render_ui_preview
+
+    rendered = render_ui_preview(
+        UiPreviewRequest(screen="search", query="RuntimeGraph")
+    )
+
+    assert rendered.screen == "search"
+    assert rendered.node_count == 4
+    assert "PragmaGraph" in rendered.html
+    assert "Ranked Results" in rendered.html
