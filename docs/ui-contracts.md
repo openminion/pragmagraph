@@ -21,10 +21,9 @@ The important ownership rule is explicit:
 - runtime package: `openminion`
 - transport kind: `openminion_workbench`
 - transport status: `planned_not_implemented`
-- current API seam: `openminion.modules.context.knowledge_graphs`
+- host-runtime seam: OpenMinion's third-brain adapter layer
 - reusable local server primitive: `pragmagraph.ui.local_server`
 - local visual UI seam: `python3.11 -m pragmagraph ui-preview --serve`
-- shared pattern reference: `docs/reference/package-local-visual-ui-pattern.md`
 
 ## Screen manifest
 

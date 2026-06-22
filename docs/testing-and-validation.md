@@ -40,9 +40,11 @@ Expected outcome:
 Run from the package root:
 
 ```bash
-make lint
-make test
+make check
 ```
+
+Use `make lint` or `make test` directly only when you need a narrower
+iteration loop.
 
 ## Focused regression tests
 
@@ -66,4 +68,3 @@ make release-check
 
 That command runs the package release smoke that builds artifacts, checks the
 wheel, and verifies the documented standalone install path.
-

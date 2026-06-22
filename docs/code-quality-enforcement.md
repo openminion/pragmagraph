@@ -19,8 +19,7 @@ PragmaGraph enforces code quality through three layers:
 For normal contribution work, run:
 
 ```bash
-make lint
-make test
+make check
 ```
 
 For broader release proof, also run:
@@ -28,6 +27,9 @@ For broader release proof, also run:
 ```bash
 make release-check
 ```
+
+Run `make lint` or `make test` directly only when you need a narrower local
+loop.
 
 ## What the gates protect
 
