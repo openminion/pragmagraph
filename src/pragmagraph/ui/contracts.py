@@ -56,7 +56,7 @@ def build_default_ui_boundary() -> UiTransportBoundary:
         transport="openminion_workbench",
         transport_status="planned_not_implemented",
         ui_owner_surface="openminion third-brain workbench",
-        api_surface="openminion.modules.context.knowledge_graphs",
+        api_surface="openminion third-brain adapter layer",
         imports_openminion=False,
         imports_runtime_package=False,
     )

@@ -57,8 +57,8 @@ This directory holds the public package documentation for standalone
    examples, and deterministic package tests.
 2. `tests/contracts/` holds OpenMinion-facing contract snapshots used by
    adapter and provider-swap validation.
-3. Host-framework planning, tracker, and swapability docs remain in the
-   workspace-root `docs/` tree rather than this package-local docs directory.
+3. Host-framework planning and runtime-integration docs stay outside this
+   package-local docs directory.
 
 ## Public package stance
 
@@ -76,10 +76,3 @@ helpers, and package-owned validation fixtures.
 2. Sophiagraph is the second brain for agent-owned memory: learned preferences,
    operator pins, summaries, decisions, and judgments.
 3. Sophia may cite Pragma; Pragma never stores Sophia's judgments.
-
-## Tracker split
-
-1. PragmaGraph package tracker owns package contracts, snapshots, indexing,
-   query APIs, CLI, tests, and OpenMinion contract snapshots.
-2. OpenMinion abstraction tracker owns provider registration, conformance,
-   context assembly, telemetry, graceful fallback, and provider swapability.

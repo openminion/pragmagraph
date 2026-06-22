@@ -42,6 +42,17 @@ def _run_capture(
     return result.stdout
 
 
+def _create_temp_venv(root: Path, base_dir: Path) -> dict[str, Path]:
+    venv_dir = base_dir / "venv"
+    _run([sys.executable, "-m", "venv", str(venv_dir)], cwd=root)
+    bin_dir = venv_dir / "bin"
+    return {
+        "venv": venv_dir,
+        "python": bin_dir / "python",
+        "pip": bin_dir / "pip",
+    }
+
+
 def _assert_smoke_payload(stdout: str) -> None:
     payload = json.loads(stdout)
     expected_roots = [
@@ -125,14 +136,11 @@ def main(argv: list[str] | None = None) -> int:
     if not args.skip_twine:
         dist_files = sorted((root / "dist").glob("*"))
         with tempfile.TemporaryDirectory(prefix="pragmagraph-twine-") as twine_tmp:
-            twine_venv = Path(twine_tmp) / "venv"
-            _run([python, "-m", "venv", str(twine_venv)], cwd=root)
-            twine_python = twine_venv / "bin" / "python"
-            twine_pip = twine_venv / "bin" / "pip"
-            _run([str(twine_pip), "install", "twine>=5,<7"], cwd=root)
+            twine_paths = _create_temp_venv(root, Path(twine_tmp))
+            _run([str(twine_paths["pip"]), "install", "twine>=5,<7"], cwd=root)
             _run(
                 [
-                    str(twine_python),
+                    str(twine_paths["python"]),
                     "-m",
                     "twine",
                     "check",
@@ -143,16 +151,14 @@ def main(argv: list[str] | None = None) -> int:
     if not args.skip_wheel_smoke:
         with tempfile.TemporaryDirectory(prefix="pragmagraph-release-") as tmpdir:
             tmp = Path(tmpdir)
-            venv_dir = tmp / "venv"
-            _run([python, "-m", "venv", str(venv_dir)], cwd=root)
-            pip = venv_dir / "bin" / "pip"
-            smoke = venv_dir / "bin" / "pragmagraph-smoke"
-            ui_preview = venv_dir / "bin" / "pragmagraph-ui"
+            venv_paths = _create_temp_venv(root, tmp)
+            smoke = venv_paths["venv"] / "bin" / "pragmagraph-smoke"
+            ui_preview = venv_paths["venv"] / "bin" / "pragmagraph-ui"
             wheel = sorted((root / "dist").glob("pragmagraph-*.whl"))[-1]
-            _run([str(pip), "install", str(wheel)], cwd=root)
+            _run([str(venv_paths["pip"]), "install", str(wheel)], cwd=root)
             _run(
                 [
-                    str(venv_dir / "bin" / "python"),
+                    str(venv_paths["python"]),
                     "-c",
                     (
                         "from pragmagraph.bench import benchmark_root; "

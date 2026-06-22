@@ -8,8 +8,19 @@ from pathlib import Path
 from typing import Literal
 import webbrowser
 
-from pragmagraph.models import GraphEdge, GraphNode, GraphSnapshot, QueryRequest, SourceRef
-from pragmagraph.query import health, neighborhood, path as graph_path, query as graph_query
+from pragmagraph.models import (
+    GraphEdge,
+    GraphNode,
+    GraphSnapshot,
+    QueryRequest,
+    SourceRef,
+)
+from pragmagraph.query import (
+    health,
+    neighborhood,
+    path as graph_path,
+    query as graph_query,
+)
 from pragmagraph.storage import load_snapshot
 from pragmagraph.workspace import load_workspace_metadata
 
@@ -284,9 +295,7 @@ def _render_integration_panel(request: UiPreviewRequest) -> str:
         source_command,
         "pragmagraph-ui --workspace .pragmagraph-workspace --screen provider_status --serve",
     )
-    command_list = "".join(
-        f"<code>{escape(command)}</code>" for command in commands
-    )
+    command_list = "".join(f"<code>{escape(command)}</code>" for command in commands)
     return (
         "<section class='pg-panel pg-integration' aria-label='OpenMinion integration'>"
         "<div><h3>OpenMinion Integration</h3>"
@@ -433,8 +442,7 @@ def _render_compact_node(node: GraphNode) -> str:
 
 def _node_link(node: GraphNode) -> str:
     return (
-        f"<a href='/result_detail?node_id={escape(node.id)}'>"
-        f"{escape(node.label)}</a>"
+        f"<a href='/result_detail?node_id={escape(node.id)}'>{escape(node.label)}</a>"
     )
 
 
@@ -476,30 +484,37 @@ def _incident_edges(snapshot: GraphSnapshot, node_id: str) -> tuple[GraphEdge, .
 def _edge_list(edges: tuple[GraphEdge, ...]) -> str:
     if not edges:
         return _empty("No edges.")
-    return "<ul class='pg-list'>" + "".join(
-        "<li>"
-        f"{_badge(edge.kind, 'blue')}"
-        f"<span>{escape(edge.source_id)} -> {escape(edge.target_id)}</span>"
-        "</li>"
-        for edge in edges
-    ) + "</ul>"
+    return (
+        "<ul class='pg-list'>"
+        + "".join(
+            "<li>"
+            f"{_badge(edge.kind, 'blue')}"
+            f"<span>{escape(edge.source_id)} -> {escape(edge.target_id)}</span>"
+            "</li>"
+            for edge in edges
+        )
+        + "</ul>"
+    )
 
 
 def _omitted_list(snapshot: GraphSnapshot) -> str:
     if not snapshot.omitted:
         return _empty("No omitted facts.")
-    return "<ul class='pg-list'>" + "".join(
-        f"<li>{escape(item.reason)} {escape(item.item_id)}</li>"
-        for item in snapshot.omitted
-    ) + "</ul>"
+    return (
+        "<ul class='pg-list'>"
+        + "".join(
+            f"<li>{escape(item.reason)} {escape(item.item_id)}</li>"
+            for item in snapshot.omitted
+        )
+        + "</ul>"
+    )
 
 
 def _key_values(payload: object) -> str:
     if not isinstance(payload, dict):
         return f"<pre>{escape(str(payload))}</pre>"
     rows = "".join(
-        "<dt>" + escape(str(key)) + "</dt>"
-        "<dd>" + escape(str(value)) + "</dd>"
+        "<dt>" + escape(str(key)) + "</dt><dd>" + escape(str(value)) + "</dd>"
         for key, value in payload.items()
     )
     return f"<dl class='pg-kv'>{rows}</dl>"

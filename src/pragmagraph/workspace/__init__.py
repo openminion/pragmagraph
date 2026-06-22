@@ -236,9 +236,10 @@ def initialize_workspace(
         namespace=namespace,
         git_identity_mode=git_identity_mode,
     )
+    profile = metadata.build_profile()
     save_workspace_metadata(metadata)
-    save_refresh_profile(metadata.build_profile(), metadata.paths.profile_path)
-    operation = run_refresh_profile(metadata.build_profile(), attempted_at=attempted_at)
+    save_refresh_profile(profile, metadata.paths.profile_path)
+    operation = run_refresh_profile(profile, attempted_at=attempted_at)
     return WorkspaceRefreshResult(workspace=metadata, operation=operation)
 
 

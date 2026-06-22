@@ -28,22 +28,12 @@ deed, matter, fact, or thing done; in this package it frames the third brain as
 a graph of reproducible structure: files, symbols, document sections, artifacts,
 references, commits, and other facts an indexer can recover from source.
 
-## Docs and release
-
-- [`docs/README.md`](docs/README.md) is the package-local docs entrypoint.
-- [`API_COMPATIBILITY.md`](API_COMPATIBILITY.md) records the supported public
-  import roots and top-level export policy.
-- [`RELEASING.md`](RELEASING.md) records the package-local release and publish
-  flow.
-- [`docs/source-tree-owner-map.md`](docs/source-tree-owner-map.md) explains the
-  source-tree module layout and public-vs-repo-local boundary.
-
-This semantic alpha provides a local observed-fact source-graph surface:
-deterministic DTOs, JSON snapshots, a local code/document indexer, incremental
-refresh manifests and structural deltas, structural query helpers, a local
-query service surface, deterministic graph reports and exports, Graphify-shaped
-interop, benchmark helpers, and CLI commands for local observed-fact graph
-work.
+Use it when you want reproducible code, docs, git, and artifact facts that an
+indexer can recover without an LLM. This semantic alpha provides deterministic
+DTOs, JSON snapshots, a local code/document indexer, refresh manifests and
+structural deltas, structural query helpers, a local query service surface,
+deterministic graph reports and exports, Graphify-shaped interop, benchmark
+helpers, and CLI commands for local observed-fact graph work.
 
 ## Trust and Brand Safety
 
@@ -54,6 +44,21 @@ work.
 `pragmagraph` has no official token, coin, NFT, airdrop, staking program,
 treasury product, or investment offering. Any claim otherwise is unauthorized
 and should be treated as a scam.
+
+## At a glance
+
+- Current public package line: `0.0.1` alpha
+- Best fit when: you want reproducible code, docs, git, and artifact facts that
+  an indexer can recover without an LLM
+- Public shape: deterministic DTOs, local indexing, query/report/export
+  helpers, refresh manifests, and package-local service/workspace/UI preview
+  contracts
+- Relationship to the rest of the family: PragmaGraph is the observed-fact
+  graph lane; Sophiagraph remains the durable-memory lane
+- Not the claim: no hosted service, prompt orchestration, memory promotion, or
+  implicit runtime-side inference lives here
+- Preferred package validation gate: `make check`, with `make release-check`
+  for release proof
 
 ## Boundary
 
@@ -71,82 +76,30 @@ consolidation decision, it belongs in Sophiagraph. Sophiagraph may cite
 PragmaGraph with `pragma://...` evidence references; PragmaGraph never stores
 Sophiagraph's judgments.
 
-## What the package provides
+## What PragmaGraph provides
 
 The package currently provides:
 
-- package metadata and Apache-2.0 release files
-- stable alpha import roots:
-  - `pragmagraph`
-  - `pragmagraph.contracts`
-  - `pragmagraph.models`
-  - `pragmagraph.query`
-  - `pragmagraph.storage`
-  - `pragmagraph.adapters`
-  - `pragmagraph.bench`
-  - `pragmagraph.portability`
-  - `pragmagraph.parsers`
-  - `pragmagraph.export`
-  - `pragmagraph.graphify`
-  - `pragmagraph.report`
-  - `pragmagraph.refresh`
-  - `pragmagraph.operations`
-  - `pragmagraph.security`
-  - `pragmagraph.service`
-  - `pragmagraph.workspace`
-- immutable DTOs for source refs, graph nodes, graph edges, snapshots, query
-  hits, omitted diagnostics, path results, and health summaries
-- deterministic JSON snapshot load/save helpers
-- a local indexer for directories, files, Markdown headings and references,
-  Python AST modules/classes/functions/methods/imports/calls/inheritance,
-  lexical TypeScript/JavaScript modules/functions/classes/imports/exports,
-  optional precise Tree-sitter-backed TypeScript/JavaScript structure when the
-  `precise` extra is installed,
-  selected JSON/TOML/YAML config metadata, lexical snippets, and local
-  git-history overlays for commits and changed paths
-- query, explain, neighborhood, path, reverse-import, reverse-dependency,
-  backlink, impact, refresh, health, recent git commits by path, files touched
-  by commit, and commits touching a symbol's file over loaded snapshots
-- content-hash refresh manifests with parser/version metadata, root metadata,
-  per-path reason codes, and deterministic structural delta helpers
-- package-owned explicit refresh operations: refresh previews, saved invocation
-  profiles, persistent refresh status ledgers, repeatable explicit-run helpers,
-  and root-backed service refresh-state reporting
-- deterministic structural report helpers with JSON and Markdown output for
-  repo summaries, unresolved facts, top nodes, hotspots, structural summaries,
-  dependency/config declarations, and agent-oriented follow-up queries
-- deterministic DOT and Mermaid export helpers for lightweight graph viewing
-  and downstream tooling, with explicit export-schema markers
-- deterministic Graphify-shaped JSON import/export helpers for backend
-  interchange tests and provider-swap validation, with explicit interop schema
-  versioning
-- package-owned local query service contracts and a stdio runner for repeated
-  snapshot-backed or root-backed sessions, including richer capabilities,
-  health, refresh, and git-overlay metadata
-- package-owned persistent workspace helpers for one local root: deterministic
-  workspace metadata, saved profile/snapshot/manifest/status layout, explicit
-  workspace refresh, workspace status inspection, and `serve --workspace`
-- package-owned UI boundary contracts and a local visual preview in
-  `pragmagraph.ui` for third-brain graph exploration: search, result detail,
-  neighborhood, path, and provider-status screens without bundling a hosted UI
-  runtime into this package; the package also exposes
-  `pragmagraph.ui.local_server` as the same reusable local visual server
-  primitive used by Sophiagraph
-- package-owned benchmark helpers plus repo-local regression fixtures for
-  readiness review, fixture profiling, refresh benchmarking, and omitted-rate
-  tracking
-- scope/security policy for gitignore-aware, size-bounded, binary/symlink-safe
-  local indexing
-- CLI commands for `index`, `refresh`, `query`, `explain`, `report`, `export`,
-  `benchmark`, `graphify-export`, `graphify-import`, `neighborhood`, `path`,
-  `health`, `git-commits-for-path`, `git-files-for-commit`,
-  `git-commits-for-symbol`, `workspace-init`, `workspace-refresh`,
-  `workspace-status`, `serve`, and `ui-preview`
-- a semantic smoke entrypoint for install validation
-- package-local tests, lint, and release-check workflow
-- API compatibility and release docs
+- Core graph contracts: stable alpha import roots centered on `pragmagraph`,
+  `contracts`, `models`, `query`, `storage`, `adapters`, `refresh`, `report`,
+  `service`, and `workspace`, plus immutable DTOs for refs, nodes, edges,
+  snapshots, queries, diagnostics, and health
+- Indexing: deterministic JSON snapshots and a local indexer for files,
+  Markdown structure, Python AST facts, TypeScript/JavaScript structure,
+  selected config metadata, snippets, and git-history overlays
+- Query and refresh: neighborhood/path/explain/impact helpers, reverse-edge
+  lookups, content-hash refresh manifests, structural deltas, saved refresh
+  profiles, and explicit refresh state reporting
+- Reports, export, and interop: structural reports, DOT/Mermaid export,
+  Graphify-shaped JSON interchange, and follow-up query/report helpers
+- Local runtime surfaces: stdio query service contracts, persistent workspace
+  helpers, `serve --workspace`, and the package-local visual preview boundary
+  under `pragmagraph.ui`
+- Operational support: benchmark helpers, repo-local regression fixtures,
+  gitignore-aware indexing/security rules, CLI commands, install smoke, and
+  compatibility/release docs
 
-## What the package does not provide yet
+## What PragmaGraph does not provide yet
 
 This package does **not** currently provide:
 
@@ -214,7 +167,7 @@ pragmagraph-smoke --json
 Expected output is deterministic JSON with the package name, version, status,
 stable import roots, and `semantic_contract: true`.
 
-## Package-local docs and release
+## Docs and release
 
 - `docs/README.md` summarizes the package-local docs contract.
 - `API_COMPATIBILITY.md` records the supported public import roots and
@@ -421,6 +374,9 @@ Workspace quickstart:
 ```bash
 pragmagraph workspace-init /path/to/repo --workspace .pragmagraph-workspace --json
 ```
+
+Library consumers that want the typed workspace helpers can also import
+`pragmagraph.workspace` directly.
 
 Workspace visual UI:
 

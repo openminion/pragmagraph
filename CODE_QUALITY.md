@@ -72,8 +72,7 @@ Good practice:
 Before closing work, run the package gates from `pragmagraph/`:
 
 ```bash
-make lint
-make test
+make check
 ```
 
 If your change affects packaging or public release shape, also run:
@@ -82,6 +81,9 @@ If your change affects packaging or public release shape, also run:
 make release-check
 ```
 
+Use `make lint` or `make test` directly only when you need a narrower loop
+while iterating.
+
 ## 7. When in doubt, choose clarity over cleverness
 
 The package prefers:
@@ -89,4 +91,3 @@ The package prefers:
 1. explicit owners over convenience,
 2. deterministic observed facts over magical ones,
 3. maintainable structure over short-term shortcuts.
-

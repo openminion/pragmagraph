@@ -70,27 +70,35 @@ def _print_payload(payload: object, *, as_json: bool) -> None:
     print(payload)
 
 
+def _add_json_flag(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--json", action="store_true", help="emit JSON output")
+
+
+def _add_git_identity_mode_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--git-identity-mode",
+        choices=tuple(sorted(SUPPORTED_GIT_IDENTITY_MODES)),
+        default=DEFAULT_GIT_IDENTITY_MODE,
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="pragmagraph package smoke")
-    parser.add_argument("--json", action="store_true", help="emit JSON output")
+    _add_json_flag(parser)
     subparsers = parser.add_subparsers(dest="command")
 
     index_parser = subparsers.add_parser("index", help="index a local root")
     index_parser.add_argument("root")
     index_parser.add_argument("--out", required=True)
     index_parser.add_argument("--namespace", default="default")
-    index_parser.add_argument(
-        "--git-identity-mode",
-        choices=tuple(sorted(SUPPORTED_GIT_IDENTITY_MODES)),
-        default=DEFAULT_GIT_IDENTITY_MODE,
-    )
-    index_parser.add_argument("--json", action="store_true", help="emit JSON output")
+    _add_git_identity_mode_argument(index_parser)
+    _add_json_flag(index_parser)
 
     query_parser = subparsers.add_parser("query", help="query a snapshot")
     query_parser.add_argument("snapshot")
     query_parser.add_argument("query")
     query_parser.add_argument("--max-results", type=int, default=10)
-    query_parser.add_argument("--json", action="store_true", help="emit JSON output")
+    _add_json_flag(query_parser)
 
     explain_parser = subparsers.add_parser(
         "explain", help="query with score explanations"
@@ -98,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
     explain_parser.add_argument("snapshot")
     explain_parser.add_argument("query")
     explain_parser.add_argument("--max-results", type=int, default=10)
-    explain_parser.add_argument("--json", action="store_true", help="emit JSON output")
+    _add_json_flag(explain_parser)
 
     git_path_parser = subparsers.add_parser(
         "git-commits-for-path",
@@ -107,7 +115,7 @@ def main(argv: list[str] | None = None) -> int:
     git_path_parser.add_argument("snapshot")
     git_path_parser.add_argument("path")
     git_path_parser.add_argument("--max-results", type=int, default=10)
-    git_path_parser.add_argument("--json", action="store_true", help="emit JSON output")
+    _add_json_flag(git_path_parser)
 
     git_commit_parser = subparsers.add_parser(
         "git-files-for-commit",
@@ -116,9 +124,7 @@ def main(argv: list[str] | None = None) -> int:
     git_commit_parser.add_argument("snapshot")
     git_commit_parser.add_argument("commit_ref")
     git_commit_parser.add_argument("--max-results", type=int, default=50)
-    git_commit_parser.add_argument(
-        "--json", action="store_true", help="emit JSON output"
-    )
+    _add_json_flag(git_commit_parser)
 
     git_symbol_parser = subparsers.add_parser(
         "git-commits-for-symbol",
@@ -127,16 +133,14 @@ def main(argv: list[str] | None = None) -> int:
     git_symbol_parser.add_argument("snapshot")
     git_symbol_parser.add_argument("symbol_node_id")
     git_symbol_parser.add_argument("--max-results", type=int, default=10)
-    git_symbol_parser.add_argument(
-        "--json", action="store_true", help="emit JSON output"
-    )
+    _add_json_flag(git_symbol_parser)
 
     report_parser = subparsers.add_parser(
         "report", help="build a deterministic structural report"
     )
     report_parser.add_argument("snapshot")
     report_parser.add_argument("--top-n", type=int, default=10)
-    report_parser.add_argument("--json", action="store_true", help="emit JSON output")
+    _add_json_flag(report_parser)
 
     export_parser = subparsers.add_parser(
         "export", help="export a snapshot as graph text"
@@ -167,17 +171,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     benchmark_parser.add_argument("root")
     benchmark_parser.add_argument("--namespace", default="default")
-    benchmark_parser.add_argument(
-        "--git-identity-mode",
-        choices=tuple(sorted(SUPPORTED_GIT_IDENTITY_MODES)),
-        default=DEFAULT_GIT_IDENTITY_MODE,
-    )
+    _add_git_identity_mode_argument(benchmark_parser)
     benchmark_parser.add_argument("--query", default="README")
     benchmark_parser.add_argument("--max-results", type=int, default=10)
     benchmark_parser.add_argument("--top-n", type=int, default=10)
-    benchmark_parser.add_argument(
-        "--json", action="store_true", help="emit JSON output"
-    )
+    _add_json_flag(benchmark_parser)
 
     refresh_parser = subparsers.add_parser("refresh", help="refresh a local root")
     refresh_parser.add_argument("root")
@@ -185,12 +183,8 @@ def main(argv: list[str] | None = None) -> int:
     refresh_parser.add_argument("--manifest-in")
     refresh_parser.add_argument("--manifest-out", required=True)
     refresh_parser.add_argument("--namespace", default="default")
-    refresh_parser.add_argument(
-        "--git-identity-mode",
-        choices=tuple(sorted(SUPPORTED_GIT_IDENTITY_MODES)),
-        default=DEFAULT_GIT_IDENTITY_MODE,
-    )
-    refresh_parser.add_argument("--json", action="store_true", help="emit JSON output")
+    _add_git_identity_mode_argument(refresh_parser)
+    _add_json_flag(refresh_parser)
 
     refresh_plan_parser = subparsers.add_parser(
         "refresh-plan",
@@ -199,17 +193,13 @@ def main(argv: list[str] | None = None) -> int:
     refresh_plan_parser.add_argument("root")
     refresh_plan_parser.add_argument("--manifest-in")
     refresh_plan_parser.add_argument("--namespace", default="default")
-    refresh_plan_parser.add_argument(
-        "--json", action="store_true", help="emit JSON output"
-    )
+    _add_json_flag(refresh_plan_parser)
 
     refresh_status_parser = subparsers.add_parser(
         "refresh-status", help="inspect a persisted refresh status ledger"
     )
     refresh_status_parser.add_argument("state")
-    refresh_status_parser.add_argument(
-        "--json", action="store_true", help="emit JSON output"
-    )
+    _add_json_flag(refresh_status_parser)
 
     profile_init_parser = subparsers.add_parser(
         "profile-init", help="write a repeatable explicit-refresh invocation profile"
@@ -221,22 +211,14 @@ def main(argv: list[str] | None = None) -> int:
     profile_init_parser.add_argument("--snapshot-out", required=True)
     profile_init_parser.add_argument("--manifest-out", required=True)
     profile_init_parser.add_argument("--state-out", required=True)
-    profile_init_parser.add_argument(
-        "--git-identity-mode",
-        choices=tuple(sorted(SUPPORTED_GIT_IDENTITY_MODES)),
-        default=DEFAULT_GIT_IDENTITY_MODE,
-    )
-    profile_init_parser.add_argument(
-        "--json", action="store_true", help="emit JSON output"
-    )
+    _add_git_identity_mode_argument(profile_init_parser)
+    _add_json_flag(profile_init_parser)
 
     profile_run_parser = subparsers.add_parser(
         "profile-run", help="run one explicit refresh from a saved invocation profile"
     )
     profile_run_parser.add_argument("profile")
-    profile_run_parser.add_argument(
-        "--json", action="store_true", help="emit JSON output"
-    )
+    _add_json_flag(profile_run_parser)
 
     neighborhood_parser = subparsers.add_parser(
         "neighborhood", help="show nodes around a snapshot node"
@@ -245,20 +227,18 @@ def main(argv: list[str] | None = None) -> int:
     neighborhood_parser.add_argument("node_id")
     neighborhood_parser.add_argument("--depth", type=int, default=1)
     neighborhood_parser.add_argument("--max-results", type=int, default=10)
-    neighborhood_parser.add_argument(
-        "--json", action="store_true", help="emit JSON output"
-    )
+    _add_json_flag(neighborhood_parser)
 
     path_parser = subparsers.add_parser("path", help="find a bounded graph path")
     path_parser.add_argument("snapshot")
     path_parser.add_argument("source_id")
     path_parser.add_argument("target_id")
     path_parser.add_argument("--max-hops", type=int, default=4)
-    path_parser.add_argument("--json", action="store_true", help="emit JSON output")
+    _add_json_flag(path_parser)
 
     health_parser = subparsers.add_parser("health", help="summarize a snapshot")
     health_parser.add_argument("snapshot")
-    health_parser.add_argument("--json", action="store_true", help="emit JSON output")
+    _add_json_flag(health_parser)
 
     serve_parser = subparsers.add_parser(
         "serve", help="run the local newline-delimited JSON service"
@@ -272,11 +252,7 @@ def main(argv: list[str] | None = None) -> int:
     serve_parser.add_argument("--snapshot-out")
     serve_parser.add_argument("--manifest-out")
     serve_parser.add_argument("--state-out")
-    serve_parser.add_argument(
-        "--git-identity-mode",
-        choices=tuple(sorted(SUPPORTED_GIT_IDENTITY_MODES)),
-        default=DEFAULT_GIT_IDENTITY_MODE,
-    )
+    _add_git_identity_mode_argument(serve_parser)
 
     workspace_init_parser = subparsers.add_parser(
         "workspace-init",
@@ -286,32 +262,22 @@ def main(argv: list[str] | None = None) -> int:
     workspace_init_parser.add_argument("--workspace", required=True)
     workspace_init_parser.add_argument("--label", default="default")
     workspace_init_parser.add_argument("--namespace", default="default")
-    workspace_init_parser.add_argument(
-        "--git-identity-mode",
-        choices=tuple(sorted(SUPPORTED_GIT_IDENTITY_MODES)),
-        default=DEFAULT_GIT_IDENTITY_MODE,
-    )
-    workspace_init_parser.add_argument(
-        "--json", action="store_true", help="emit JSON output"
-    )
+    _add_git_identity_mode_argument(workspace_init_parser)
+    _add_json_flag(workspace_init_parser)
 
     workspace_refresh_parser = subparsers.add_parser(
         "workspace-refresh",
         help="refresh a persistent local workspace directory",
     )
     workspace_refresh_parser.add_argument("workspace")
-    workspace_refresh_parser.add_argument(
-        "--json", action="store_true", help="emit JSON output"
-    )
+    _add_json_flag(workspace_refresh_parser)
 
     workspace_status_parser = subparsers.add_parser(
         "workspace-status",
         help="inspect a persistent local workspace directory",
     )
     workspace_status_parser.add_argument("workspace")
-    workspace_status_parser.add_argument(
-        "--json", action="store_true", help="emit JSON output"
-    )
+    _add_json_flag(workspace_status_parser)
 
     ui_parser = subparsers.add_parser(
         "ui-preview",
@@ -339,7 +305,7 @@ def main(argv: list[str] | None = None) -> int:
     ui_parser.add_argument("--serve", action="store_true")
     ui_parser.add_argument("--host", default="127.0.0.1")
     ui_parser.add_argument("--port", type=int, default=8766)
-    ui_parser.add_argument("--json", action="store_true", help="emit JSON output")
+    _add_json_flag(ui_parser)
 
     args = parser.parse_args(argv)
 
