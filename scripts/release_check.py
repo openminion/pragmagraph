@@ -42,6 +42,27 @@ def _run_capture(
     return result.stdout
 
 
+def _graphfakos_root(root: Path) -> Path | None:
+    candidate = root.parent / "graphfakos"
+    return candidate if (candidate / "pyproject.toml").exists() else None
+
+
+def _test_pythonpath(root: Path) -> str:
+    paths = [str(root / "src")]
+    graphfakos_root = _graphfakos_root(root)
+    if graphfakos_root:
+        paths.insert(0, str(graphfakos_root / "src"))
+    return os.pathsep.join(paths)
+
+
+def _ensure_graphfakos_wheel(root: Path, python: str) -> Path | None:
+    graphfakos_root = _graphfakos_root(root)
+    if graphfakos_root is None:
+        return None
+    _run([python, "-m", "build"], cwd=graphfakos_root)
+    return sorted((graphfakos_root / "dist").glob("graphfakos-*.whl"))[-1]
+
+
 def _create_temp_venv(root: Path, base_dir: Path) -> dict[str, Path]:
     venv_dir = base_dir / "venv"
     _run([sys.executable, "-m", "venv", str(venv_dir)], cwd=root)
@@ -130,7 +151,7 @@ def main(argv: list[str] | None = None) -> int:
     _run(
         [python, "-m", "pytest", "-q"],
         cwd=root,
-        extra_env={"PYTHONPATH": str(root / "src")},
+        extra_env={"PYTHONPATH": _test_pythonpath(root)},
     )
     _run([python, "-m", "build"], cwd=root)
     if not args.skip_twine:
@@ -149,13 +170,18 @@ def main(argv: list[str] | None = None) -> int:
                 cwd=root,
             )
     if not args.skip_wheel_smoke:
+        graphfakos_wheel = _ensure_graphfakos_wheel(root, python)
         with tempfile.TemporaryDirectory(prefix="pragmagraph-release-") as tmpdir:
             tmp = Path(tmpdir)
             venv_paths = _create_temp_venv(root, tmp)
             smoke = venv_paths["venv"] / "bin" / "pragmagraph-smoke"
             ui_preview = venv_paths["venv"] / "bin" / "pragmagraph-ui"
             wheel = sorted((root / "dist").glob("pragmagraph-*.whl"))[-1]
-            _run([str(venv_paths["pip"]), "install", str(wheel)], cwd=root)
+            install_cmd = [str(venv_paths["pip"]), "install"]
+            if graphfakos_wheel is not None:
+                install_cmd.append(str(graphfakos_wheel))
+            install_cmd.append(str(wheel))
+            _run(install_cmd, cwd=root)
             _run(
                 [
                     str(venv_paths["python"]),

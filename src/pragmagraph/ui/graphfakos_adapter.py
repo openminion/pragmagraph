@@ -1,0 +1,226 @@
+"""GraphFakos adapter for PragmaGraph source graph previews."""
+
+from __future__ import annotations
+
+from graphfakos import (
+    GraphFakosCitation,
+    GraphFakosEdge,
+    GraphFakosGraph,
+    GraphFakosNode,
+    GraphFakosProvenance,
+    GraphFakosProvider,
+    GraphFakosRequest,
+)
+
+from pragmagraph.models import GraphEdge, GraphNode, GraphSnapshot, SourceRef
+
+
+class PragmaGraphViewerProvider(GraphFakosProvider):
+    provider_id = "pragmagraph"
+    provider_label = "PragmaGraph"
+    graph_role = "source"
+    capabilities = (
+        "search",
+        "neighborhood",
+        "path",
+        "provenance",
+        "freshness",
+        "provider_status",
+        "context_preview",
+        "source_graph",
+        "document_graph",
+        "code_graph",
+        "artifact_graph",
+        "static_export",
+        "local_preview",
+    )
+
+    def __init__(self, snapshot: GraphSnapshot) -> None:
+        self._snapshot = snapshot
+
+    def load_graph(self, request: GraphFakosRequest) -> GraphFakosGraph:
+        return _snapshot_to_graphfakos(
+            self._snapshot,
+            request,
+            provider_id=self.provider_id,
+            provider_label=self.provider_label,
+            graph_role=self.graph_role,
+            capabilities=self.capabilities,
+        )
+
+
+def _snapshot_to_graphfakos(
+    snapshot: GraphSnapshot,
+    request: GraphFakosRequest,
+    *,
+    provider_id: str,
+    provider_label: str,
+    graph_role: str,
+    capabilities: tuple[str, ...],
+) -> GraphFakosGraph:
+    citations = tuple(_citation_for_node(node) for node in snapshot.nodes) + tuple(
+        _citation_for_edge(edge) for edge in snapshot.edges
+    )
+    provenance = tuple(_provenance_for_node(node) for node in snapshot.nodes)
+    nodes = tuple(_node_to_graphfakos(node) for node in snapshot.nodes)
+    edges = tuple(_edge_to_graphfakos(edge) for edge in snapshot.edges)
+    return GraphFakosGraph(
+        graph_id=snapshot.namespace,
+        label="PragmaGraph Observed Source Graph",
+        provider_id=provider_id,
+        provider_label=provider_label,
+        graph_role=graph_role,
+        capabilities=capabilities,
+        nodes=nodes,
+        edges=edges,
+        provenance=provenance,
+        citations=citations,
+        warnings=tuple(item.reason for item in snapshot.omitted),
+        stats={
+            "namespace": snapshot.namespace,
+            "root_path": snapshot.root_path,
+            "request_screen": request.screen,
+            **dict(snapshot.stats),
+        },
+        generated_at=snapshot.created_at,
+        provider_payload={
+            "namespace": snapshot.namespace,
+            "root_path": snapshot.root_path,
+            "schema_version": snapshot.schema_version,
+            "indexer_version": snapshot.indexer_version,
+            "snapshot_label": _snapshot_label(snapshot),
+            "integration_commands": (
+                "pragmagraph-ui --workspace .pragmagraph-workspace --screen search --serve --open",
+                "pragmagraph-ui --workspace .pragmagraph-workspace --screen provider_status --serve",
+            ),
+        },
+    )
+
+
+def _snapshot_label(snapshot: GraphSnapshot) -> str:
+    timestamp = snapshot.created_at or "unknown time"
+    return f"{snapshot.namespace} snapshot at {timestamp}"
+
+
+def _node_to_graphfakos(node: GraphNode) -> GraphFakosNode:
+    return GraphFakosNode(
+        id=node.id,
+        label=node.label,
+        kind=node.kind,
+        summary=node.text or node.source_ref.path or node.id,
+        tags=_node_tags(node),
+        source=node.source_ref.path,
+        timestamps=_timestamps(node.metadata),
+        provenance_ids=(f"provenance:{node.id}",),
+        citation_ids=(f"citation:node:{node.id}",),
+        provider_payload={
+            "source_ref": node.source_ref.to_dict(),
+            "metadata": dict(node.metadata),
+        },
+    )
+
+
+def _edge_to_graphfakos(edge: GraphEdge) -> GraphFakosEdge:
+    return GraphFakosEdge(
+        id=edge.id,
+        source_id=edge.source_id,
+        target_id=edge.target_id,
+        kind=edge.kind,
+        label=edge.kind,
+        provenance_ids=(),
+        citation_ids=(f"citation:edge:{edge.id}",),
+        provider_payload={
+            "source_ref": edge.source_ref.to_dict(),
+            "metadata": dict(edge.metadata),
+        },
+    )
+
+
+def _citation_for_node(node: GraphNode) -> GraphFakosCitation:
+    return _citation(
+        citation_id=f"citation:node:{node.id}",
+        label=node.label,
+        source_ref=node.source_ref,
+        excerpt=node.text,
+    )
+
+
+def _citation_for_edge(edge: GraphEdge) -> GraphFakosCitation:
+    return _citation(
+        citation_id=f"citation:edge:{edge.id}",
+        label=edge.kind,
+        source_ref=edge.source_ref,
+        excerpt=f"{edge.source_id} -> {edge.target_id}",
+    )
+
+
+def _citation(
+    *,
+    citation_id: str,
+    label: str,
+    source_ref: SourceRef,
+    excerpt: str,
+) -> GraphFakosCitation:
+    return GraphFakosCitation(
+        id=citation_id,
+        label=label,
+        uri=source_ref.uri,
+        path=source_ref.path,
+        line=source_ref.line,
+        span=_source_span(source_ref),
+        excerpt=excerpt or source_ref.path or label,
+    )
+
+
+def _provenance_for_node(node: GraphNode) -> GraphFakosProvenance:
+    return GraphFakosProvenance(
+        id=f"provenance:{node.id}",
+        provider_id="pragmagraph",
+        source_type=node.kind,
+        source_label=node.source_ref.path or node.label,
+        source_uri=node.source_ref.uri,
+        excerpt=node.text or node.label,
+        observed_at=str(node.metadata.get("observed_at", "")),
+        updated_at=str(node.metadata.get("updated_at", "")),
+        confidence=_float_or_none(node.metadata.get("confidence")),
+        provider_payload={"metadata": dict(node.metadata)},
+    )
+
+
+def _node_tags(node: GraphNode) -> tuple[str, ...]:
+    tags = ["source", node.kind]
+    freshness = node.metadata.get("freshness")
+    if freshness:
+        tags.append(str(freshness))
+    if node.source_ref.path:
+        tags.append("citation")
+    return tuple(tags)
+
+
+def _timestamps(metadata: object) -> dict[str, str]:
+    if not isinstance(metadata, dict):
+        return {}
+    keys = ("created_at", "updated_at", "observed_at", "refreshed_at")
+    return {key: str(metadata[key]) for key in keys if metadata.get(key)}
+
+
+def _source_span(source_ref: SourceRef) -> str:
+    if source_ref.line is None:
+        return source_ref.section
+    if source_ref.end_line and source_ref.end_line != source_ref.line:
+        return f"{source_ref.line}-{source_ref.end_line}"
+    return str(source_ref.line)
+
+
+def _float_or_none(value: object) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+__all__ = [
+    "PragmaGraphViewerProvider",
+]

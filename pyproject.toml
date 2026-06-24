@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pragmagraph"
-version = "0.0.1"
+version = "0.0.3"
 description = "Standalone observed-fact graph substrate for code and document structure"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -22,7 +22,9 @@ classifiers = [
   "Topic :: Database",
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-dependencies = []
+dependencies = [
+  "graphfakos>=0.0.1,<1",
+]
 
 [project.urls]
 Repository = "https://github.com/openminion/pragmagraph"

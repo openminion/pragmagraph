@@ -81,7 +81,8 @@ def test_ui_preview_exports_match_sophiagraph_local_visual_pattern() -> None:
 
     assert rendered.screen == "search"
     assert rendered.node_count == 4
+    assert "GraphFakos" in rendered.html
     assert "PragmaGraph" in rendered.html
-    assert "Ranked Results" in rendered.html
+    assert "Graph Canvas" in rendered.html
     assert "OpenMinion Integration" in rendered.html
     assert "Third-brain observed source graph." in rendered.html
