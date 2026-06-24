@@ -45,7 +45,7 @@ def test_python_m_pragmagraph_smoke() -> None:
             "pragmagraph.workspace",
         ],
         "status": "semantic-alpha",
-        "version": "0.0.1",
+        "version": "0.0.3",
     }
 
 
@@ -93,10 +93,11 @@ def test_python_m_pragmagraph_ui_preview_writes_html(tmp_path) -> None:
     assert payload["output_path"] == str(output_path)
     assert payload["screen"] == "provider_status"
     assert payload["node_count"] == 4
+    assert "GraphFakos" in html
     assert "PragmaGraph" in html
     assert "OpenMinion Integration" in html
     assert "Third-brain observed source graph." in html
-    assert "pragmagraph workspace-init" in html
+    assert "PragmaGraph Observed Source Graph" in html
 
 
 def test_pragmagraph_ui_preview_server_serves_visual_routes() -> None:
@@ -122,7 +123,7 @@ def test_pragmagraph_ui_preview_server_serves_visual_routes() -> None:
         server.server_close()
         thread.join(timeout=5)
 
-    assert "Ranked Results" in search_html
+    assert "Graph Canvas" in search_html
     assert "OpenMinion Integration" in search_html
-    assert "href='/provider_status'" in search_html
+    assert "href='/provider_status" in search_html
     assert "Provider Status" in status_html

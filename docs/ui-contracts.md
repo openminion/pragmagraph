@@ -4,15 +4,18 @@ Status: semantic alpha
 Scope: typed UI boundary contracts plus package-local visual preview
 
 `pragmagraph.ui` is the package-owned typed boundary for future operator-facing
-third-brain workbench screens.
+third-brain workbench screens. The package-local preview now renders through
+GraphFakos, the shared graph lens package.
 
 The important ownership rule is explicit:
 
 1. `pragmagraph` owns typed observed-fact graph contracts and the package-local
    UI boundary surface,
-2. `pragmagraph` also owns the local visual preview used for package smoke,
-   demo, and visual navigation of one snapshot/workspace,
-3. `openminion` owns the hosted runtime workbench UI and provider-neutral
+2. `pragmagraph` owns the GraphFakos adapter used for package smoke, demo, and
+   visual navigation of one snapshot/workspace,
+3. `graphfakos` owns the reusable viewer shell, graph canvas, local server
+   primitive, static HTML export, and shared viewer assertions,
+4. `openminion` owns the hosted runtime workbench UI and provider-neutral
    operator experience.
 
 ## Current contract
@@ -22,8 +25,9 @@ The important ownership rule is explicit:
 - transport kind: `openminion_workbench`
 - transport status: `planned_not_implemented`
 - host-runtime seam: OpenMinion's third-brain adapter layer
-- reusable local server primitive: `pragmagraph.ui.local_server`
+- reusable local server primitive: `graphfakos.server`
 - local visual UI seam: `python3.11 -m pragmagraph ui-preview --serve`
+- shared viewer package: `graphfakos`
 
 ## Screen manifest
 
@@ -38,7 +42,8 @@ The first screen manifest is intentionally small and matches the workbench MVP:
 ## Local Visual UI
 
 Use the package-local browser preview to inspect one snapshot or workspace
-without starting an OpenMinion workbench:
+through the GraphFakos-backed third-brain viewer without starting an OpenMinion
+workbench:
 
 ```bash
 pragmagraph-ui \
@@ -62,7 +67,8 @@ The equivalent module form is `python3.11 -m pragmagraph ui-preview`.
 ## Boundary
 
 This package does **not** currently ship a hosted browser app, Textual TUI,
-REST server, or MCP UI server. It ships typed UI contracts, the same reusable
-local visual server primitive used by Sophiagraph, and a package-local visual
-preview command so package structure stays aligned with sibling standalone
-packages and future UI work has one canonical import root.
+REST server, or MCP UI server. It ships typed UI contracts, deterministic
+PragmaGraph to GraphFakos adapter mapping, compatibility wrappers for the local
+visual server primitive, and a package-local visual preview command so package
+structure stays aligned with sibling standalone packages and future UI work has
+one canonical import root.

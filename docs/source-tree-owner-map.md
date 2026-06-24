@@ -35,8 +35,9 @@ export, graphify, report, refresh, security, service, workspace, and
 9. `workspace/` owns the persistent local workspace directory contract and
    explicit workspace lifecycle helpers.
 10. `service/` owns the local repeated-query service boundary.
-11. `ui/` owns typed UI contracts only; runtime workbench implementation
-   belongs in OpenMinion.
+11. `ui/` owns typed UI contracts, the PragmaGraph-to-GraphFakos adapter, and
+   package CLI preview wiring. Shared viewer shell, local server behavior,
+   static export, and reusable viewer assertions belong to GraphFakos.
 
 ## Repo-local but not public API
 

@@ -47,7 +47,7 @@ and should be treated as a scam.
 
 ## At a glance
 
-- Current public package line: `0.0.1` alpha
+- Current public package line: `0.0.3` alpha
 - Best fit when: you want reproducible code, docs, git, and artifact facts that
   an indexer can recover without an LLM
 - Public shape: deterministic DTOs, local indexing, query/report/export
@@ -110,8 +110,8 @@ This package does **not** currently provide:
 - OpenMinion runtime provider wiring
 - prompt context merging
 - the actual hosted operator-facing workbench runtime UI (that belongs to
-  OpenMinion; `pragmagraph.ui` owns the package-local visual preview and typed
-  boundary)
+  OpenMinion; `pragmagraph.ui` owns the package adapter and typed boundary,
+  while GraphFakos owns the shared local viewer shell)
 - semantic inference from prose or model output
 - automatic Sophiagraph memory writes or promotion
 
