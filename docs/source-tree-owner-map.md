@@ -15,8 +15,8 @@ The public alpha surface is documented in:
 
 The preferred entrypoint is `pragmagraph`, with additional stable import roots
 for contracts, models, query, storage, adapters, bench, portability, parsers,
-export, graphify, report, refresh, security, service, workspace, and
-`pragmagraph.ui`.
+export, graphify, report, refresh, navigation, security, service, workspace,
+and `pragmagraph.ui`.
 
 ## Source-tree owner map
 
@@ -32,11 +32,19 @@ export, graphify, report, refresh, security, service, workspace, and
 7. `refresh/` owns content-hash manifest and refresh behavior.
 8. `operations.py` owns explicit refresh planning, saved invocation profiles,
    persisted status ledgers, and repeatable local ingest runs.
-9. `workspace/` owns the persistent local workspace directory contract and
+9. `navigation/` owns compact repo-map and handoff views over observed
+   snapshots.
+10. `workspace/` owns the persistent local workspace directory contract and
    explicit workspace lifecycle helpers.
-10. `service/` owns the local repeated-query service boundary.
-11. `ui/` owns typed UI contracts, the PragmaGraph-to-GraphFakos adapter, and
-   package CLI preview wiring. Shared viewer shell, local server behavior,
+11. `service/` owns the local repeated-query service boundary.
+12. `ui/` owns typed UI contracts, the PragmaGraph-to-GraphFakos adapter, and
+   package CLI preview wiring. `ui/__init__.py` remains the stable UI import
+   seam, `ui/contracts.py` owns typed route and transport-boundary contracts,
+   `ui/local_server.py` remains the stable local-viewer compatibility seam,
+   `preview.py` is the stable preview façade,
+   `preview_types.py` owns typed request/result contracts, and
+   `preview_support.py` owns preview request parsing plus snapshot-loading and
+   GraphFakos bridge helpers. Shared viewer shell, local server behavior,
    static export, and reusable viewer assertions belong to GraphFakos.
 
 ## Repo-local but not public API

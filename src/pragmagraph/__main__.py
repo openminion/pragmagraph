@@ -19,6 +19,11 @@ from pragmagraph.graphify import (
     to_graphify_payload,
 )
 from pragmagraph.models import QueryRequest
+from pragmagraph.navigation import (
+    build_repo_map,
+    render_compact_handoff,
+    render_markdown_repo_map,
+)
 from pragmagraph.operations import (
     build_refresh_plan,
     build_refresh_profile,
@@ -141,6 +146,18 @@ def main(argv: list[str] | None = None) -> int:
     report_parser.add_argument("snapshot")
     report_parser.add_argument("--top-n", type=int, default=10)
     _add_json_flag(report_parser)
+
+    repo_map_parser = subparsers.add_parser(
+        "repo-map", help="render a compact repository navigation map"
+    )
+    repo_map_parser.add_argument("snapshot")
+    repo_map_parser.add_argument("--top-n", type=int, default=8)
+    repo_map_parser.add_argument(
+        "--handoff",
+        action="store_true",
+        help="render the shorter agent handoff view",
+    )
+    _add_json_flag(repo_map_parser)
 
     export_parser = subparsers.add_parser(
         "export", help="export a snapshot as graph text"
@@ -370,6 +387,15 @@ def main(argv: list[str] | None = None) -> int:
             _print_payload(report.to_dict(), as_json=True)
         else:
             print(render_markdown_report(report), end="")
+    elif args.command == "repo-map":
+        snapshot = load_snapshot(args.snapshot)
+        repo_map = build_repo_map(snapshot, top_n=args.top_n)
+        if args.json:
+            _print_payload(repo_map.to_dict(), as_json=True)
+        elif args.handoff:
+            print(render_compact_handoff(snapshot, top_n=args.top_n), end="")
+        else:
+            print(render_markdown_repo_map(repo_map), end="")
     elif args.command == "export":
         snapshot = load_snapshot(args.snapshot)
         print(render_graph_export(snapshot, format=args.format), end="")

@@ -89,7 +89,7 @@ The package currently provides:
   selected config metadata, snippets, and git-history overlays
 - Query and refresh: neighborhood/path/explain/impact helpers, reverse-edge
   lookups, content-hash refresh manifests, structural deltas, saved refresh
-  profiles, and explicit refresh state reporting
+  profiles, explicit refresh state reporting, and compact repo-map handoffs
 - Reports, export, and interop: structural reports, DOT/Mermaid export,
   Graphify-shaped JSON interchange, and follow-up query/report helpers
 - Local runtime surfaces: stdio query service contracts, persistent workspace

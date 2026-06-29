@@ -78,9 +78,13 @@ def test_profile_run_persists_snapshot_manifest_and_status(tmp_path: Path) -> No
     assert operation.status.status == "fresh"
     assert operation.status.snapshot_id
     assert operation.status.manifest_entry_count == 2
+    assert operation.status.added_node_count >= 1
+    assert operation.status.added_edge_count >= 1
+    assert isinstance(operation.status.omitted_reason_counts, dict)
     status = load_refresh_status(profile.state_path)
     assert status.status == "fresh"
     assert status.namespace == "fixture"
+    assert status.added_node_count == operation.status.added_node_count
     profile_path = _save_profile_fixture(profile, tmp_path / "profile.json")
     loaded_profile = load_refresh_profile(profile_path)
     assert loaded_profile.root_path == str(root.resolve())
@@ -159,6 +163,8 @@ def test_cli_profile_init_run_and_status_commands(tmp_path: Path) -> None:
     status_payload = json.loads(status.stdout)
     assert status_payload["status"] == "fresh"
     assert status_payload["manifest_entry_count"] == 2
+    assert "added_node_count" in status_payload
+    assert "omitted_reason_counts" in status_payload
 
 
 def test_root_service_health_and_refresh_return_refresh_state(tmp_path: Path) -> None:

@@ -208,11 +208,22 @@ class ScriptLexicalParser:
         r"""^\s*(?:export\s+default\s+|export\s+)?(?:async\s+)?function\s+([A-Za-z_$][A-Za-z0-9_$]*)""",
         re.MULTILINE,
     )
+    _ARROW_FUNCTION_RE = re.compile(
+        r"""^\s*(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][A-Za-z0-9_$]*)\s*=>""",
+        re.MULTILINE,
+    )
     _CONST_EXPORT_RE = re.compile(
         r"""^\s*export\s+(?:const|let|var)\s+([A-Za-z_$][A-Za-z0-9_$]*)""",
         re.MULTILINE,
     )
-    _NAMED_EXPORT_RE = re.compile(r"""^\s*export\s*\{\s*([^}]+)\s*\}""", re.MULTILINE)
+    _TYPE_EXPORT_RE = re.compile(
+        r"""^\s*export\s+(?:interface|type)\s+([A-Za-z_$][A-Za-z0-9_$]*)""",
+        re.MULTILINE,
+    )
+    _NAMED_EXPORT_RE = re.compile(
+        r"""^\s*export\s*\{\s*([^}]+?)\s*\}(?:\s+from\s+["'][^"']+["'])?""",
+        re.MULTILINE,
+    )
 
     def parse(
         self, *, namespace: str, rel: str, file_id: str, text: str
@@ -319,9 +330,15 @@ class ScriptLexicalParser:
         function_match = self._FUNCTION_RE.match(line)
         if function_match:
             symbol_defs.append((function_match.group(1), NODE_SCRIPT_FUNCTION))
+        arrow_function_match = self._ARROW_FUNCTION_RE.match(line)
+        if arrow_function_match:
+            symbol_defs.append((arrow_function_match.group(1), NODE_SCRIPT_FUNCTION))
         const_match = self._CONST_EXPORT_RE.match(line)
-        if const_match:
+        if const_match and not arrow_function_match:
             symbol_defs.append((const_match.group(1), NODE_SCRIPT_EXPORT))
+        type_match = self._TYPE_EXPORT_RE.match(line)
+        if type_match:
+            symbol_defs.append((type_match.group(1), NODE_SCRIPT_EXPORT))
         for label, kind in symbol_defs:
             symbol_id = node_id(namespace, kind, f"{rel}:{label}")
             export_kind = "export" if line.lstrip().startswith("export") else "local"

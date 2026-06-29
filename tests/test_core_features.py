@@ -35,6 +35,12 @@ def _script_repo(tmp_path: Path) -> Path:
                 "}\n"
             ),
             "src/util.ts": "export function makeValue() {\n  return true;\n}\n",
+            "src/types.ts": (
+                "export interface RuntimeGraphOptions {\n"
+                "  enabled: boolean;\n"
+                "}\n\n"
+                "export const makeOptions = () => ({ enabled: true });\n"
+            ),
             "package.json": '{"dependencies":{"left-pad":"1.0.0"}}\n',
         },
     )
@@ -83,6 +89,14 @@ def test_script_parser_extracts_modules_imports_and_exports(tmp_path: Path) -> N
     )
     assert any(
         node.kind == "script_export" and node.label == "makeValue"
+        for node in snapshot.nodes
+    )
+    assert any(
+        node.kind == "script_function" and node.label == "makeOptions"
+        for node in snapshot.nodes
+    )
+    assert any(
+        node.kind == "script_export" and node.label == "RuntimeGraphOptions"
         for node in snapshot.nodes
     )
     assert any(

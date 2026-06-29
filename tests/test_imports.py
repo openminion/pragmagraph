@@ -13,6 +13,7 @@ def test_pragmagraph_package_imports() -> None:
     import pragmagraph.export
     import pragmagraph.graphify
     import pragmagraph.models
+    import pragmagraph.navigation
     import pragmagraph.operations
     import pragmagraph.parsers
     import pragmagraph.portability
@@ -29,6 +30,7 @@ def test_pragmagraph_package_imports() -> None:
     assert pragmagraph.PACKAGE_STATUS == "semantic-alpha"
     assert "pragmagraph.bench" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.models" in pragmagraph.STABLE_IMPORT_ROOTS
+    assert "pragmagraph.navigation" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.evidence" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.export" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.graphify" in pragmagraph.STABLE_IMPORT_ROOTS
@@ -45,6 +47,7 @@ def test_pragmagraph_package_imports() -> None:
     assert "query" in pragmagraph.query.__all__
     assert "build_report" in pragmagraph.report.__all__
     assert "load_snapshot" in pragmagraph.storage.__all__
+    assert "build_repo_map" in pragmagraph.navigation.__all__
 
 
 def test_top_level_public_api_and_version_metadata_are_stable() -> None:
@@ -95,8 +98,11 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "SCHEMA_VERSION",
         "SnapshotStructuralDelta",
         "SourceRef",
+        "RepoMap",
+        "RepoMapSection",
         "backlinks",
         "benchmark_root",
+        "build_repo_map",
         "build_report",
         "build_refresh_plan",
         "build_refresh_profile",
@@ -114,7 +120,9 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "recent_commits_for_path",
         "render_dot",
         "render_graph_export",
+        "render_compact_handoff",
         "render_markdown_benchmark",
+        "render_markdown_repo_map",
         "render_mermaid",
         "render_markdown_report",
         "refresh_snapshot",
@@ -155,6 +163,7 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     import pragmagraph.export as export
     import pragmagraph.graphify as graphify
     import pragmagraph.models as models
+    import pragmagraph.navigation as navigation
     import pragmagraph.parsers as parsers
     import pragmagraph.portability as portability
     import pragmagraph.query as query
@@ -173,6 +182,7 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     assert "render_mermaid" in export.__all__
     assert "snapshot_from_graphify_payload" in graphify.__all__
     assert "GraphSnapshot" in models.__all__
+    assert "render_compact_handoff" in navigation.__all__
     assert "OptionalParserFamily" in parsers.__all__
     assert "get_default_registry" in parsers.__all__
     assert "pragma_uri" in portability.__all__

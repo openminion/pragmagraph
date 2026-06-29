@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from collections import Counter
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -140,9 +141,28 @@ class RefreshStatus:
     changed_path_count: int = 0
     unchanged_path_count: int = 0
     removed_path_count: int = 0
+    added_node_count: int = 0
+    removed_node_count: int = 0
+    added_edge_count: int = 0
+    removed_edge_count: int = 0
+    added_omitted_count: int = 0
+    removed_omitted_count: int = 0
     manifest_entry_count: int = 0
+    omitted_reason_counts: Mapping[str, int] = field(default_factory=dict)
     parser_set: tuple[str, ...] = ()
     schema_version: str = _STATUS_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "omitted_reason_counts",
+            {str(key): int(value) for key, value in self.omitted_reason_counts.items()},
+        )
+        object.__setattr__(
+            self,
+            "parser_set",
+            tuple(str(item) for item in self.parser_set),
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -162,7 +182,14 @@ class RefreshStatus:
             "changed_path_count": self.changed_path_count,
             "unchanged_path_count": self.unchanged_path_count,
             "removed_path_count": self.removed_path_count,
+            "added_node_count": self.added_node_count,
+            "removed_node_count": self.removed_node_count,
+            "added_edge_count": self.added_edge_count,
+            "removed_edge_count": self.removed_edge_count,
+            "added_omitted_count": self.added_omitted_count,
+            "removed_omitted_count": self.removed_omitted_count,
             "manifest_entry_count": self.manifest_entry_count,
+            "omitted_reason_counts": dict(self.omitted_reason_counts),
             "parser_set": list(self.parser_set),
         }
 
@@ -189,7 +216,19 @@ class RefreshStatus:
             changed_path_count=int(payload.get("changed_path_count", 0) or 0),
             unchanged_path_count=int(payload.get("unchanged_path_count", 0) or 0),
             removed_path_count=int(payload.get("removed_path_count", 0) or 0),
+            added_node_count=int(payload.get("added_node_count", 0) or 0),
+            removed_node_count=int(payload.get("removed_node_count", 0) or 0),
+            added_edge_count=int(payload.get("added_edge_count", 0) or 0),
+            removed_edge_count=int(payload.get("removed_edge_count", 0) or 0),
+            added_omitted_count=int(payload.get("added_omitted_count", 0) or 0),
+            removed_omitted_count=int(payload.get("removed_omitted_count", 0) or 0),
             manifest_entry_count=int(payload.get("manifest_entry_count", 0) or 0),
+            omitted_reason_counts={
+                str(key): int(value)
+                for key, value in dict(
+                    payload.get("omitted_reason_counts", {}) or {}
+                ).items()
+            },
             parser_set=tuple(str(item) for item in payload.get("parser_set", ()) or ()),
         )
 
@@ -355,6 +394,7 @@ def refresh_status_from_result(
     attempted_at: str = "",
 ) -> RefreshStatus:
     parser_set = tuple(sorted({entry.parser for entry in result.manifest.entries}))
+    omitted_reason_counts = Counter(item.reason for item in result.snapshot.omitted)
     return RefreshStatus(
         root_path=profile.root_path,
         namespace=profile.namespace,
@@ -368,7 +408,14 @@ def refresh_status_from_result(
         changed_path_count=len(result.changed_paths),
         unchanged_path_count=len(result.unchanged_paths),
         removed_path_count=len(result.removed_paths),
+        added_node_count=len(result.snapshot_delta.added_node_ids),
+        removed_node_count=len(result.snapshot_delta.removed_node_ids),
+        added_edge_count=len(result.snapshot_delta.added_edge_ids),
+        removed_edge_count=len(result.snapshot_delta.removed_edge_ids),
+        added_omitted_count=len(result.snapshot_delta.added_omitted_ids),
+        removed_omitted_count=len(result.snapshot_delta.removed_omitted_ids),
         manifest_entry_count=len(result.manifest.entries),
+        omitted_reason_counts=dict(sorted(omitted_reason_counts.items())),
         parser_set=parser_set,
     )
 

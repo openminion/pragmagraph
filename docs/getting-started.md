@@ -41,6 +41,26 @@ Before substantial code changes, read:
 5. Run `make check` before calling the work ready.
 6. Record validation commands in the PR description.
 
+## Common local checks
+
+Create a snapshot:
+
+```bash
+pragmagraph index . --out snapshot.json --json
+```
+
+Inspect compact navigation:
+
+```bash
+pragmagraph repo-map snapshot.json --handoff
+```
+
+Inspect explicit refresh status:
+
+```bash
+pragmagraph refresh-status status.json --json
+```
+
 ## Pull request shape
 
 Preferred PR shape:
