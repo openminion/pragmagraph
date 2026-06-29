@@ -18,14 +18,16 @@ from .local_server import (
     serve_local_visual_server,
 )
 from .preview import (
-    PreviewScreen,
-    UiPreviewRender,
-    UiPreviewRequest,
-    UiPreviewResult,
     make_ui_preview_server,
     render_ui_preview,
     serve_ui_preview,
     write_ui_preview,
+)
+from .preview_types import (
+    PreviewScreen,
+    UiPreviewRender,
+    UiPreviewRequest,
+    UiPreviewResult,
 )
 
 __all__ = [
