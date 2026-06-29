@@ -28,6 +28,7 @@ External consumers should treat these import roots as the supported public API:
 - `pragmagraph.report`
 - `pragmagraph.refresh`
 - `pragmagraph.operations`
+- `pragmagraph.navigation`
 - `pragmagraph.security`
 - `pragmagraph.service`
 - `pragmagraph.ui`
@@ -53,6 +54,8 @@ The following top-level exports are part of the current public contract:
 - Graphify-shaped JSON interop helpers `to_graphify_payload`,
   `snapshot_from_graphify_payload`, and `GRAPHIFY_INTEROP_FORMAT`
 - structural report helpers `build_report` and `render_markdown_report`
+- compact navigation helpers `build_repo_map`, `render_markdown_repo_map`, and
+  `render_compact_handoff`
 - refresh helpers `refresh_snapshot` and `diff_snapshots`
 - structural navigation helpers `reverse_imports`, `reverse_dependencies`,
   `backlinks`, and `impact`
@@ -122,7 +125,8 @@ Public-contract confidence should be enforced by tests that cover:
 13. deterministic stdio service behavior for snapshot-backed and root-backed
     repeated-request sessions,
 14. deterministic workspace init/status/refresh behavior and
-    `serve --workspace` startup.
+    `serve --workspace` startup,
+15. deterministic compact repo-map and handoff rendering.
 
 ## Non-goals
 

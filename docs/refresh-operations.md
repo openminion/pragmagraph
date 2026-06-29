@@ -59,6 +59,9 @@ only:
 - snapshot and manifest paths
 - parser set
 - changed / unchanged / removed path counts
+- added / removed node, edge, and omitted-diagnostic counts from the structural
+  snapshot delta
+- omitted diagnostic reason counts from the latest snapshot
 - snapshot identity
 - typed error code/message for the last failed attempt
 

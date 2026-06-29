@@ -47,6 +47,13 @@ from pragmagraph.models import (
     SnapshotStructuralDelta,
     SourceRef,
 )
+from pragmagraph.navigation import (
+    RepoMap,
+    RepoMapSection,
+    build_repo_map,
+    render_compact_handoff,
+    render_markdown_repo_map,
+)
 from pragmagraph.report import (
     GraphReport,
     GraphReportDependency,
@@ -117,6 +124,7 @@ STABLE_IMPORT_ROOTS = (
     "pragmagraph.service",
     "pragmagraph.ui",
     "pragmagraph.workspace",
+    "pragmagraph.navigation",
 )
 
 __all__ = [
@@ -151,6 +159,8 @@ __all__ = [
     "RefreshManifestEntry",
     "RefreshPathChange",
     "RefreshResult",
+    "RepoMap",
+    "RepoMapSection",
     "SCHEMA_VERSION",
     "SnapshotStructuralDelta",
     "STABLE_IMPORT_ROOTS",
@@ -163,6 +173,7 @@ __all__ = [
     "files_touched_by_commit",
     "benchmark_root",
     "build_report",
+    "build_repo_map",
     "diff_snapshots",
     "evidence_ref_for_node",
     "impact",
@@ -174,7 +185,9 @@ __all__ = [
     "load_snapshot",
     "render_dot",
     "render_graph_export",
+    "render_compact_handoff",
     "render_markdown_benchmark",
+    "render_markdown_repo_map",
     "render_mermaid",
     "render_markdown_report",
     "RefreshOperationResult",

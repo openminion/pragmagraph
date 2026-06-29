@@ -96,6 +96,7 @@ def _assert_smoke_payload(stdout: str) -> None:
         "pragmagraph.service",
         "pragmagraph.ui",
         "pragmagraph.workspace",
+        "pragmagraph.navigation",
     ]
     if payload.get("package") != "pragmagraph":
         raise RuntimeError(f"unexpected smoke package: {payload!r}")
@@ -113,6 +114,7 @@ def _assert_package_docs_shape(root: Path) -> None:
         root / "docs" / "export-mode.md",
         root / "docs" / "git-history-mode.md",
         root / "docs" / "graphify-interop.md",
+        root / "docs" / "navigation-mode.md",
         root / "docs" / "refresh-operations.md",
         root / "docs" / "report-mode.md",
         root / "docs" / "service-mode.md",

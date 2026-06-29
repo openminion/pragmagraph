@@ -26,6 +26,8 @@ This directory holds the public package documentation for standalone
   package-owned persistent local workspace contract.
 - [`refresh-operations.md`](refresh-operations.md) records
   the package-owned explicit refresh/profile/status surface.
+- [`navigation-mode.md`](navigation-mode.md) records the
+  compact repo-map and handoff surfaces for fast local graph orientation.
 - [`ui-contracts.md`](ui-contracts.md) records the
   package-owned `pragmagraph.ui` boundary for the future OpenMinion workbench
   surface.
@@ -64,10 +66,11 @@ This directory holds the public package documentation for standalone
 
 The `0.0.3` semantic alpha defines the current public package contract:
 immutable DTOs, JSON snapshots, local indexing, deterministic
-query/traversal/report/export helpers, Graphify-shaped interop, package-local
-service and UI boundary contracts, explicit refresh/profile/status helpers,
-workspace persistence helpers, git-aware provenance overlays, benchmark
-helpers, and package-owned validation fixtures.
+query/traversal/report/export helpers, compact navigation maps,
+Graphify-shaped interop, package-local service and UI boundary contracts,
+explicit refresh/profile/status helpers, workspace persistence helpers,
+git-aware provenance overlays, benchmark helpers, and package-owned validation
+fixtures.
 
 ## Boundary shorthand
 
