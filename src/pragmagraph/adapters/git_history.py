@@ -173,8 +173,17 @@ def collect_git_overlay(
                 namespace=namespace,
                 changed_path=changed_path["path"],
                 current_exists=changed_path["path"] in file_nodes_by_path,
+                previous_path=changed_path.get("previous_path"),
+                change_kind=str(changed_path.get("change_kind", "modify")),
             )
             overlay_nodes[path_node.id] = path_node
+            edge_metadata = {
+                "additions": changed_path["additions"],
+                "deletions": changed_path["deletions"],
+                "change_kind": changed_path.get("change_kind", "modify"),
+            }
+            if changed_path.get("previous_path"):
+                edge_metadata["previous_path"] = changed_path["previous_path"]
             overlay_edges[
                 edge_id(namespace, commit_node.id, EDGE_GIT_CHANGES_PATH, path_node.id)
             ] = GraphEdge(
@@ -188,10 +197,7 @@ def collect_git_overlay(
                 source_id=commit_node.id,
                 target_id=path_node.id,
                 source_ref=SourceRef(path=changed_path["path"]),
-                metadata={
-                    "additions": changed_path["additions"],
-                    "deletions": changed_path["deletions"],
-                },
+                metadata=edge_metadata,
             )
             file_node = file_nodes_by_path.get(changed_path["path"])
             if file_node is not None:
@@ -208,10 +214,7 @@ def collect_git_overlay(
                     source_id=commit_node.id,
                     target_id=file_node.id,
                     source_ref=SourceRef(path=changed_path["path"]),
-                    metadata={
-                        "additions": changed_path["additions"],
-                        "deletions": changed_path["deletions"],
-                    },
+                    metadata=edge_metadata,
                 )
 
     for record in records:
@@ -242,6 +245,12 @@ def collect_git_overlay(
         ),
         changed_path_count=sum(
             1 for node in overlay_nodes.values() if node.kind == NODE_GIT_CHANGED_PATH
+        ),
+        rename_count=sum(
+            1
+            for edge in overlay_edges.values()
+            if edge.kind == EDGE_GIT_CHANGES_PATH
+            and edge.metadata.get("change_kind") == "rename"
         ),
         shallow=shallow,
     )
@@ -294,7 +303,7 @@ def _read_git_history(repo_root: Path) -> list[dict[str, object]]:
             str(repo_root),
             "log",
             "--date-order",
-            "--no-renames",
+            "--find-renames",
             f"--format={_GIT_LOG_FORMAT}",
             "--numstat",
             "--",
@@ -323,9 +332,12 @@ def _read_git_history(repo_root: Path) -> list[dict[str, object]]:
             if len(parts) != 3:
                 continue
             additions, deletions, path_text = parts
+            path, previous_path = _parse_numstat_path(path_text)
             changes.append(
                 {
-                    "path": normalize_relative_path(path_text),
+                    "path": path,
+                    "previous_path": previous_path,
+                    "change_kind": "rename" if previous_path else "modify",
                     "additions": _numstat_value(additions),
                     "deletions": _numstat_value(deletions),
                 }
@@ -403,13 +415,18 @@ def _changed_path_node(
     namespace: str,
     changed_path: str,
     current_exists: bool,
+    previous_path: object = None,
+    change_kind: str = "modify",
 ) -> GraphNode:
+    metadata = {"current_exists": current_exists, "change_kind": change_kind}
+    if previous_path:
+        metadata["previous_path"] = str(previous_path)
     return GraphNode(
         id=node_id(namespace, NODE_GIT_CHANGED_PATH, changed_path),
         kind=NODE_GIT_CHANGED_PATH,
         label=changed_path,
         source_ref=SourceRef(path=changed_path),
-        metadata={"current_exists": current_exists},
+        metadata=metadata,
     )
 
 
@@ -423,22 +440,53 @@ def _normalize_changed_path(
     change: Mapping[str, object],
     prefix: str,
 ) -> dict[str, object] | None:
-    path = normalize_relative_path(str(change["path"]))
-    if prefix:
-        prefix_match = f"{prefix}/"
-        if path == prefix:
-            local_path = "."
-        elif path.startswith(prefix_match):
-            local_path = path[len(prefix_match) :]
-        else:
-            return None
-    else:
-        local_path = path
+    path = _strip_prefix(normalize_relative_path(str(change["path"])), prefix)
+    if path is None:
+        return None
+    previous_path = change.get("previous_path")
+    local_previous = (
+        _strip_prefix(normalize_relative_path(str(previous_path)), prefix)
+        if previous_path
+        else ""
+    )
     return {
-        "path": normalize_relative_path(local_path),
+        "path": normalize_relative_path(path),
+        "previous_path": normalize_relative_path(local_previous)
+        if local_previous
+        else "",
+        "change_kind": change.get("change_kind", "modify"),
         "additions": change["additions"],
         "deletions": change["deletions"],
     }
+
+
+def _strip_prefix(path: str, prefix: str) -> str | None:
+    if not prefix:
+        return path
+    prefix_match = f"{prefix}/"
+    if path == prefix:
+        return "."
+    if path.startswith(prefix_match):
+        return path[len(prefix_match) :]
+    return None
+
+
+def _parse_numstat_path(path_text: str) -> tuple[str, str]:
+    normalized = normalize_relative_path(path_text)
+    if "=>" not in normalized:
+        return normalized, ""
+    previous, current = _expand_rename_path(normalized)
+    return normalize_relative_path(current), normalize_relative_path(previous)
+
+
+def _expand_rename_path(path_text: str) -> tuple[str, str]:
+    if "{" in path_text and "}" in path_text:
+        prefix, rest = path_text.split("{", 1)
+        inside, suffix = rest.split("}", 1)
+        old_part, new_part = (part.strip() for part in inside.split("=>", 1))
+        return f"{prefix}{old_part}{suffix}", f"{prefix}{new_part}{suffix}"
+    old_part, new_part = (part.strip() for part in path_text.split("=>", 1))
+    return old_part, new_part
 
 
 def _hash_identity(value: str) -> str:
@@ -481,6 +529,7 @@ def _overlay_stats(
     root_prefix: str = "",
     commit_count: int = 0,
     changed_path_count: int = 0,
+    rename_count: int = 0,
     shallow: bool = False,
 ) -> dict[str, object]:
     return {
@@ -490,6 +539,7 @@ def _overlay_stats(
         "git_root_prefix": root_prefix,
         "git_commit_count": commit_count,
         "git_changed_path_count": changed_path_count,
+        "git_rename_count": rename_count,
         "git_shallow_repository": shallow,
     }
 

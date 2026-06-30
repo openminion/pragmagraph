@@ -13,11 +13,15 @@ from pragmagraph.adapters import (
     index_path,
 )
 from pragmagraph.bench import benchmark_root, render_markdown_benchmark
+from pragmagraph.certification import build_certification_pack
+from pragmagraph.docgraph import build_doc_graph_summary, render_markdown_doc_graph
 from pragmagraph.export import render_graph_export
 from pragmagraph.graphify import (
     snapshot_from_graphify_payload,
     to_graphify_payload,
 )
+from pragmagraph.interchange import build_symbol_reference_bundle
+from pragmagraph.lineage import build_git_lineage
 from pragmagraph.models import QueryRequest
 from pragmagraph.navigation import (
     build_repo_map,
@@ -32,6 +36,8 @@ from pragmagraph.operations import (
     run_refresh_profile,
     save_refresh_profile,
 )
+from pragmagraph.parser_support import build_parser_support_matrix
+from pragmagraph.planner import explain_query_plan
 from pragmagraph.query import (
     commits_touching_symbol_file,
     files_touched_by_commit,
@@ -45,6 +51,7 @@ from pragmagraph.report import build_report, render_markdown_report
 from pragmagraph.refresh import load_manifest, refresh_snapshot, save_manifest
 from pragmagraph.service import LocalQueryService, run_stdio_service
 from pragmagraph.storage import load_snapshot, save_snapshot
+from pragmagraph.topology import build_topology_summary, render_markdown_topology
 from pragmagraph.ui import UiPreviewRequest, serve_ui_preview, write_ui_preview
 from pragmagraph.workspace import (
     initialize_workspace,
@@ -158,6 +165,50 @@ def main(argv: list[str] | None = None) -> int:
         help="render the shorter agent handoff view",
     )
     _add_json_flag(repo_map_parser)
+
+    topology_parser = subparsers.add_parser(
+        "topology", help="summarize structural graph topology"
+    )
+    topology_parser.add_argument("snapshot")
+    topology_parser.add_argument("--top-n", type=int, default=10)
+    _add_json_flag(topology_parser)
+
+    doc_graph_parser = subparsers.add_parser(
+        "doc-graph", help="summarize document backlinks and mention candidates"
+    )
+    doc_graph_parser.add_argument("snapshot")
+    doc_graph_parser.add_argument("--top-n", type=int, default=10)
+    _add_json_flag(doc_graph_parser)
+
+    interchange_parser = subparsers.add_parser(
+        "interchange", help="emit stable symbol/reference interchange JSON"
+    )
+    interchange_parser.add_argument("snapshot")
+
+    query_plan_parser = subparsers.add_parser(
+        "query-plan", help="explain deterministic query execution facts"
+    )
+    query_plan_parser.add_argument("snapshot")
+    query_plan_parser.add_argument("query")
+    query_plan_parser.add_argument("--max-results", type=int, default=10)
+
+    lineage_parser = subparsers.add_parser(
+        "git-lineage", help="show observed git path lineage"
+    )
+    lineage_parser.add_argument("snapshot")
+    lineage_parser.add_argument("path")
+    lineage_parser.add_argument("--max-results", type=int, default=20)
+
+    parser_support_parser = subparsers.add_parser(
+        "parser-support", help="show parser family support matrix"
+    )
+    _add_json_flag(parser_support_parser)
+
+    certify_parser = subparsers.add_parser(
+        "certify", help="emit snapshot certification facts"
+    )
+    certify_parser.add_argument("snapshot")
+    certify_parser.add_argument("--top-n", type=int, default=10)
 
     export_parser = subparsers.add_parser(
         "export", help="export a snapshot as graph text"
@@ -400,6 +451,49 @@ def main(argv: list[str] | None = None) -> int:
             print(render_compact_handoff(snapshot, top_n=args.top_n), end="")
         else:
             print(render_markdown_repo_map(repo_map), end="")
+    elif args.command == "topology":
+        snapshot = load_snapshot(args.snapshot)
+        summary = build_topology_summary(snapshot, top_n=args.top_n)
+        if args.json:
+            _print_payload(summary.to_dict(), as_json=True)
+        else:
+            print(render_markdown_topology(summary), end="")
+    elif args.command == "doc-graph":
+        snapshot = load_snapshot(args.snapshot)
+        summary = build_doc_graph_summary(snapshot, top_n=args.top_n)
+        if args.json:
+            _print_payload(summary.to_dict(), as_json=True)
+        else:
+            print(render_markdown_doc_graph(summary), end="")
+    elif args.command == "interchange":
+        snapshot = load_snapshot(args.snapshot)
+        _print_payload(build_symbol_reference_bundle(snapshot), as_json=True)
+    elif args.command == "query-plan":
+        snapshot = load_snapshot(args.snapshot)
+        _print_payload(
+            explain_query_plan(
+                snapshot,
+                QueryRequest(query=args.query, max_results=args.max_results),
+            ),
+            as_json=True,
+        )
+    elif args.command == "git-lineage":
+        snapshot = load_snapshot(args.snapshot)
+        _print_payload(
+            build_git_lineage(snapshot, args.path, max_results=args.max_results),
+            as_json=True,
+        )
+    elif args.command == "parser-support":
+        _print_payload(
+            [item.to_dict() for item in build_parser_support_matrix()],
+            as_json=True,
+        )
+    elif args.command == "certify":
+        snapshot = load_snapshot(args.snapshot)
+        _print_payload(
+            build_certification_pack(snapshot, top_n=args.top_n),
+            as_json=True,
+        )
     elif args.command == "export":
         snapshot = load_snapshot(args.snapshot)
         print(render_graph_export(snapshot, format=args.format), end="")

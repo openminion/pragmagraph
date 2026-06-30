@@ -8,14 +8,20 @@ def test_pragmagraph_package_imports() -> None:
     import pragmagraph
     import pragmagraph.adapters
     import pragmagraph.bench
+    import pragmagraph.certification
     import pragmagraph.contracts
+    import pragmagraph.docgraph
     import pragmagraph.evidence
     import pragmagraph.export
     import pragmagraph.graphify
+    import pragmagraph.interchange
+    import pragmagraph.lineage
     import pragmagraph.models
     import pragmagraph.navigation
     import pragmagraph.operations
+    import pragmagraph.parser_support
     import pragmagraph.parsers
+    import pragmagraph.planner
     import pragmagraph.portability
     import pragmagraph.query
     import pragmagraph.report
@@ -23,14 +29,22 @@ def test_pragmagraph_package_imports() -> None:
     import pragmagraph.security
     import pragmagraph.service
     import pragmagraph.storage
+    import pragmagraph.topology
     import pragmagraph.ui
     import pragmagraph.workspace
 
     assert pragmagraph.__version__ == "0.0.3"
     assert pragmagraph.PACKAGE_STATUS == "semantic-alpha"
     assert "pragmagraph.bench" in pragmagraph.STABLE_IMPORT_ROOTS
+    assert "pragmagraph.certification" in pragmagraph.STABLE_IMPORT_ROOTS
+    assert "pragmagraph.docgraph" in pragmagraph.STABLE_IMPORT_ROOTS
+    assert "pragmagraph.interchange" in pragmagraph.STABLE_IMPORT_ROOTS
+    assert "pragmagraph.lineage" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.models" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.navigation" in pragmagraph.STABLE_IMPORT_ROOTS
+    assert "pragmagraph.parser_support" in pragmagraph.STABLE_IMPORT_ROOTS
+    assert "pragmagraph.planner" in pragmagraph.STABLE_IMPORT_ROOTS
+    assert "pragmagraph.topology" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.evidence" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.export" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.graphify" in pragmagraph.STABLE_IMPORT_ROOTS
@@ -64,6 +78,10 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "CAPABILITIES",
         "BenchmarkMeasurement",
         "BenchmarkReport",
+        "CertificationPack",
+        "DocGraphSummary",
+        "DocMentionCandidate",
+        "DocReferenceTarget",
         "MemoryEvidenceBundle",
         "MemoryEvidenceRef",
         "GraphEdge",
@@ -76,17 +94,25 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "GraphReportSummary",
         "GraphSnapshot",
         "GRAPHIFY_INTEROP_FORMAT",
+        "GitLineage",
+        "GitLineageEntry",
         "HealthSummary",
         "INDEXER_VERSION",
+        "INTERCHANGE_FORMAT",
+        "InterchangeBundle",
         "OmittedDiagnostic",
         "PathResult",
+        "ParserFamilySupport",
         "ParserDiagnostic",
         "ParserResult",
         "PragmaGraphError",
+        "PrivacyProfile",
         "QueryExplanation",
         "QueryHit",
+        "QueryPlanEvidence",
         "QueryRequest",
         "QueryResult",
+        "ReferenceRecord",
         "RefreshManifest",
         "RefreshManifestEntry",
         "RefreshOperationResult",
@@ -98,19 +124,31 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "SCHEMA_VERSION",
         "SnapshotStructuralDelta",
         "SourceRef",
+        "SymbolRecord",
+        "TopologyComponent",
+        "TopologyNode",
+        "TopologySummary",
         "RepoMap",
         "RepoMapSection",
         "backlinks",
         "benchmark_root",
+        "build_certification_pack",
+        "build_doc_graph_summary",
+        "build_git_lineage",
+        "build_parser_support_matrix",
+        "build_privacy_profile",
         "build_repo_map",
         "build_report",
         "build_refresh_plan",
         "build_refresh_profile",
+        "build_symbol_reference_bundle",
+        "build_topology_summary",
         "collect_memory_evidence",
         "collect_related_memory_evidence",
         "commits_touching_symbol_file",
         "diff_snapshots",
         "evidence_ref_for_node",
+        "explain_query_plan",
         "files_touched_by_commit",
         "impact",
         "index_path",
@@ -122,7 +160,9 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "render_graph_export",
         "render_compact_handoff",
         "render_markdown_benchmark",
+        "render_markdown_doc_graph",
         "render_markdown_repo_map",
+        "render_markdown_topology",
         "render_mermaid",
         "render_markdown_report",
         "refresh_snapshot",
@@ -158,13 +198,19 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
 def test_public_roots_expose_semantic_alpha_contracts() -> None:
     import pragmagraph.adapters as adapters
     import pragmagraph.bench as bench
+    import pragmagraph.certification as certification
     import pragmagraph.contracts as contracts
+    import pragmagraph.docgraph as docgraph
     import pragmagraph.evidence as evidence
     import pragmagraph.export as export
     import pragmagraph.graphify as graphify
+    import pragmagraph.interchange as interchange
+    import pragmagraph.lineage as lineage
     import pragmagraph.models as models
     import pragmagraph.navigation as navigation
+    import pragmagraph.parser_support as parser_support
     import pragmagraph.parsers as parsers
+    import pragmagraph.planner as planner
     import pragmagraph.portability as portability
     import pragmagraph.query as query
     import pragmagraph.report as report
@@ -172,19 +218,26 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     import pragmagraph.security as security
     import pragmagraph.service as service
     import pragmagraph.storage as storage
+    import pragmagraph.topology as topology
     import pragmagraph.ui as ui
     import pragmagraph.workspace as workspace
 
     assert "index_path" in adapters.__all__
     assert "render_markdown_benchmark" in bench.__all__
+    assert "build_certification_pack" in certification.__all__
     assert "SCHEMA_VERSION" in contracts.__all__
+    assert "build_doc_graph_summary" in docgraph.__all__
     assert "collect_memory_evidence" in evidence.__all__
     assert "render_mermaid" in export.__all__
     assert "snapshot_from_graphify_payload" in graphify.__all__
+    assert "build_symbol_reference_bundle" in interchange.__all__
+    assert "build_git_lineage" in lineage.__all__
     assert "GraphSnapshot" in models.__all__
     assert "render_compact_handoff" in navigation.__all__
+    assert "build_parser_support_matrix" in parser_support.__all__
     assert "OptionalParserFamily" in parsers.__all__
     assert "get_default_registry" in parsers.__all__
+    assert "explain_query_plan" in planner.__all__
     assert "pragma_uri" in portability.__all__
     assert "reverse_imports" in query.__all__
     assert "neighborhood" in query.__all__
@@ -194,6 +247,7 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     assert "ScopePolicy" in security.__all__
     assert "LocalQueryService" in service.__all__
     assert "save_snapshot" in storage.__all__
+    assert "build_topology_summary" in topology.__all__
     assert "build_ui_screen_manifest" in ui.__all__
     assert "initialize_workspace" in workspace.__all__
 

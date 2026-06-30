@@ -29,6 +29,13 @@ External consumers should treat these import roots as the supported public API:
 - `pragmagraph.refresh`
 - `pragmagraph.operations`
 - `pragmagraph.navigation`
+- `pragmagraph.interchange`
+- `pragmagraph.topology`
+- `pragmagraph.docgraph`
+- `pragmagraph.planner`
+- `pragmagraph.certification`
+- `pragmagraph.lineage`
+- `pragmagraph.parser_support`
 - `pragmagraph.security`
 - `pragmagraph.service`
 - `pragmagraph.ui`
@@ -56,6 +63,14 @@ The following top-level exports are part of the current public contract:
 - structural report helpers `build_report` and `render_markdown_report`
 - compact navigation helpers `build_repo_map`, `render_markdown_repo_map`, and
   `render_compact_handoff`
+- stable symbol/reference interchange helper `build_symbol_reference_bundle`
+- topology and document-graph helpers `build_topology_summary` and
+  `build_doc_graph_summary`
+- query-plan evidence helper `explain_query_plan`
+- certification/privacy helpers `build_certification_pack` and
+  `build_privacy_profile`
+- git lineage helper `build_git_lineage`
+- parser support helper `build_parser_support_matrix`
 - refresh helpers `refresh_snapshot` and `diff_snapshots`
 - structural navigation helpers `reverse_imports`, `reverse_dependencies`,
   `backlinks`, and `impact`
@@ -126,7 +141,9 @@ Public-contract confidence should be enforced by tests that cover:
     repeated-request sessions,
 14. deterministic workspace init/status/refresh behavior and
     `serve --workspace` startup,
-15. deterministic compact repo-map and handoff rendering.
+15. deterministic compact repo-map and handoff rendering,
+16. deterministic symbol/reference interchange, topology, document-graph,
+    query-plan, git-lineage, parser-support, and certification behavior.
 
 ## Non-goals
 
