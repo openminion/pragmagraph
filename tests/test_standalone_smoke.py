@@ -66,12 +66,20 @@ def test_console_script_contract_and_release_smoke_shape() -> None:
     assert "twine" in release_check
     assert "pragmagraph-smoke" in release_check
     assert "pragmagraph-ui" in release_check
+    assert "pragmagraph-artifact.json" in release_check
+    assert "pragmagraph-report.json" in release_check
+    assert "pragmagraph-report.md" in release_check
+    assert "graphfakos-ui" in release_check
     assert "semantic_contract" in release_check
     assert "semantic alpha" in release_check
 
 
 def test_python_m_pragmagraph_ui_preview_writes_html(tmp_path) -> None:
     output_path = tmp_path / "pragmagraph-ui.html"
+    artifact_path = tmp_path / "pragmagraph-artifact.json"
+    embed_path = tmp_path / "pragmagraph-embed.html"
+    report_path = tmp_path / "pragmagraph-report.json"
+    markdown_path = tmp_path / "pragmagraph-report.md"
     result = subprocess.run(
         [
             sys.executable,
@@ -82,6 +90,14 @@ def test_python_m_pragmagraph_ui_preview_writes_html(tmp_path) -> None:
             "provider_status",
             "--html-out",
             str(output_path),
+            "--artifact-out",
+            str(artifact_path),
+            "--embed-out",
+            str(embed_path),
+            "--report-out",
+            str(report_path),
+            "--markdown-report-out",
+            str(markdown_path),
             "--json",
         ],
         check=True,
@@ -90,15 +106,25 @@ def test_python_m_pragmagraph_ui_preview_writes_html(tmp_path) -> None:
     )
     payload = json.loads(result.stdout)
     html = output_path.read_text(encoding="utf-8")
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
 
     assert payload["output_path"] == str(output_path)
     assert payload["screen"] == "provider_status"
     assert payload["node_count"] == 4
+    assert payload["artifact"]["artifact"] is True
+    assert payload["embed"]["embedded"] is True
+    assert payload["report"]["report"] is True
+    assert payload["markdown_report"]["markdown_report"] is True
     assert "GraphFakos" in html
     assert "PragmaGraph" in html
     assert "OpenMinion Integration" in html
     assert "Third-brain observed source graph." in html
     assert "PragmaGraph Observed Source Graph" in html
+    assert "data-graphfakos-embed='true'" in embed_path.read_text(encoding="utf-8")
+    assert report["graph"]["provider_label"] == "PragmaGraph"
+    assert artifact["provider_id"] == "pragmagraph"
+    assert "# GraphFakos Report" in markdown_path.read_text(encoding="utf-8")
 
 
 def test_pragmagraph_ui_preview_server_serves_visual_routes() -> None:

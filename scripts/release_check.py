@@ -59,6 +59,10 @@ def _ensure_graphfakos_wheel(root: Path, python: str) -> Path | None:
     graphfakos_root = _graphfakos_root(root)
     if graphfakos_root is None:
         return None
+    shutil.rmtree(graphfakos_root / "build", ignore_errors=True)
+    shutil.rmtree(graphfakos_root / "dist", ignore_errors=True)
+    for egg_info in graphfakos_root.glob("src/*.egg-info"):
+        shutil.rmtree(egg_info, ignore_errors=True)
     _run([python, "-m", "build"], cwd=graphfakos_root)
     return sorted((graphfakos_root / "dist").glob("graphfakos-*.whl"))[-1]
 
@@ -176,6 +180,7 @@ def main(argv: list[str] | None = None) -> int:
         with tempfile.TemporaryDirectory(prefix="pragmagraph-release-") as tmpdir:
             tmp = Path(tmpdir)
             venv_paths = _create_temp_venv(root, tmp)
+            graphfakos_ui = venv_paths["venv"] / "bin" / "graphfakos-ui"
             smoke = venv_paths["venv"] / "bin" / "pragmagraph-smoke"
             ui_preview = venv_paths["venv"] / "bin" / "pragmagraph-ui"
             wheel = sorted((root / "dist").glob("pragmagraph-*.whl"))[-1]
@@ -210,6 +215,27 @@ def main(argv: list[str] | None = None) -> int:
                     "provider_status",
                     "--html-out",
                     str(tmp / "pragmagraph-ui.html"),
+                    "--artifact-out",
+                    str(tmp / "pragmagraph-artifact.json"),
+                    "--embed-out",
+                    str(tmp / "pragmagraph-embed.html"),
+                    "--report-out",
+                    str(tmp / "pragmagraph-report.json"),
+                    "--markdown-report-out",
+                    str(tmp / "pragmagraph-report.md"),
+                    "--json",
+                ],
+                cwd=root,
+            )
+            _run_capture(
+                [
+                    str(graphfakos_ui),
+                    "--graph-json",
+                    str(tmp / "pragmagraph-artifact.json"),
+                    "--screen",
+                    "provider_status",
+                    "--html-out",
+                    str(tmp / "pragmagraph-artifact-replay.html"),
                     "--json",
                 ],
                 cwd=root,

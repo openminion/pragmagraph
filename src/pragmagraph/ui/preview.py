@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-import webbrowser
-
+from graphfakos import GraphPreviewOutputPaths, write_provider_preview_outputs
 from graphfakos.server import (
     LocalViewerHttpServer as LocalVisualHttpServer,
     LocalViewerServerResult as LocalVisualServerResult,
@@ -29,21 +27,35 @@ from .preview_types import (
 
 def write_ui_preview(request: UiPreviewRequest) -> UiPreviewResult:
     """Write one local visual UI preview to an HTML file."""
-    rendered = render_ui_preview(request)
-    output_path = Path(request.output_path).expanduser().resolve(strict=False)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(rendered.html, encoding="utf-8")
-    opened = False
-    if request.open_browser:
-        opened = webbrowser.open(output_path.as_uri())
+    snapshot = snapshot_for_request(request)
+    provider = PragmaGraphViewerProvider(snapshot)
+    graph_request = graphfakos_request(request)
+    payload = write_provider_preview_outputs(
+        provider,
+        graph_request,
+        GraphPreviewOutputPaths(
+            html_path=request.output_path,
+            artifact_path=request.artifact_path,
+            embed_path=request.embed_path,
+            report_path=request.report_path,
+            markdown_report_path=request.markdown_report_path,
+        ),
+        open_browser=request.open_browser,
+    )
     return UiPreviewResult(
-        output_path=str(output_path),
-        screen=rendered.screen,
-        workspace=rendered.workspace,
-        snapshot=rendered.snapshot,
-        node_count=rendered.node_count,
-        edge_count=rendered.edge_count,
-        opened=opened,
+        output_path=str(payload["output_path"]),
+        screen=str(payload["screen"]),
+        workspace=request.workspace,
+        snapshot=request.snapshot,
+        node_count=int(payload["node_count"]),
+        edge_count=int(payload["edge_count"]),
+        provider_id=str(payload["provider_id"]),
+        route=str(payload["route"]),
+        artifact=payload.get("artifact"),
+        embed=payload.get("embed"),
+        report=payload.get("report"),
+        markdown_report=payload.get("markdown_report"),
+        opened=bool(payload["opened"]),
     )
 
 
