@@ -314,6 +314,10 @@ def main(argv: list[str] | None = None) -> int:
         default="search",
     )
     ui_parser.add_argument("--html-out", default="pragmagraph-ui-preview.html")
+    ui_parser.add_argument("--artifact-out", default="")
+    ui_parser.add_argument("--embed-out", default="")
+    ui_parser.add_argument("--report-out", default="")
+    ui_parser.add_argument("--markdown-report-out", default="")
     ui_parser.add_argument("--query", default="RuntimeGraph")
     ui_parser.add_argument("--node-id")
     ui_parser.add_argument("--source-id")
@@ -539,6 +543,10 @@ def main(argv: list[str] | None = None) -> int:
             workspace=args.workspace,
             snapshot=args.snapshot,
             output_path=args.html_out,
+            artifact_path=args.artifact_out,
+            embed_path=args.embed_out,
+            report_path=args.report_out,
+            markdown_report_path=args.markdown_report_out,
             query=args.query,
             node_id=args.node_id,
             source_id=args.source_id,
