@@ -37,6 +37,9 @@ This directory holds the public package documentation for standalone
   deterministic Graphify-shaped JSON import/export contract.
 - [`git-history-mode.md`](git-history-mode.md) records the
   local git-overlay contract, privacy posture, and CLI shape.
+- [`advanced-structural-views.md`](advanced-structural-views.md)
+  records symbol/reference interchange, topology, document-graph, query-plan,
+  git-lineage, parser-support, and certification helper surfaces.
 - [`certification-readiness-matrix.md`](certification-readiness-matrix.md)
   records the current standalone and OpenMinion proof targets for the public
   package surface.
@@ -69,7 +72,9 @@ immutable DTOs, JSON snapshots, local indexing, deterministic
 query/traversal/report/export helpers, compact navigation maps,
 Graphify-shaped interop, package-local service and UI boundary contracts,
 explicit refresh/profile/status helpers, workspace persistence helpers,
-git-aware provenance overlays, benchmark helpers, and package-owned validation
+git-aware provenance overlays and path lineage, symbol/reference interchange,
+topology and document-graph summaries, query-plan evidence, parser-support
+metadata, certification packs, benchmark helpers, and package-owned validation
 fixtures.
 
 ## Boundary shorthand

@@ -261,6 +261,7 @@ def index_path(
         "git_commit_count": int(git_stats.get("git_commit_count", 0)),
         "git_identity_mode": str(git_stats.get("git_identity_mode", identity_mode)),
         "git_overlay_enabled": bool(git_stats.get("git_overlay_enabled", False)),
+        "git_rename_count": int(git_stats.get("git_rename_count", 0)),
         "git_repo_root": str(git_stats.get("git_repo_root", "")),
         "git_root_prefix": str(git_stats.get("git_root_prefix", "")),
         "git_shallow_repository": bool(git_stats.get("git_shallow_repository", False)),

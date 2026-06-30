@@ -13,7 +13,8 @@ The public alpha surface is documented in:
 
 The preferred entrypoint is `pragmagraph`, with additional stable import roots
 for contracts, models, query, storage, adapters, bench, portability, parsers,
-export, graphify, report, refresh, navigation, security, service, workspace,
+export, graphify, report, refresh, navigation, interchange, topology, docgraph,
+planner, certification, lineage, parser_support, security, service, workspace,
 and `pragmagraph.ui`.
 
 ## Source-tree owner map
@@ -32,10 +33,13 @@ and `pragmagraph.ui`.
    persisted status ledgers, and repeatable local ingest runs.
 9. `navigation/` owns compact repo-map and handoff views over observed
    snapshots.
-10. `workspace/` owns the persistent local workspace directory contract and
+10. `interchange/`, `topology/`, `docgraph/`, `planner/`,
+   `certification/`, `lineage/`, and `parser_support/` own advanced
+   structural views over observed snapshots.
+11. `workspace/` owns the persistent local workspace directory contract and
    explicit workspace lifecycle helpers.
-11. `service/` owns the local repeated-query service boundary.
-12. `ui/` owns typed UI contracts only; runtime workbench implementation
+12. `service/` owns the local repeated-query service boundary.
+13. `ui/` owns typed UI contracts only; runtime workbench implementation
    belongs in OpenMinion.
 
 ## Repo-local but not public API

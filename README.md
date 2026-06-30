@@ -90,9 +90,12 @@ The package currently provides:
   selected config metadata, snippets, and git-history overlays
 - Query and refresh: neighborhood/path/explain/impact helpers, reverse-edge
   lookups, content-hash refresh manifests, structural deltas, saved refresh
-  profiles, explicit refresh state reporting, and compact repo-map handoffs
+  profiles, explicit refresh state reporting, compact repo-map handoffs, and
+  query-plan evidence
 - Reports, export, and interop: structural reports, DOT/Mermaid export,
-  Graphify-shaped JSON interchange, and follow-up query/report helpers
+  Graphify-shaped JSON interchange, stable symbol/reference interchange,
+  topology/doc-graph views, git lineage, parser-support metadata, and
+  certification packs
 - Local runtime surfaces: stdio query service contracts, persistent workspace
   helpers, `serve --workspace`, and the package-local visual preview boundary
   under `pragmagraph.ui`
@@ -188,6 +191,9 @@ stable import roots, and `semantic_contract: true`.
   posture.
 - `docs/git-history-mode.md` records the local git-overlay contract,
   privacy posture, and CLI shape.
+- `docs/advanced-structural-views.md` records symbol/reference interchange,
+  topology, document-graph, query-plan, git-lineage, parser-support, and
+  certification helper surfaces.
 - `docs/ui-contracts.md` records the package-owned UI boundary
   contract.
 - `docs/source-tree-owner-map.md` explains the source-tree module

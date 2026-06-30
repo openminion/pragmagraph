@@ -10,6 +10,19 @@ from pragmagraph.bench import (
     benchmark_root,
     render_markdown_benchmark,
 )
+from pragmagraph.certification import (
+    CertificationPack,
+    PrivacyProfile,
+    build_certification_pack,
+    build_privacy_profile,
+)
+from pragmagraph.docgraph import (
+    DocGraphSummary,
+    DocMentionCandidate,
+    DocReferenceTarget,
+    build_doc_graph_summary,
+    render_markdown_doc_graph,
+)
 from pragmagraph.export import render_dot, render_graph_export, render_mermaid
 from pragmagraph.evidence import (
     collect_memory_evidence,
@@ -24,6 +37,14 @@ from pragmagraph.graphify import (
     snapshot_from_graphify_payload,
     to_graphify_payload,
 )
+from pragmagraph.interchange import (
+    INTERCHANGE_FORMAT,
+    InterchangeBundle,
+    ReferenceRecord,
+    SymbolRecord,
+    build_symbol_reference_bundle,
+)
+from pragmagraph.lineage import GitLineage, GitLineageEntry, build_git_lineage
 from pragmagraph.models import (
     GraphEdge,
     GraphNode,
@@ -54,6 +75,11 @@ from pragmagraph.navigation import (
     render_compact_handoff,
     render_markdown_repo_map,
 )
+from pragmagraph.parser_support import (
+    ParserFamilySupport,
+    build_parser_support_matrix,
+)
+from pragmagraph.planner import QueryPlanEvidence, explain_query_plan
 from pragmagraph.report import (
     GraphReport,
     GraphReportDependency,
@@ -63,6 +89,13 @@ from pragmagraph.report import (
     GraphReportSummary,
     build_report,
     render_markdown_report,
+)
+from pragmagraph.topology import (
+    TopologyComponent,
+    TopologyNode,
+    TopologySummary,
+    build_topology_summary,
+    render_markdown_topology,
 )
 from pragmagraph.query import (
     backlinks,
@@ -125,12 +158,23 @@ STABLE_IMPORT_ROOTS = (
     "pragmagraph.ui",
     "pragmagraph.workspace",
     "pragmagraph.navigation",
+    "pragmagraph.interchange",
+    "pragmagraph.topology",
+    "pragmagraph.docgraph",
+    "pragmagraph.planner",
+    "pragmagraph.certification",
+    "pragmagraph.lineage",
+    "pragmagraph.parser_support",
 )
 
 __all__ = [
     "CAPABILITIES",
     "BenchmarkMeasurement",
     "BenchmarkReport",
+    "CertificationPack",
+    "DocGraphSummary",
+    "DocMentionCandidate",
+    "DocReferenceTarget",
     "GraphEdge",
     "GraphNode",
     "GraphReport",
@@ -141,20 +185,28 @@ __all__ = [
     "GraphReportSummary",
     "GraphSnapshot",
     "GRAPHIFY_INTEROP_FORMAT",
+    "GitLineage",
+    "GitLineageEntry",
     "HealthSummary",
     "INDEXER_VERSION",
+    "INTERCHANGE_FORMAT",
+    "InterchangeBundle",
     "MemoryEvidenceBundle",
     "MemoryEvidenceRef",
     "OmittedDiagnostic",
     "PACKAGE_STATUS",
     "PathResult",
+    "ParserFamilySupport",
     "ParserDiagnostic",
     "ParserResult",
     "PragmaGraphError",
+    "PrivacyProfile",
     "QueryExplanation",
     "QueryHit",
+    "QueryPlanEvidence",
     "QueryRequest",
     "QueryResult",
+    "ReferenceRecord",
     "RefreshManifest",
     "RefreshManifestEntry",
     "RefreshPathChange",
@@ -165,6 +217,10 @@ __all__ = [
     "SnapshotStructuralDelta",
     "STABLE_IMPORT_ROOTS",
     "SourceRef",
+    "SymbolRecord",
+    "TopologyComponent",
+    "TopologyNode",
+    "TopologySummary",
     "__version__",
     "backlinks",
     "commits_touching_symbol_file",
@@ -172,10 +228,18 @@ __all__ = [
     "collect_related_memory_evidence",
     "files_touched_by_commit",
     "benchmark_root",
+    "build_certification_pack",
+    "build_doc_graph_summary",
+    "build_git_lineage",
+    "build_parser_support_matrix",
+    "build_privacy_profile",
     "build_report",
     "build_repo_map",
+    "build_symbol_reference_bundle",
+    "build_topology_summary",
     "diff_snapshots",
     "evidence_ref_for_node",
+    "explain_query_plan",
     "impact",
     "index_path",
     "initialize_workspace",
@@ -187,7 +251,9 @@ __all__ = [
     "render_graph_export",
     "render_compact_handoff",
     "render_markdown_benchmark",
+    "render_markdown_doc_graph",
     "render_markdown_repo_map",
+    "render_markdown_topology",
     "render_mermaid",
     "render_markdown_report",
     "RefreshOperationResult",

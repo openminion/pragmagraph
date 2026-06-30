@@ -17,6 +17,7 @@ from pragmagraph.query import (
     files_touched_by_commit,
     recent_commits_for_path,
 )
+from pragmagraph.lineage import build_git_lineage
 from pragmagraph.report import build_report, render_markdown_report
 from pragmagraph.service import LocalQueryService, ServiceRequest
 from pragmagraph.storage import save_snapshot, stable_dumps
@@ -211,6 +212,37 @@ def test_git_output_is_timezone_deterministic(
     assert stable_dumps(utc_snapshot) == stable_dumps(la_snapshot)
 
 
+def test_git_overlay_records_rename_lineage(tmp_path: Path) -> None:
+    root, _hashes = _git_repo_root(tmp_path)
+    _git(root, "mv", "src/app.py", "src/runtime.py")
+    _git(
+        root,
+        "commit",
+        "-m",
+        "rename runtime module",
+        env=_commit_env(
+            name="Casey Example",
+            email="casey@example.com",
+            date="2026-06-12T09:15:00-0700",
+        ),
+    )
+
+    snapshot = index_path(root, namespace="fixture")
+    lineage = build_git_lineage(snapshot, "src/runtime.py", max_results=10)
+
+    assert snapshot.stats["git_rename_count"] == 1
+    assert any(
+        node.kind == "git_changed_path"
+        and node.source_ref.path == "src/runtime.py"
+        and node.metadata.get("previous_path") == "src/app.py"
+        for node in snapshot.nodes
+    )
+    assert lineage.entries[0].change_kind == "rename"
+    assert lineage.entries[0].path == "src/runtime.py"
+    assert lineage.entries[0].previous_path == "src/app.py"
+    assert any(entry.path == "src/app.py" for entry in lineage.entries[1:])
+
+
 def test_non_git_root_and_git_unavailable_surface_typed_diagnostics(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -234,6 +266,11 @@ def test_cli_git_commands_emit_json(tmp_path: Path) -> None:
     root, (_first_hash, second_hash) = _git_repo_root(tmp_path)
     snapshot_path = tmp_path / "snapshot.json"
     save_snapshot(index_path(root, namespace="fixture"), snapshot_path)
+    package_root = Path(__file__).resolve().parents[1]
+    env = dict(os.environ)
+    env["PYTHONPATH"] = os.pathsep.join(
+        (str(package_root / "src"), str(package_root.parent / "graphfakos" / "src"))
+    )
 
     commits_payload = json.loads(
         subprocess.run(
@@ -249,6 +286,7 @@ def test_cli_git_commands_emit_json(tmp_path: Path) -> None:
             check=True,
             capture_output=True,
             text=True,
+            env=env,
         ).stdout
     )
     files_payload = json.loads(
@@ -265,6 +303,7 @@ def test_cli_git_commands_emit_json(tmp_path: Path) -> None:
             check=True,
             capture_output=True,
             text=True,
+            env=env,
         ).stdout
     )
 

@@ -101,6 +101,13 @@ def _assert_smoke_payload(stdout: str) -> None:
         "pragmagraph.ui",
         "pragmagraph.workspace",
         "pragmagraph.navigation",
+        "pragmagraph.interchange",
+        "pragmagraph.topology",
+        "pragmagraph.docgraph",
+        "pragmagraph.planner",
+        "pragmagraph.certification",
+        "pragmagraph.lineage",
+        "pragmagraph.parser_support",
     ]
     if payload.get("package") != "pragmagraph":
         raise RuntimeError(f"unexpected smoke package: {payload!r}")
@@ -113,6 +120,7 @@ def _assert_smoke_payload(stdout: str) -> None:
 def _assert_package_docs_shape(root: Path) -> None:
     required_paths = [
         root / "docs" / "README.md",
+        root / "docs" / "advanced-structural-views.md",
         root / "docs" / "benchmarking.md",
         root / "docs" / "certification-readiness-matrix.md",
         root / "docs" / "export-mode.md",
@@ -200,6 +208,16 @@ def main(argv: list[str] | None = None) -> int:
                         "from pragmagraph.service import LocalQueryService; "
                         "from pragmagraph.ui import build_ui_screen_manifest; "
                         "from pragmagraph.workspace import initialize_workspace; "
+                        "from pragmagraph.certification import "
+                        "build_certification_pack; "
+                        "from pragmagraph.docgraph import build_doc_graph_summary; "
+                        "from pragmagraph.interchange import "
+                        "build_symbol_reference_bundle; "
+                        "from pragmagraph.lineage import build_git_lineage; "
+                        "from pragmagraph.parser_support import "
+                        "build_parser_support_matrix; "
+                        "from pragmagraph.planner import explain_query_plan; "
+                        "from pragmagraph.topology import build_topology_summary; "
                         "from pragmagraph.report import build_report, "
                         "render_markdown_report"
                     ),
