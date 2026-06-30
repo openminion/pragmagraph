@@ -66,6 +66,9 @@ source .venv/bin/activate
 
 # 3. Install in editable mode with dev extras
 make dev-install
+
+# 4. Install local hooks, including commit-message enforcement
+make hooks-install
 ```
 
 Install the optional precise parser family when you need Tree-sitter-backed
@@ -123,6 +126,24 @@ make fix
 9. Do not turn fixture repos, contract snapshots, or examples into accidental
    public API promises.
 10. Do not bundle unrelated refactors into the same PR.
+
+Commit message guidance:
+
+1. Use commit messages in the form `<type>: <summary>` or
+   `<type>(<scope>): <summary>`.
+2. Approved current types are `feat`, `fix`, `docs`, `refactor`, `test`,
+   `chore`, `style`, and `build`.
+3. In this package, scope is optional but encouraged when it improves owner
+   clarity, for example `ui`, `query`, `refresh`, `report`, `workspace`,
+   `docs`, or `release`.
+4. Keep the summary specific to the landed change and avoid vague messages like
+   `update`.
+5. Prefer the most specific truthful type; do not use `chore` when `docs`,
+   `test`, `refactor`, or `build` is more accurate.
+6. Do not use local shorthand or planning labels as normal commit types.
+
+The same policy runs locally through `make hooks-install` and again in GitHub
+Actions on pull requests plus `dev`/`main` pushes.
 
 Preferred PR shape:
 
