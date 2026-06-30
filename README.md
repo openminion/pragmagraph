@@ -29,11 +29,12 @@ a graph of reproducible structure: files, symbols, document sections, artifacts,
 references, commits, and other facts an indexer can recover from source.
 
 Use it when you want reproducible code, docs, git, and artifact facts that an
-indexer can recover without an LLM. This semantic alpha provides deterministic
-DTOs, JSON snapshots, a local code/document indexer, refresh manifests and
-structural deltas, structural query helpers, a local query service surface,
-deterministic graph reports and exports, Graphify-shaped interop, benchmark
-helpers, and CLI commands for local observed-fact graph work.
+indexer can recover without an LLM.
+
+This semantic alpha includes deterministic DTOs, JSON snapshots, local
+code/document indexing, refresh manifests, structural deltas, query helpers,
+local service contracts, reports, exports, Graphify-shaped interop, benchmark
+helpers, and CLI commands for observed-fact graph work.
 
 ## Trust and Brand Safety
 
@@ -384,13 +385,16 @@ Workspace visual UI:
 pragmagraph-ui --workspace .pragmagraph-workspace --screen provider_status --serve
 ```
 
-See [API_COMPATIBILITY.md](API_COMPATIBILITY.md) for the public import-root
-policy, [docs/report-mode.md](docs/report-mode.md) for the
-structural report contract, [docs/export-mode.md](docs/export-mode.md)
-for deterministic graph exports, [docs/benchmarking.md](docs/benchmarking.md)
-for the benchmark/readiness surface, [docs/graphify-interop.md](docs/graphify-interop.md)
-for Graphify-shaped JSON interchange, [docs/workspace-mode.md](docs/workspace-mode.md)
-for the persistent local workspace contract,
-[docs/certification-readiness-matrix.md](docs/certification-readiness-matrix.md)
-for package/OpenMinion proof coverage, and [RELEASING.md](RELEASING.md) for
-package-local release checks.
+Reference docs:
+
+- [API_COMPATIBILITY.md](API_COMPATIBILITY.md) — public import-root policy.
+- [docs/report-mode.md](docs/report-mode.md) — structural report contract.
+- [docs/export-mode.md](docs/export-mode.md) — deterministic graph exports.
+- [docs/benchmarking.md](docs/benchmarking.md) — benchmark/readiness surface.
+- [docs/graphify-interop.md](docs/graphify-interop.md) — Graphify-shaped JSON
+  interchange.
+- [docs/workspace-mode.md](docs/workspace-mode.md) — persistent local workspace
+  contract.
+- [docs/certification-readiness-matrix.md](docs/certification-readiness-matrix.md)
+  — package/OpenMinion proof coverage.
+- [RELEASING.md](RELEASING.md) — package-local release checks.
