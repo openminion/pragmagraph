@@ -37,6 +37,7 @@ precise = [
 ]
 dev = [
   "build>=1,<2",
+  "pre-commit>=4,<5",
   "pytest>=8,<9",
   "ruff>=0.11,<1",
   "tree-sitter>=0.25,<1",
