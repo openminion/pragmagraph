@@ -50,7 +50,7 @@ from pragmagraph.query import (
 from pragmagraph.report import build_report, render_markdown_report
 from pragmagraph.refresh import load_manifest, refresh_snapshot, save_manifest
 from pragmagraph.service import LocalQueryService, run_stdio_service
-from pragmagraph.storage import load_snapshot, save_snapshot
+from pragmagraph.storage import SQLiteGraphStore, load_snapshot, save_snapshot
 from pragmagraph.topology import build_topology_summary, render_markdown_topology
 from pragmagraph.ui import UiPreviewRequest, serve_ui_preview, write_ui_preview
 from pragmagraph.workspace import (
@@ -234,6 +234,63 @@ def main(argv: list[str] | None = None) -> int:
     graphify_import_parser.add_argument("--namespace", default="graphify")
     graphify_import_parser.add_argument("--root-path", default="")
 
+    store_import_parser = subparsers.add_parser(
+        "store-import",
+        help="import a canonical snapshot into a materialized graph store",
+    )
+    store_import_parser.add_argument("snapshot")
+    store_import_parser.add_argument("--out", required=True)
+    store_import_parser.add_argument(
+        "--backend",
+        choices=("sqlite",),
+        default="sqlite",
+    )
+    _add_json_flag(store_import_parser)
+
+    store_export_parser = subparsers.add_parser(
+        "store-export",
+        help="export a materialized graph store as canonical snapshot JSON",
+    )
+    store_export_parser.add_argument("store")
+    store_export_parser.add_argument("--out")
+    _add_json_flag(store_export_parser)
+
+    store_health_parser = subparsers.add_parser(
+        "store-health",
+        help="summarize a materialized graph store",
+    )
+    store_health_parser.add_argument("store")
+    _add_json_flag(store_health_parser)
+
+    store_query_parser = subparsers.add_parser(
+        "store-query",
+        help="query a materialized graph store",
+    )
+    store_query_parser.add_argument("store")
+    store_query_parser.add_argument("query")
+    store_query_parser.add_argument("--max-results", type=int, default=10)
+    _add_json_flag(store_query_parser)
+
+    store_neighborhood_parser = subparsers.add_parser(
+        "store-neighborhood",
+        help="show nodes around a materialized-store node",
+    )
+    store_neighborhood_parser.add_argument("store")
+    store_neighborhood_parser.add_argument("node_id")
+    store_neighborhood_parser.add_argument("--depth", type=int, default=1)
+    store_neighborhood_parser.add_argument("--max-results", type=int, default=10)
+    _add_json_flag(store_neighborhood_parser)
+
+    store_path_parser = subparsers.add_parser(
+        "store-path",
+        help="find a bounded path in a materialized graph store",
+    )
+    store_path_parser.add_argument("store")
+    store_path_parser.add_argument("source_id")
+    store_path_parser.add_argument("target_id")
+    store_path_parser.add_argument("--max-hops", type=int, default=4)
+    _add_json_flag(store_path_parser)
+
     benchmark_parser = subparsers.add_parser(
         "benchmark", help="benchmark package operations against a local root"
     )
@@ -315,6 +372,7 @@ def main(argv: list[str] | None = None) -> int:
     serve_group.add_argument("--snapshot")
     serve_group.add_argument("--root")
     serve_group.add_argument("--workspace")
+    serve_group.add_argument("--store")
     serve_parser.add_argument("--namespace", default="default")
     serve_parser.add_argument("--manifest-in")
     serve_parser.add_argument("--snapshot-out")
@@ -510,6 +568,65 @@ def main(argv: list[str] | None = None) -> int:
         )
         save_snapshot(snapshot, args.out)
         _print_payload(health(snapshot), as_json=True)
+    elif args.command == "store-import":
+        snapshot = load_snapshot(args.snapshot)
+        if args.backend != "sqlite":
+            raise ValueError(f"unsupported store backend: {args.backend}")
+        store = SQLiteGraphStore.from_snapshot(snapshot, args.out)
+        _print_payload(
+            {
+                "manifest": store.manifest().to_dict(),
+                "capabilities": store.capabilities().to_dict(),
+                "health": store.health().to_dict(),
+            },
+            as_json=True,
+        )
+    elif args.command == "store-export":
+        store = SQLiteGraphStore(args.store)
+        snapshot = store.export_snapshot()
+        if args.out:
+            save_snapshot(snapshot, args.out)
+            _print_payload(health(snapshot), as_json=True)
+        else:
+            _print_payload(snapshot.to_dict(), as_json=True)
+    elif args.command == "store-health":
+        store = SQLiteGraphStore(args.store)
+        _print_payload(
+            {
+                "manifest": store.manifest().to_dict(),
+                "capabilities": store.capabilities().to_dict(),
+                "health": store.health().to_dict(),
+            },
+            as_json=True,
+        )
+    elif args.command == "store-query":
+        store = SQLiteGraphStore(args.store)
+        _print_payload(
+            store.query(
+                QueryRequest(query=args.query, max_results=args.max_results),
+            ).to_dict(),
+            as_json=True,
+        )
+    elif args.command == "store-neighborhood":
+        store = SQLiteGraphStore(args.store)
+        _print_payload(
+            store.neighborhood(
+                args.node_id,
+                depth=args.depth,
+                max_results=args.max_results,
+            ).to_dict(),
+            as_json=True,
+        )
+    elif args.command == "store-path":
+        store = SQLiteGraphStore(args.store)
+        _print_payload(
+            store.path(
+                args.source_id,
+                args.target_id,
+                max_hops=args.max_hops,
+            ).to_dict(),
+            as_json=True,
+        )
     elif args.command == "benchmark":
         report = benchmark_root(
             args.root,
@@ -618,6 +735,8 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "serve":
         if args.workspace:
             service = LocalQueryService.from_workspace(args.workspace)
+        elif args.store:
+            service = LocalQueryService.from_store_path(args.store)
         elif args.snapshot:
             service = LocalQueryService.from_snapshot_path(args.snapshot)
         else:
