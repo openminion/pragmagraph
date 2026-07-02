@@ -67,8 +67,20 @@ pragmagraph refresh-status status.json --json
 Preferred PR shape:
 
 1. short, GitHub-native title,
-2. flat bullet summary of what changed,
-3. short validation block with exact commands.
+2. flat line-item bullets that summarize what changed,
+3. plain `Validation` label followed by exact command bullets.
+
+Example:
+
+`Add explicit refresh operations spine`
+
+- add explicit refresh operations
+- align standalone package docs
+- keep workspace and refresh boundaries clear
+
+Validation
+- `make lint`
+- `make test`
 
 ## Commit message shape
 
