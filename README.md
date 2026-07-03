@@ -61,22 +61,6 @@ and should be treated as a scam.
 - Preferred package validation gate: `make check`, with `make release-check`
   for release proof
 
-## Boundary
-
-- **Sophiagraph** owns inferred, judged, lossy durable memory.
-- **PragmaGraph** owns observed, indexer-extracted, reproducible facts and
-  deeds.
-- **Graphify** remains a third-brain adapter. **PragmaGraph** is the native
-  package surface for OpenMinion's observed-fact graph lane, not a relabeling
-  of Graphify.
-
-Practical rule: if a parser, static analyzer, doc walker, git reader, or shell
-command can reproduce the fact without an LLM, it belongs in PragmaGraph. If it
-depends on a preference, operator pin, summary, design judgment, or memory
-consolidation decision, it belongs in Sophiagraph. Sophiagraph may cite
-PragmaGraph with `pragma://...` evidence references; PragmaGraph never stores
-Sophiagraph's judgments.
-
 ## What PragmaGraph provides
 
 The package currently provides:
@@ -106,7 +90,41 @@ The package currently provides:
   gitignore-aware indexing/security rules, CLI commands, install smoke, and
   compatibility/release docs
 
-## What PragmaGraph does not provide yet
+### Package boundary
+
+`pragmagraph` is the observed-fact graph lane in the OpenMinion family:
+
+- **Sophiagraph** owns inferred, judged, lossy durable memory.
+- **PragmaGraph** owns observed, indexer-extracted, reproducible facts and
+  deeds.
+- **Graphify** remains a third-brain adapter. **PragmaGraph** is the native
+  package surface for OpenMinion's observed-fact graph lane, not a relabeling
+  of Graphify.
+
+Practical rule: if a parser, static analyzer, doc walker, git reader, or shell
+command can reproduce the fact without an LLM, it belongs in PragmaGraph. If it
+depends on a preference, operator pin, summary, design judgment, or memory
+consolidation decision, it belongs in Sophiagraph. Sophiagraph may cite
+PragmaGraph with `pragma://...` evidence references; PragmaGraph never stores
+Sophiagraph's judgments.
+
+### Package vs service ownership for indexing, service mode, and UI preview
+
+`pragmagraph` (this package) is the typed contract, deterministic indexer, and
+local execution surface for observed-fact graph work. It exposes:
+
+- reproducible DTOs, snapshot models, query helpers, and report/export surfaces
+- package-local indexing, refresh manifests, structural deltas, and workspace
+  helpers
+- stdio service contracts, local preview boundaries in `pragmagraph.ui`, and
+  deterministic standalone smoke validation
+
+`pragmagraph` does **not** own a hosted service, browser-session runtime,
+OpenMinion orchestration, or long-running operators. Those belong to a host
+runtime or follow-on service layer. The package supplies the typed contract and
+deterministic local behavior; the host supplies operational runtime behavior.
+
+## What PragmaGraph does not provide
 
 This package does **not** currently provide:
 
@@ -124,6 +142,73 @@ This package does **not** currently provide:
 
 Those features belong to follow-on releases or to OpenMinion's provider
 adapter layer.
+
+The current visual explorer command lives in `pragmagraph.ui` and renders
+through GraphFakos, the shared graph lens package. PragmaGraph owns the
+observed-fact adapter and graph semantics; GraphFakos owns the reusable viewer
+shell, graph canvas, local server primitive, and static export surface.
+
+You can run the package-local visual UI today:
+
+```bash
+pragmagraph-ui \
+  --screen summary \
+  --serve \
+  --open
+```
+
+Use a persistent workspace as the preview source:
+
+```bash
+pragmagraph-ui \
+  --workspace <workspace-root> \
+  --screen workspace \
+  --serve
+```
+
+Use `--html-out` only when you want to export a standalone HTML snapshot. The
+equivalent module form is `python3.11 -m pragmagraph ui-preview`.
+
+## CLI Quickstart
+
+Index a local code/docs root into a deterministic JSON snapshot:
+
+```bash
+pragmagraph index . \
+  --out .pragmagraph/snapshot.json \
+  --namespace my-project \
+  --git-identity-mode name_email_hash \
+  --json
+```
+
+Query the snapshot:
+
+```bash
+pragmagraph query .pragmagraph/snapshot.json "RuntimeGraph" --json
+```
+
+Refresh and explain with deterministic metadata:
+
+```bash
+pragmagraph refresh . \
+  --out .pragmagraph/snapshot.json \
+  --manifest-out .pragmagraph/manifest.json \
+  --namespace my-project \
+  --json
+
+pragmagraph explain .pragmagraph/snapshot.json "RuntimeGraph" --json
+```
+
+Inspect git-aware provenance:
+
+```bash
+pragmagraph git-commits-for-path .pragmagraph/snapshot.json src/app.py --json
+pragmagraph git-files-for-commit .pragmagraph/snapshot.json abc123def456 --json
+pragmagraph git-commits-for-symbol \
+  .pragmagraph/snapshot.json \
+  "pragma://my-project/python_class/src/app.py:RuntimeGraph" \
+  --json
+```
 
 ## Install
 
@@ -205,60 +290,6 @@ stable import roots, and `semantic_contract: true`.
 - `tests/fixtures/repos/` and `tests/contracts/` hold repo-local regression
   fixtures and OpenMinion contract snapshots; they are validation assets, not
   public package API.
-
-## License and brand-use boundary
-
-- Source code license: `Apache-2.0`
-- Brand/trademark grant: `none`
-
-The software license grants rights to use, modify, and redistribute the code.
-It does **not** grant rights to use the PragmaGraph, Sophiagraph, or OpenMinion
-names, logos, branding, website identity, or social identity except for
-truthful attribution. Forks, clones, and derivative distributions must not
-present themselves as the official PragmaGraph project or imply affiliation,
-endorsement, or maintenance by PragmaGraph or OpenMinion contributors unless
-that is actually true.
-
-## CLI Quickstart
-
-Index a local code/docs root into a deterministic JSON snapshot:
-
-```bash
-pragmagraph index . \
-  --out .pragmagraph/snapshot.json \
-  --namespace my-project \
-  --git-identity-mode name_email_hash \
-  --json
-```
-
-Query the snapshot:
-
-```bash
-pragmagraph query .pragmagraph/snapshot.json "RuntimeGraph" --json
-```
-
-Refresh and explain with deterministic metadata:
-
-```bash
-pragmagraph refresh . \
-  --out .pragmagraph/snapshot.json \
-  --manifest-out .pragmagraph/manifest.json \
-  --namespace my-project \
-  --json
-
-pragmagraph explain .pragmagraph/snapshot.json "RuntimeGraph" --json
-```
-
-Inspect git-aware provenance:
-
-```bash
-pragmagraph git-commits-for-path .pragmagraph/snapshot.json src/app.py --json
-pragmagraph git-files-for-commit .pragmagraph/snapshot.json abc123def456 --json
-pragmagraph git-commits-for-symbol \
-  .pragmagraph/snapshot.json \
-  "pragma://my-project/python_class/src/app.py:RuntimeGraph" \
-  --json
-```
 
 Inspect nearby graph facts:
 
@@ -426,3 +457,16 @@ Reference docs:
 - [docs/certification-readiness-matrix.md](docs/certification-readiness-matrix.md)
   — package/OpenMinion proof coverage.
 - [RELEASING.md](RELEASING.md) — package-local release checks.
+
+## License and brand-use boundary
+
+- Source code license: `Apache-2.0`
+- Brand/trademark grant: `none`
+
+The software license grants rights to use, modify, and redistribute the code.
+It does **not** grant rights to use the PragmaGraph, Sophiagraph, or OpenMinion
+names, logos, branding, website identity, or social identity except for
+truthful attribution. Forks, clones, and derivative distributions must not
+present themselves as the official PragmaGraph project or imply affiliation,
+endorsement, or maintenance by PragmaGraph or OpenMinion contributors unless
+that is actually true.
