@@ -53,7 +53,7 @@ def test_python_m_pragmagraph_smoke() -> None:
             "pragmagraph.parser_support",
         ],
         "status": "semantic-alpha",
-        "version": "0.0.4rc1",
+        "version": "0.0.4",
     }
 
 
