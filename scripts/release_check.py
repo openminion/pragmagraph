@@ -13,28 +13,29 @@ import tempfile
 from pathlib import Path
 
 
-def _run(cmd: list[str], *, cwd: Path, extra_env: dict[str, str] | None = None) -> None:
-    print("+", " ".join(cmd))
+def _command_env(extra_env: dict[str, str] | None = None) -> dict[str, str]:
     env = os.environ.copy()
     if extra_env:
         env.update(extra_env)
-    subprocess.run(cmd, cwd=cwd, check=True, env=env)
+    return env
+
+
+def _run(cmd: list[str], *, cwd: Path, extra_env: dict[str, str] | None = None) -> None:
+    print("+", " ".join(cmd))
+    subprocess.run(cmd, cwd=cwd, check=True, env=_command_env(extra_env))
 
 
 def _run_capture(
     cmd: list[str], *, cwd: Path, extra_env: dict[str, str] | None = None
 ) -> str:
     print("+", " ".join(cmd))
-    env = os.environ.copy()
-    if extra_env:
-        env.update(extra_env)
     result = subprocess.run(
         cmd,
         cwd=cwd,
         check=True,
         capture_output=True,
         text=True,
-        env=env,
+        env=_command_env(extra_env),
     )
     if result.stderr:
         print(result.stderr, file=sys.stderr)

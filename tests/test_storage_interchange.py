@@ -49,6 +49,17 @@ def _snapshot(tmp_path: Path):
     return index_path(_store_fixture_root(tmp_path), namespace="store-fixture")
 
 
+def _run_cli_json(*args: str) -> dict[str, object]:
+    return json.loads(
+        subprocess.run(
+            [sys.executable, "-m", "pragmagraph", *args],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+    )
+
+
 def _serve_process(*args: str) -> subprocess.Popen[str]:
     return subprocess.Popen(
         [sys.executable, "-m", "pragmagraph", "serve", *args],
@@ -134,67 +145,20 @@ def test_cli_store_import_query_export_and_health(tmp_path: Path) -> None:
     exported_path = tmp_path / "exported.json"
     save_snapshot(_snapshot(tmp_path), snapshot_path)
 
-    import_payload = json.loads(
-        subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "pragmagraph",
-                "store-import",
-                str(snapshot_path),
-                "--out",
-                str(store_path),
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout
+    import_payload = _run_cli_json(
+        "store-import",
+        str(snapshot_path),
+        "--out",
+        str(store_path),
     )
-    query_payload = json.loads(
-        subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "pragmagraph",
-                "store-query",
-                str(store_path),
-                "RuntimeGraph",
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout
+    query_payload = _run_cli_json("store-query", str(store_path), "RuntimeGraph")
+    export_payload = _run_cli_json(
+        "store-export",
+        str(store_path),
+        "--out",
+        str(exported_path),
     )
-    export_payload = json.loads(
-        subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "pragmagraph",
-                "store-export",
-                str(store_path),
-                "--out",
-                str(exported_path),
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout
-    )
-    health_payload = json.loads(
-        subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "pragmagraph",
-                "store-health",
-                str(store_path),
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout
-    )
+    health_payload = _run_cli_json("store-health", str(store_path))
 
     assert import_payload["manifest"]["backend"] == "sqlite"
     assert query_payload["hits"][0]["node"]["label"] == "RuntimeGraph"

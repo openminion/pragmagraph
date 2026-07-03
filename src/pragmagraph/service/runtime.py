@@ -347,12 +347,7 @@ class LocalQueryService:
             return self._query_result(request.params).to_dict()
         if method == METHOD_NEIGHBORHOOD:
             node_id = self._required_str(request.params, "node_id")
-            if node_id not in self._snapshot.node_map():
-                raise self._error(
-                    ERROR_NOT_FOUND,
-                    "requested node_id is not present in the loaded snapshot",
-                    {"node_id": node_id},
-                )
+            self._require_snapshot_node(node_id, detail_key="node_id")
             depth = self._int_param(request.params, "depth", default=1, minimum=1)
             max_results = self._int_param(
                 request.params,
@@ -368,19 +363,8 @@ class LocalQueryService:
         if method == METHOD_PATH:
             source_id = self._required_str(request.params, "source_id")
             target_id = self._required_str(request.params, "target_id")
-            node_map = self._snapshot.node_map()
-            if source_id not in node_map:
-                raise self._error(
-                    ERROR_NOT_FOUND,
-                    "requested source_id is not present in the loaded snapshot",
-                    {"source_id": source_id},
-                )
-            if target_id not in node_map:
-                raise self._error(
-                    ERROR_NOT_FOUND,
-                    "requested target_id is not present in the loaded snapshot",
-                    {"target_id": target_id},
-                )
+            self._require_snapshot_node(source_id, detail_key="source_id")
+            self._require_snapshot_node(target_id, detail_key="target_id")
             max_hops = self._int_param(
                 request.params,
                 "max_hops",
@@ -473,6 +457,15 @@ class LocalQueryService:
         if self._store is not None:
             return self._store.path(source_id, target_id, max_hops=max_hops)
         return path(self._snapshot, source_id, target_id, max_hops=max_hops)
+
+    def _require_snapshot_node(self, node_id: str, *, detail_key: str) -> None:
+        if node_id in self._snapshot.node_map():
+            return
+        raise self._error(
+            ERROR_NOT_FOUND,
+            f"requested {detail_key} is not present in the loaded snapshot",
+            {detail_key: node_id},
+        )
 
     def _refresh_result(self) -> dict[str, Any]:
         if not self.refresh_supported:

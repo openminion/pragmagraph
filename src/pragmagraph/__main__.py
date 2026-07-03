@@ -94,6 +94,32 @@ def _add_git_identity_mode_argument(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def _store_payload(store: SQLiteGraphStore) -> dict[str, object]:
+    return {
+        "manifest": store.manifest().to_dict(),
+        "capabilities": store.capabilities().to_dict(),
+        "health": store.health().to_dict(),
+    }
+
+
+def _service_from_args(args: argparse.Namespace) -> LocalQueryService:
+    if args.workspace:
+        return LocalQueryService.from_workspace(args.workspace)
+    if args.store:
+        return LocalQueryService.from_store_path(args.store)
+    if args.snapshot:
+        return LocalQueryService.from_snapshot_path(args.snapshot)
+    return LocalQueryService.from_root(
+        args.root,
+        namespace=args.namespace,
+        manifest_path=args.manifest_in,
+        snapshot_out_path=args.snapshot_out,
+        manifest_out_path=args.manifest_out,
+        state_out_path=args.state_out,
+        git_identity_mode=args.git_identity_mode,
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="pragmagraph package smoke")
     _add_json_flag(parser)
@@ -573,14 +599,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.backend != "sqlite":
             raise ValueError(f"unsupported store backend: {args.backend}")
         store = SQLiteGraphStore.from_snapshot(snapshot, args.out)
-        _print_payload(
-            {
-                "manifest": store.manifest().to_dict(),
-                "capabilities": store.capabilities().to_dict(),
-                "health": store.health().to_dict(),
-            },
-            as_json=True,
-        )
+        _print_payload(_store_payload(store), as_json=True)
     elif args.command == "store-export":
         store = SQLiteGraphStore(args.store)
         snapshot = store.export_snapshot()
@@ -591,14 +610,7 @@ def main(argv: list[str] | None = None) -> int:
             _print_payload(snapshot.to_dict(), as_json=True)
     elif args.command == "store-health":
         store = SQLiteGraphStore(args.store)
-        _print_payload(
-            {
-                "manifest": store.manifest().to_dict(),
-                "capabilities": store.capabilities().to_dict(),
-                "health": store.health().to_dict(),
-            },
-            as_json=True,
-        )
+        _print_payload(_store_payload(store), as_json=True)
     elif args.command == "store-query":
         store = SQLiteGraphStore(args.store)
         _print_payload(
@@ -733,22 +745,7 @@ def main(argv: list[str] | None = None) -> int:
         snapshot = load_snapshot(args.snapshot)
         _print_payload(health(snapshot), as_json=True)
     elif args.command == "serve":
-        if args.workspace:
-            service = LocalQueryService.from_workspace(args.workspace)
-        elif args.store:
-            service = LocalQueryService.from_store_path(args.store)
-        elif args.snapshot:
-            service = LocalQueryService.from_snapshot_path(args.snapshot)
-        else:
-            service = LocalQueryService.from_root(
-                args.root,
-                namespace=args.namespace,
-                manifest_path=args.manifest_in,
-                snapshot_out_path=args.snapshot_out,
-                manifest_out_path=args.manifest_out,
-                state_out_path=args.state_out,
-                git_identity_mode=args.git_identity_mode,
-            )
+        service = _service_from_args(args)
         return run_stdio_service(service)
     elif args.command == "ui-preview":
         request = UiPreviewRequest(
