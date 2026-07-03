@@ -33,7 +33,7 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
-            git fetch --no-tags --depth=1 origin "${GITHUB_BASE_REF}"
+            git fetch --no-tags origin "${GITHUB_BASE_REF}"
             base_commit="$(git merge-base HEAD FETCH_HEAD)"
             ./.venv/bin/python3.11 -m pre_commit run \
               --from-ref "${base_commit}" \
@@ -50,6 +50,8 @@ jobs:
           fi
           files=(
             .pre-commit-config.yaml
+            .github/release.yml
+            .github/workflows/release.yml
             .github/workflows/quality.yml
             CONTRIBUTING.md
             docs/getting-started.md
@@ -67,7 +69,7 @@ jobs:
           set -euo pipefail
           commits=()
           if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
-            git fetch --no-tags --depth=1 origin "${GITHUB_BASE_REF}"
+            git fetch --no-tags origin "${GITHUB_BASE_REF}"
             base_commit="$(git merge-base HEAD FETCH_HEAD)"
             mapfile -t commits < <(git rev-list --reverse "${base_commit}..HEAD")
           elif [[ -n "${BEFORE_SHA}" && "${BEFORE_SHA}" != "0000000000000000000000000000000000000000" ]]; then
