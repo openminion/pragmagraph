@@ -84,5 +84,5 @@ def test_ui_preview_exports_match_sophiagraph_local_visual_pattern() -> None:
     assert "GraphFakos" in rendered.html
     assert "PragmaGraph" in rendered.html
     assert "Graph Canvas" in rendered.html
-    assert "OpenMinion Integration" in rendered.html
-    assert "Third-brain observed source graph." in rendered.html
+    assert "Provider Status" in rendered.html
+    assert "PragmaGraph Observed Source Graph" in rendered.html

@@ -50,6 +50,8 @@ jobs:
           fi
           files=(
             .pre-commit-config.yaml
+            .github/release.yml
+            .github/workflows/release.yml
             .github/workflows/quality.yml
             CONTRIBUTING.md
             docs/getting-started.md
