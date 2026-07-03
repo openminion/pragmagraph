@@ -53,7 +53,7 @@ def test_python_m_pragmagraph_smoke() -> None:
             "pragmagraph.parser_support",
         ],
         "status": "semantic-alpha",
-        "version": "0.0.3",
+        "version": "0.0.4",
     }
 
 
@@ -125,8 +125,7 @@ def test_python_m_pragmagraph_ui_preview_writes_html(tmp_path) -> None:
     assert payload["markdown_report"]["markdown_report"] is True
     assert "GraphFakos" in html
     assert "PragmaGraph" in html
-    assert "OpenMinion Integration" in html
-    assert "Third-brain observed source graph." in html
+    assert "Provider Status" in html
     assert "PragmaGraph Observed Source Graph" in html
     assert "data-graphfakos-embed='true'" in embed_path.read_text(encoding="utf-8")
     assert report["graph"]["provider_label"] == "PragmaGraph"
@@ -158,6 +157,6 @@ def test_pragmagraph_ui_preview_server_serves_visual_routes() -> None:
         thread.join(timeout=5)
 
     assert "Graph Canvas" in search_html
-    assert "OpenMinion Integration" in search_html
+    assert "PragmaGraph Observed Source Graph" in search_html
     assert "href='/provider_status" in search_html
     assert "Provider Status" in status_html

@@ -22,6 +22,9 @@ This directory holds the public package documentation for standalone
   text export contracts and CLI shape.
 - [`service-mode.md`](service-mode.md) records the local
   service request/response contract.
+- [`storage-interchange.md`](storage-interchange.md) records the
+  canonical snapshot, JSON store, SQLite materialized store, and vector
+  sidecar boundary.
 - [`workspace-mode.md`](workspace-mode.md) records the
   package-owned persistent local workspace contract.
 - [`refresh-operations.md`](refresh-operations.md) records
@@ -43,6 +46,11 @@ This directory holds the public package documentation for standalone
 - [`certification-readiness-matrix.md`](certification-readiness-matrix.md)
   records the current standalone and OpenMinion proof targets for the public
   package surface.
+- [`specs/storage-interchange-and-search-2026-07-02-spec.md`](specs/storage-interchange-and-search-2026-07-02-spec.md)
+  defines the draft storage abstraction, materialized search store, and vector
+  sidecar direction.
+- [`trackers/storage-interchange-and-search-2026-07-02-tracker.md`](trackers/storage-interchange-and-search-2026-07-02-tracker.md)
+  tracks the review-gated storage interchange and search implementation plan.
 
 ## Package-local code/docs boundaries
 
@@ -67,9 +75,10 @@ This directory holds the public package documentation for standalone
 
 ## Public package stance
 
-The `0.0.3` semantic alpha defines the current public package contract:
+The `0.0.4` semantic alpha defines the current public package contract:
 immutable DTOs, JSON snapshots, local indexing, deterministic
-query/traversal/report/export helpers, compact navigation maps,
+query/traversal/report/export helpers, JSON and SQLite-backed store contracts,
+compact navigation maps,
 Graphify-shaped interop, package-local service and UI boundary contracts,
 explicit refresh/profile/status helpers, workspace persistence helpers,
 git-aware provenance overlays and path lineage, symbol/reference interchange,

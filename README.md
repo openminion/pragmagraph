@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="https://pypi.org/project/pragmagraph/"><img alt="PyPI" src="https://img.shields.io/pypi/v/pragmagraph?color=3775A9"></a>
+  <a href="https://pypi.org/project/pragmagraph/"><img alt="PyPI" src="https://img.shields.io/badge/pypi-v0.0.4-3775A9"></a>
   <a href="https://pypi.org/project/pragmagraph/"><img alt="Python" src="https://img.shields.io/pypi/pyversions/pragmagraph"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
   <img alt="Status" src="https://img.shields.io/badge/status-published%20alpha-5B8DEF">
@@ -48,7 +48,7 @@ and should be treated as a scam.
 
 ## At a glance
 
-- Current public package line: `0.0.3` alpha
+- Current public package line: `0.0.4` alpha
 - Best fit when: you want reproducible code, docs, git, and artifact facts that
   an indexer can recover without an LLM
 - Public shape: deterministic DTOs, local indexing, query/report/export
@@ -92,6 +92,9 @@ The package currently provides:
   lookups, content-hash refresh manifests, structural deltas, saved refresh
   profiles, explicit refresh state reporting, compact repo-map handoffs, and
   query-plan evidence
+- Storage interchange: canonical JSON snapshot stores, local SQLite
+  materialized stores, typed store manifests, capability reports, import/export
+  commands, and store-backed query/service routing
 - Reports, export, and interop: structural reports, DOT/Mermaid export,
   Graphify-shaped JSON interchange, stable symbol/reference interchange,
   topology/doc-graph views, git lineage, parser-support metadata, and
@@ -107,7 +110,7 @@ The package currently provides:
 
 This package does **not** currently provide:
 
-- SQLite, KuzuDB, Neo4j, hosted, vector, or typed-edge storage
+- KuzuDB, Neo4j, hosted, vector, or typed-edge storage
 - Graphify runtime API wrapping or Graphify replacement behavior
 - file watchers, git hooks, daemons, or scheduled refresh
 - MCP, HTTP, WebSocket, or hosted service transports
@@ -285,6 +288,23 @@ Run the local query service against a saved snapshot:
 pragmagraph serve --snapshot .pragmagraph/snapshot.json
 ```
 
+Build and query a local SQLite materialized store:
+
+```bash
+pragmagraph store-import .pragmagraph/snapshot.json \
+  --out .pragmagraph/graph.sqlite
+
+pragmagraph store-query .pragmagraph/graph.sqlite RuntimeGraph --json
+
+pragmagraph store-health .pragmagraph/graph.sqlite --json
+```
+
+Run the local query service against the materialized store:
+
+```bash
+pragmagraph serve --store .pragmagraph/graph.sqlite
+```
+
 Open the local visual UI against a saved snapshot:
 
 ```bash
@@ -397,6 +417,8 @@ Reference docs:
 - [docs/report-mode.md](docs/report-mode.md) — structural report contract.
 - [docs/export-mode.md](docs/export-mode.md) — deterministic graph exports.
 - [docs/benchmarking.md](docs/benchmarking.md) — benchmark/readiness surface.
+- [docs/storage-interchange.md](docs/storage-interchange.md) — canonical
+  snapshot and materialized store contract.
 - [docs/graphify-interop.md](docs/graphify-interop.md) — Graphify-shaped JSON
   interchange.
 - [docs/workspace-mode.md](docs/workspace-mode.md) — persistent local workspace

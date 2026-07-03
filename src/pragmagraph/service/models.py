@@ -135,6 +135,10 @@ class ServiceCapabilities:
     git_identity_mode: str = ""
     git_commit_count: int = 0
     git_changed_path_count: int = 0
+    store_backend: str = ""
+    store_path: str = ""
+    store_manifest_schema_version: str = ""
+    store_fts_available: bool = False
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -181,6 +185,10 @@ class ServiceCapabilities:
             "git_identity_mode": self.git_identity_mode,
             "git_commit_count": self.git_commit_count,
             "git_changed_path_count": self.git_changed_path_count,
+            "store_backend": self.store_backend,
+            "store_path": self.store_path,
+            "store_manifest_schema_version": self.store_manifest_schema_version,
+            "store_fts_available": self.store_fts_available,
         }
 
 

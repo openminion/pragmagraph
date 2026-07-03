@@ -47,6 +47,7 @@ from pragmagraph.service.constants import (
     SERVICE_VERSION,
     STARTUP_MODE_ROOT,
     STARTUP_MODE_SNAPSHOT,
+    STARTUP_MODE_STORE,
     STARTUP_MODE_WORKSPACE,
 )
 from pragmagraph.service.models import (
@@ -54,7 +55,13 @@ from pragmagraph.service.models import (
     ServiceRequest,
     ServiceResponse,
 )
-from pragmagraph.storage import load_snapshot, save_snapshot, stable_dumps
+from pragmagraph.storage import (
+    GraphStore,
+    SQLiteGraphStore,
+    load_snapshot,
+    save_snapshot,
+    stable_dumps,
+)
 from pragmagraph.workspace import (
     ensure_workspace_snapshot,
     load_workspace_status,
@@ -75,6 +82,7 @@ class ServiceStartup:
     manifest_out_path: str = ""
     state_out_path: str = ""
     workspace_path: str = ""
+    store_path: str = ""
     profile_label: str = "service-root"
 
 
@@ -88,11 +96,13 @@ class LocalQueryService:
         startup: ServiceStartup,
         manifest: RefreshManifest | None = None,
         refresh_status: RefreshStatus | None = None,
+        store: GraphStore | None = None,
     ) -> None:
         self._snapshot = snapshot
         self._startup = startup
         self._manifest = manifest
         self._refresh_status = refresh_status
+        self._store = store
 
     @classmethod
     def from_snapshot_path(cls, snapshot_path: str | Path) -> "LocalQueryService":
@@ -104,6 +114,20 @@ class LocalQueryService:
                 namespace=snapshot.namespace,
                 snapshot_path=str(Path(snapshot_path)),
             ),
+        )
+
+    @classmethod
+    def from_store_path(cls, store_path: str | Path) -> "LocalQueryService":
+        store = SQLiteGraphStore(store_path)
+        snapshot = store.export_snapshot()
+        return cls(
+            snapshot=snapshot,
+            startup=ServiceStartup(
+                mode=STARTUP_MODE_STORE,
+                namespace=snapshot.namespace,
+                store_path=str(Path(store_path)),
+            ),
+            store=store,
         )
 
     @classmethod
@@ -222,6 +246,7 @@ class LocalQueryService:
                 }
             )
         )
+        store_manifest = self._store.manifest() if self._store is not None else None
         return ServiceCapabilities(
             service_version=SERVICE_VERSION,
             package_version=pragmagraph.__version__,
@@ -254,6 +279,16 @@ class LocalQueryService:
             git_commit_count=int(self._snapshot.stats.get("git_commit_count", 0) or 0),
             git_changed_path_count=int(
                 self._snapshot.stats.get("git_changed_path_count", 0) or 0
+            ),
+            store_backend=store_manifest.backend if store_manifest is not None else "",
+            store_path=self._startup.store_path,
+            store_manifest_schema_version=(
+                store_manifest.manifest_schema_version
+                if store_manifest is not None
+                else ""
+            ),
+            store_fts_available=(
+                store_manifest.fts_available if store_manifest is not None else False
             ),
         )
 
@@ -292,18 +327,20 @@ class LocalQueryService:
             return self.capabilities().to_dict()
         if method == METHOD_HEALTH:
             capabilities = self.capabilities()
-            summary = health(self._snapshot).to_dict()
+            summary = self._store_health().to_dict()
             summary["service"] = {
                 "startup_mode": self._startup.mode,
                 "refresh_supported": self.refresh_supported,
                 "snapshot_id": _snapshot_id(self._snapshot),
                 "workspace_path": self._startup.workspace_path,
+                "store_path": self._startup.store_path,
                 "manifest_schema_version": self._manifest_schema_version(),
                 "parser_set": capabilities.parser_set,
                 "parser_versions": capabilities.parser_versions,
                 "diagnostic_counts": _diagnostic_counts(self._snapshot),
                 "git_overlay": self._git_overlay_summary(),
                 "refresh_state": self._refresh_state_payload(),
+                "store": self._store_summary(),
             }
             return summary
         if method in {METHOD_QUERY, METHOD_EXPLAIN}:
@@ -323,8 +360,7 @@ class LocalQueryService:
                 default=10,
                 minimum=1,
             )
-            return neighborhood(
-                self._snapshot,
+            return self._store_neighborhood(
                 node_id,
                 depth=depth,
                 max_results=max_results,
@@ -351,8 +387,7 @@ class LocalQueryService:
                 default=4,
                 minimum=1,
             )
-            return path(
-                self._snapshot,
+            return self._store_path(
                 source_id,
                 target_id,
                 max_hops=max_hops,
@@ -399,7 +434,45 @@ class LocalQueryService:
             max_results=self._int_param(params, "max_results", default=10, minimum=1),
             include_edges=self._bool_param(params, "include_edges", default=True),
         )
+        if self._store is not None:
+            return self._store.query(request)
         return query(self._snapshot, request)
+
+    def _store_health(self) -> Any:
+        return (
+            self._store.health() if self._store is not None else health(self._snapshot)
+        )
+
+    def _store_neighborhood(
+        self,
+        node_id: str,
+        *,
+        depth: int,
+        max_results: int,
+    ) -> Any:
+        if self._store is not None:
+            return self._store.neighborhood(
+                node_id,
+                depth=depth,
+                max_results=max_results,
+            )
+        return neighborhood(
+            self._snapshot,
+            node_id,
+            depth=depth,
+            max_results=max_results,
+        )
+
+    def _store_path(
+        self,
+        source_id: str,
+        target_id: str,
+        *,
+        max_hops: int,
+    ) -> Any:
+        if self._store is not None:
+            return self._store.path(source_id, target_id, max_hops=max_hops)
+        return path(self._snapshot, source_id, target_id, max_hops=max_hops)
 
     def _refresh_result(self) -> dict[str, Any]:
         if not self.refresh_supported:
@@ -568,6 +641,20 @@ class LocalQueryService:
             "changed_path_count": int(
                 self._snapshot.stats.get("git_changed_path_count", 0) or 0
             ),
+        }
+
+    def _store_summary(self) -> dict[str, Any] | None:
+        if self._store is None:
+            return None
+        manifest = self._store.manifest()
+        capabilities = self._store.capabilities()
+        return {
+            "backend": manifest.backend,
+            "path": self._startup.store_path,
+            "manifest_schema_version": manifest.manifest_schema_version,
+            "schema_version": manifest.schema_version,
+            "fts_available": manifest.fts_available,
+            "capabilities": capabilities.to_dict(),
         }
 
 

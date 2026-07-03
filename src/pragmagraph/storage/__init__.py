@@ -82,9 +82,25 @@ class SnapshotRepository:
         return load_snapshot(self.path)
 
 
+from pragmagraph.storage.backends import (  # noqa: E402
+    GraphStore,
+    JsonSnapshotStore,
+    SQLiteGraphStore,
+    StoreCapabilityReport,
+    StoreManifest,
+    open_store,
+)
+
+
 __all__ = [
+    "GraphStore",
+    "JsonSnapshotStore",
+    "SQLiteGraphStore",
     "SnapshotRepository",
+    "StoreCapabilityReport",
+    "StoreManifest",
     "load_snapshot",
+    "open_store",
     "save_snapshot",
     "snapshot_from_dict",
     "snapshot_to_dict",

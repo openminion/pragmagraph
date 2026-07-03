@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from time import perf_counter_ns
 from typing import Any, Callable, Mapping, TypeVar
 
@@ -15,7 +16,7 @@ from pragmagraph.models import QueryRequest
 from pragmagraph.query import query
 from pragmagraph.refresh import refresh_snapshot
 from pragmagraph.report import build_report
-from pragmagraph.storage import stable_dumps
+from pragmagraph.storage import SQLiteGraphStore, stable_dumps
 
 _T = TypeVar("_T")
 
@@ -120,7 +121,7 @@ def benchmark_root(
         detail_builder=lambda value: {"bytes": len(value.encode("utf-8"))},
     )
     query_result, query_measurement = _measure(
-        "query",
+        "json_query",
         lambda: query(
             snapshot,
             QueryRequest(query=query_text, max_results=max_results),
@@ -157,6 +158,25 @@ def benchmark_root(
             "edge_count": len(value.get("edges", ())),
         },
     )
+    with TemporaryDirectory(prefix="pragmagraph-bench-") as temp_dir:
+        store_path = Path(temp_dir) / "graph.sqlite"
+        sqlite_store, sqlite_import_measurement = _measure(
+            "sqlite_import",
+            lambda: SQLiteGraphStore.from_snapshot(snapshot, store_path),
+            detail_builder=lambda value: value.manifest().to_dict(),
+        )
+        sqlite_query_result, sqlite_query_measurement = _measure(
+            "sqlite_query",
+            lambda: sqlite_store.query(
+                QueryRequest(query=query_text, max_results=max_results),
+            ),
+            detail_builder=lambda value: {
+                "hit_count": len(value.hits),
+                "candidate_count": int(value.diagnostics.get("candidate_count", 0)),
+                "fts_available": bool(value.diagnostics.get("fts_available", False)),
+            },
+        )
+    _ = query_result, dot_text, mermaid_text, graphify_payload, sqlite_query_result
     refresh_result, refresh_measurement = _measure(
         "refresh_unchanged",
         lambda: refresh_snapshot(
@@ -195,6 +215,8 @@ def benchmark_root(
             snapshot_measurement,
             refresh_measurement,
             query_measurement,
+            sqlite_import_measurement,
+            sqlite_query_measurement,
             report_measurement,
             dot_measurement,
             mermaid_measurement,

@@ -94,21 +94,40 @@ smoke must also be able to import `pragmagraph.ui`.
 
 ## Publish Sequence
 
-This package intentionally mirrors Sophiagraph's package-local setup: the
-package directory owns build, check, metadata, and release-smoke validation. It
-does not own a package-local GitHub Release workflow.
+This package now owns the same GitHub Actions release shape used by the sibling
+packages:
 
-After validation is green, publish through the same external PyPI release
-process used for Sophiagraph, using the artifacts produced by
-`scripts/release_check.py`.
+1. RC tags such as `v0.0.4rc1` publish to TestPyPI.
+2. Manual `workflow_dispatch` with `target=testpypi` publishes the final
+   version to TestPyPI from the final release branch.
+3. Final tags such as `v0.0.4` publish to production PyPI.
+4. GitHub Releases should use the bare version title such as `0.0.4`.
+
+The deterministic local gate still starts with the package-owned smoke script:
 
 ```bash
 rm -rf build dist src/*.egg-info
 python3.11 scripts/release_check.py
 ```
 
+After local proof is green, use the repo-family release flow documented in
+`docs/reference/package-release-process.md`:
+
+1. bump RC version surfaces,
+2. run local proof,
+3. push the RC branch and RC tag,
+4. verify the hosted TestPyPI RC publish,
+5. bump to the final version on a final release branch,
+6. manually dispatch the final branch to TestPyPI,
+7. push the final tag to production PyPI,
+8. create the GitHub Release,
+9. merge the final release branch into the public default branch,
+10. back-merge the public default branch into the release source branch when
+    those branches differ,
+11. remove temporary release branches after the merge.
+
 After a production upload, the project name `pragmagraph` is owned by the PyPI
-account/organization used for the release.
+account or organization used for the release.
 
 ## Notes
 
