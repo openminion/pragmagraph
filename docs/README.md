@@ -46,16 +46,6 @@ This directory holds the public package documentation for standalone
 - [`certification-readiness-matrix.md`](certification-readiness-matrix.md)
   records the current standalone and OpenMinion proof targets for the public
   package surface.
-- [`specs/storage-interchange-and-search-2026-07-02-spec.md`](specs/storage-interchange-and-search-2026-07-02-spec.md)
-  defines the draft storage abstraction, materialized search store, and vector
-  sidecar direction.
-- [`trackers/storage-interchange-and-search-2026-07-02-tracker.md`](trackers/storage-interchange-and-search-2026-07-02-tracker.md)
-  tracks the review-gated storage interchange and search implementation plan.
-- [`specs/product-gap-top20-roadmap-2026-07-02-spec.md`](specs/product-gap-top20-roadmap-2026-07-02-spec.md)
-  records the review-only top-20 product gap roadmap from current package
-  state and public product research.
-- [`trackers/product-gap-top20-roadmap-2026-07-02-tracker.md`](trackers/product-gap-top20-roadmap-2026-07-02-tracker.md)
-  tracks the non-executable discussion register for those candidate gaps.
 
 ## Package-local code/docs boundaries
 
