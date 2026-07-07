@@ -83,6 +83,10 @@ The package currently provides:
   Graphify-shaped JSON interchange, stable symbol/reference interchange,
   topology/doc-graph views, git lineage, parser-support metadata, and
   certification packs
+- Viewer contract: bounded `pragmagraph.viewer` envelopes for GraphFakos and
+  other provider-neutral graph viewers, including clusters, LOD, edge bundles,
+  omitted counts, content previews, evidence, provenance, and deterministic
+  1k/200k/1m fixture generation
 - Local runtime surfaces: stdio query service contracts, persistent workspace
   helpers, `serve --workspace`, and the package-local visual preview boundary
   under `pragmagraph.ui`
@@ -147,6 +151,19 @@ The current visual explorer command lives in `pragmagraph.ui` and renders
 through GraphFakos, the shared graph lens package. PragmaGraph owns the
 observed-fact adapter and graph semantics; GraphFakos owns the reusable viewer
 shell, graph canvas, local server primitive, and static export surface.
+
+For large viewer iteration, generate a bounded PragmaGraph viewer envelope and
+open it through GraphFakos:
+
+```bash
+pragmagraph viewer-fixture \
+  --scenario viewer-scale-200k \
+  --out ../workspace-tmp/pragmagraph-viewer-support/viewer-scale-200k.json \
+  --json
+```
+
+See [`docs/viewer-contract.md`](docs/viewer-contract.md) for the envelope,
+cluster, content, fixture, and GraphFakos handoff contract.
 
 You can run the package-local visual UI today:
 

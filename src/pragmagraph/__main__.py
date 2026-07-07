@@ -52,7 +52,15 @@ from pragmagraph.refresh import load_manifest, refresh_snapshot, save_manifest
 from pragmagraph.service import LocalQueryService, run_stdio_service
 from pragmagraph.storage import SQLiteGraphStore, load_snapshot, save_snapshot
 from pragmagraph.topology import build_topology_summary, render_markdown_topology
-from pragmagraph.ui import UiPreviewRequest, serve_ui_preview, write_ui_preview
+from pragmagraph.viewer import (
+    VIEWER_FIXTURE_SCENARIOS,
+    build_viewer_envelope,
+    build_viewer_fixture_envelope,
+    load_viewer_envelope,
+    viewer_cluster,
+    viewer_content,
+    write_viewer_envelope,
+)
 from pragmagraph.workspace import (
     initialize_workspace,
     load_workspace_status,
@@ -463,6 +471,59 @@ def main(argv: list[str] | None = None) -> int:
     ui_parser.add_argument("--port", type=int, default=8766)
     _add_json_flag(ui_parser)
 
+    viewer_export_parser = subparsers.add_parser(
+        "viewer-export",
+        help="export a snapshot as a provider-neutral viewer envelope",
+    )
+    viewer_export_parser.add_argument("snapshot")
+    viewer_export_parser.add_argument(
+        "--lod",
+        choices=("auto", "raw", "sampled", "cluster", "meta"),
+        default="auto",
+    )
+    viewer_export_parser.add_argument("--node-budget", type=int, default=240)
+    viewer_export_parser.add_argument("--edge-budget", type=int, default=480)
+    viewer_export_parser.add_argument("--cluster-size", type=int, default=24)
+    viewer_export_parser.add_argument("--out", default="")
+    _add_json_flag(viewer_export_parser)
+
+    viewer_fixture_parser = subparsers.add_parser(
+        "viewer-fixture",
+        help="generate a deterministic large-scale viewer envelope fixture",
+    )
+    viewer_fixture_parser.add_argument(
+        "--scenario",
+        choices=VIEWER_FIXTURE_SCENARIOS,
+        required=True,
+    )
+    viewer_fixture_parser.add_argument("--out", required=True)
+    viewer_fixture_parser.add_argument("--node-budget", type=int, default=240)
+    viewer_fixture_parser.add_argument("--edge-budget", type=int, default=480)
+    viewer_fixture_parser.add_argument("--seed", type=int, default=20260706)
+    _add_json_flag(viewer_fixture_parser)
+
+    viewer_cluster_parser = subparsers.add_parser(
+        "viewer-cluster",
+        help="show bounded cluster detail from a viewer envelope",
+    )
+    viewer_cluster_parser.add_argument("envelope")
+    viewer_cluster_parser.add_argument("cluster_id")
+    viewer_cluster_parser.add_argument("--budget", type=int, default=100)
+    _add_json_flag(viewer_cluster_parser)
+
+    viewer_content_parser = subparsers.add_parser(
+        "viewer-content",
+        help="show provider-owned node content from a viewer envelope",
+    )
+    viewer_content_parser.add_argument("envelope")
+    viewer_content_parser.add_argument("node_id")
+    viewer_content_parser.add_argument(
+        "--mode",
+        choices=("preview", "full"),
+        default="preview",
+    )
+    _add_json_flag(viewer_content_parser)
+
     args = parser.parse_args(argv)
 
     if args.command == "index":
@@ -748,6 +809,8 @@ def main(argv: list[str] | None = None) -> int:
         service = _service_from_args(args)
         return run_stdio_service(service)
     elif args.command == "ui-preview":
+        from pragmagraph.ui import UiPreviewRequest, serve_ui_preview, write_ui_preview
+
         request = UiPreviewRequest(
             screen=args.screen,
             workspace=args.workspace,
@@ -773,6 +836,39 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         result = write_ui_preview(request)
         _print_payload(result.to_dict(), as_json=args.json)
+    elif args.command == "viewer-export":
+        snapshot = load_snapshot(args.snapshot)
+        envelope = build_viewer_envelope(
+            snapshot,
+            level_of_detail=args.lod,
+            node_budget=args.node_budget,
+            edge_budget=args.edge_budget,
+            cluster_size=args.cluster_size,
+        )
+        if args.out:
+            _print_payload(write_viewer_envelope(envelope, args.out), as_json=True)
+        else:
+            _print_payload(envelope.to_dict(), as_json=True)
+    elif args.command == "viewer-fixture":
+        envelope = build_viewer_fixture_envelope(
+            args.scenario,
+            node_budget=args.node_budget,
+            edge_budget=args.edge_budget,
+            seed=args.seed,
+        )
+        _print_payload(write_viewer_envelope(envelope, args.out), as_json=True)
+    elif args.command == "viewer-cluster":
+        envelope = load_viewer_envelope(args.envelope)
+        _print_payload(
+            viewer_cluster(envelope, args.cluster_id, budget=args.budget),
+            as_json=True,
+        )
+    elif args.command == "viewer-content":
+        envelope = load_viewer_envelope(args.envelope)
+        _print_payload(
+            viewer_content(envelope, args.node_id, mode=args.mode),
+            as_json=True,
+        )
     elif args.json:
         print(json.dumps(smoke_payload(), sort_keys=True))
     else:

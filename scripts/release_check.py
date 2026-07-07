@@ -109,6 +109,7 @@ def _assert_smoke_payload(stdout: str) -> None:
         "pragmagraph.certification",
         "pragmagraph.lineage",
         "pragmagraph.parser_support",
+        "pragmagraph.viewer",
     ]
     if payload.get("package") != "pragmagraph":
         raise RuntimeError(f"unexpected smoke package: {payload!r}")
@@ -133,6 +134,7 @@ def _assert_package_docs_shape(root: Path) -> None:
         root / "docs" / "service-mode.md",
         root / "docs" / "source-tree-owner-map.md",
         root / "docs" / "ui-contracts.md",
+        root / "docs" / "viewer-contract.md",
         root / "docs" / "workspace-mode.md",
         root / "src" / "pragmagraph" / "README.md",
         root / "tests" / "fixtures" / "repos",

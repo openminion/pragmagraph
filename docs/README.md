@@ -38,6 +38,9 @@ This directory holds the public package documentation for standalone
   package-owned benchmark surface and repo-local regression fixture policy.
 - [`graphify-interop.md`](graphify-interop.md) records the
   deterministic Graphify-shaped JSON import/export contract.
+- [`viewer-contract.md`](viewer-contract.md) records the
+  provider-neutral viewer envelope, scale-fixture commands, and GraphFakos
+  handoff boundary.
 - [`git-history-mode.md`](git-history-mode.md) records the
   local git-overlay contract, privacy posture, and CLI shape.
 - [`advanced-structural-views.md`](advanced-structural-views.md)

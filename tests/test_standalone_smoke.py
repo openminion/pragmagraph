@@ -51,6 +51,7 @@ def test_python_m_pragmagraph_smoke() -> None:
             "pragmagraph.certification",
             "pragmagraph.lineage",
             "pragmagraph.parser_support",
+            "pragmagraph.viewer",
         ],
         "status": "semantic-alpha",
         "version": "0.0.4",
