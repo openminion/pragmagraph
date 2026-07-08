@@ -56,9 +56,14 @@ from pragmagraph.viewer import (
     VIEWER_FIXTURE_SCENARIOS,
     build_viewer_envelope,
     build_viewer_fixture_envelope,
+    explain_omitted,
     load_viewer_envelope,
     viewer_cluster,
+    viewer_cluster_nodes,
     viewer_content,
+    viewer_delta,
+    viewer_envelope_neighborhood,
+    viewer_envelope_path,
     write_viewer_envelope,
 )
 from pragmagraph.workspace import (
@@ -524,6 +529,57 @@ def main(argv: list[str] | None = None) -> int:
     )
     _add_json_flag(viewer_content_parser)
 
+    viewer_neighborhood_parser = subparsers.add_parser(
+        "viewer-neighborhood",
+        help="show bounded visible-node neighborhood from a viewer envelope",
+    )
+    viewer_neighborhood_parser.add_argument("envelope")
+    viewer_neighborhood_parser.add_argument("node_id")
+    viewer_neighborhood_parser.add_argument("--depth", type=int, default=1)
+    viewer_neighborhood_parser.add_argument("--budget", type=int, default=100)
+    _add_json_flag(viewer_neighborhood_parser)
+
+    viewer_path_parser = subparsers.add_parser(
+        "viewer-path",
+        help="show a bounded visible path from a viewer envelope",
+    )
+    viewer_path_parser.add_argument("envelope")
+    viewer_path_parser.add_argument("source_id")
+    viewer_path_parser.add_argument("target_id")
+    viewer_path_parser.add_argument("--budget", type=int, default=100)
+    _add_json_flag(viewer_path_parser)
+
+    viewer_cluster_nodes_parser = subparsers.add_parser(
+        "viewer-cluster-nodes",
+        help="show bounded hub or bridge node IDs for a viewer cluster",
+    )
+    viewer_cluster_nodes_parser.add_argument("envelope")
+    viewer_cluster_nodes_parser.add_argument("cluster_id")
+    viewer_cluster_nodes_parser.add_argument(
+        "--role",
+        choices=("hub", "bridge"),
+        required=True,
+    )
+    viewer_cluster_nodes_parser.add_argument("--budget", type=int, default=100)
+    _add_json_flag(viewer_cluster_nodes_parser)
+
+    viewer_omitted_parser = subparsers.add_parser(
+        "viewer-omitted",
+        help="explain omitted counts from a viewer envelope",
+    )
+    viewer_omitted_parser.add_argument("envelope")
+    viewer_omitted_parser.add_argument("--reason", default="")
+    _add_json_flag(viewer_omitted_parser)
+
+    viewer_delta_parser = subparsers.add_parser(
+        "viewer-delta",
+        help="show viewer-safe structural delta between two snapshots",
+    )
+    viewer_delta_parser.add_argument("before_snapshot")
+    viewer_delta_parser.add_argument("after_snapshot")
+    viewer_delta_parser.add_argument("--budget", type=int, default=100)
+    _add_json_flag(viewer_delta_parser)
+
     args = parser.parse_args(argv)
 
     if args.command == "index":
@@ -869,6 +925,46 @@ def main(argv: list[str] | None = None) -> int:
             viewer_content(envelope, args.node_id, mode=args.mode),
             as_json=True,
         )
+    elif args.command == "viewer-neighborhood":
+        envelope = load_viewer_envelope(args.envelope)
+        _print_payload(
+            viewer_envelope_neighborhood(
+                envelope,
+                args.node_id,
+                depth=args.depth,
+                budget=args.budget,
+            ),
+            as_json=True,
+        )
+    elif args.command == "viewer-path":
+        envelope = load_viewer_envelope(args.envelope)
+        _print_payload(
+            viewer_envelope_path(
+                envelope,
+                args.source_id,
+                args.target_id,
+                budget=args.budget,
+            ),
+            as_json=True,
+        )
+    elif args.command == "viewer-cluster-nodes":
+        envelope = load_viewer_envelope(args.envelope)
+        _print_payload(
+            viewer_cluster_nodes(
+                envelope,
+                args.cluster_id,
+                role=args.role,
+                budget=args.budget,
+            ),
+            as_json=True,
+        )
+    elif args.command == "viewer-omitted":
+        envelope = load_viewer_envelope(args.envelope)
+        _print_payload(explain_omitted(envelope, reason=args.reason), as_json=True)
+    elif args.command == "viewer-delta":
+        before = load_snapshot(args.before_snapshot)
+        after = load_snapshot(args.after_snapshot)
+        _print_payload(viewer_delta(before, after, budget=args.budget), as_json=True)
     elif args.json:
         print(json.dumps(smoke_payload(), sort_keys=True))
     else:

@@ -188,7 +188,11 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "verify_memory_evidence_ref",
         "verify_memory_evidence_refs",
         "viewer_cluster",
+        "viewer_cluster_nodes",
         "viewer_content",
+        "viewer_delta",
+        "viewer_envelope_neighborhood",
+        "viewer_envelope_path",
         "viewer_neighborhood",
         "viewer_path",
         "WorkspaceMetadata",
@@ -263,6 +267,8 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     assert "build_topology_summary" in topology.__all__
     assert "build_ui_screen_manifest" in ui.__all__
     assert "build_viewer_envelope" in viewer.__all__
+    assert "viewer_delta" in viewer.__all__
+    assert "viewer_envelope_neighborhood" in viewer.__all__
     assert "initialize_workspace" in workspace.__all__
 
 

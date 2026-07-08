@@ -80,7 +80,43 @@ PYTHONPATH=src .venv/bin/python3.11 -m pragmagraph.__main__ viewer-content \
   scale-001:node:0000 \
   --mode preview \
   --json
+
+PYTHONPATH=src .venv/bin/python3.11 -m pragmagraph.__main__ viewer-neighborhood \
+  ../workspace-tmp/pragmagraph-viewer-support/viewer-scale-200k.json \
+  scale-001:node:0000 \
+  --depth 2 \
+  --budget 50 \
+  --json
+
+PYTHONPATH=src .venv/bin/python3.11 -m pragmagraph.__main__ viewer-path \
+  ../workspace-tmp/pragmagraph-viewer-support/viewer-scale-200k.json \
+  scale-001:node:0000 \
+  scale-002:node:0000 \
+  --budget 50 \
+  --json
+
+PYTHONPATH=src .venv/bin/python3.11 -m pragmagraph.__main__ viewer-cluster-nodes \
+  ../workspace-tmp/pragmagraph-viewer-support/viewer-scale-200k.json \
+  scale-001 \
+  --role hub \
+  --budget 25 \
+  --json
+
+PYTHONPATH=src .venv/bin/python3.11 -m pragmagraph.__main__ viewer-omitted \
+  ../workspace-tmp/pragmagraph-viewer-support/viewer-scale-200k.json \
+  --reason node_budget \
+  --json
+
+PYTHONPATH=src .venv/bin/python3.11 -m pragmagraph.__main__ viewer-delta \
+  .pragmagraph/snapshot-before.json \
+  .pragmagraph/snapshot-after.json \
+  --budget 100 \
+  --json
 ```
+
+The helper commands return JSON-serializable structural data only. They do not
+emit renderer-specific styling, mutate provider truth, or require GraphFakos to
+inspect PragmaGraph internals.
 
 ## GraphFakos Handoff
 

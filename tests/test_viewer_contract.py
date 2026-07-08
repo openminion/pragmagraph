@@ -5,13 +5,19 @@ import subprocess
 import sys
 
 from pragmagraph.models import GraphEdge, GraphNode, GraphSnapshot, SourceRef
+from pragmagraph.storage import save_snapshot
 from pragmagraph.viewer import (
     VIEWER_ENVELOPE_SCHEMA_VERSION,
     ViewerGraphEnvelope,
     build_viewer_envelope,
     build_viewer_fixture_envelope,
+    explain_omitted,
     viewer_cluster,
+    viewer_cluster_nodes,
     viewer_content,
+    viewer_delta,
+    viewer_envelope_neighborhood,
+    viewer_envelope_path,
 )
 
 
@@ -92,9 +98,62 @@ def test_viewer_cluster_and_content_helpers_are_bounded() -> None:
 
     assert cluster["cluster"]["id"] == cluster_id
     assert len(cluster["nodes"]) <= 3
+    assert cluster["omitted"][0]["reason"] == "cluster_budget"
     assert content["node_id"] == node_id
     assert content["content"]["mode"] == "full"
     assert "provider-owned" in content["content"]["text"]
+
+
+def test_viewer_navigation_helpers_are_bounded_and_deterministic() -> None:
+    envelope = build_viewer_fixture_envelope("viewer-scale-1k", node_budget=80)
+    source_id = str(envelope.nodes[0]["id"])
+    target_id = str(envelope.edges[0]["target_id"])
+    cluster_id = str(envelope.nodes[0]["cluster_id"])
+
+    neighborhood = viewer_envelope_neighborhood(envelope, source_id, budget=2)
+    graph_path = viewer_envelope_path(envelope, source_id, target_id, budget=4)
+    hubs = viewer_cluster_nodes(envelope, cluster_id, role="hub", budget=2)
+    bridges = viewer_cluster_nodes(envelope, cluster_id, role="bridge", budget=1)
+    omitted = explain_omitted(envelope, reason="node_budget")
+
+    assert neighborhood["node_id"] == source_id
+    assert len(neighborhood["nodes"]) <= 2
+    assert graph_path["found"] is True
+    assert graph_path["nodes"][0]["id"] == source_id
+    assert hubs["node_ids"] == list(envelope.clusters[0]["hub_node_ids"])[:2]
+    assert bridges["role"] == "bridge"
+    assert omitted["omitted"][0]["reason"] == "node_budget"
+
+
+def test_viewer_helpers_report_missing_ids() -> None:
+    envelope = build_viewer_fixture_envelope("viewer-scale-1k", node_budget=20)
+
+    try:
+        viewer_envelope_neighborhood(envelope, "missing-node")
+    except KeyError as exc:
+        assert "viewer node id not found" in str(exc)
+    else:
+        raise AssertionError("missing node should raise KeyError")
+
+
+def test_viewer_delta_marks_snapshot_changes() -> None:
+    before = _snapshot()
+    after = GraphSnapshot(
+        namespace=before.namespace,
+        root_path=before.root_path,
+        nodes=(
+            *before.nodes,
+            GraphNode(id="node:999", kind="file", label="Added Node"),
+        ),
+        edges=before.edges,
+        created_at="2026-07-07T00:00:00+00:00",
+    )
+
+    delta = viewer_delta(before, after, budget=2)
+
+    assert delta["structural_delta"]["added_node_ids"] == ["node:999"]
+    assert delta["markers"][0]["status"] == "added"
+    assert delta["freshness"]["changed"] == 1
 
 
 def test_viewer_fixture_cli_writes_provider_envelope(tmp_path) -> None:
@@ -160,3 +219,114 @@ def test_viewer_fixture_cli_writes_provider_envelope(tmp_path) -> None:
 
     assert json.loads(cluster_result.stdout)["cluster"]["id"] == "scale-001"
     assert json.loads(content_result.stdout)["node_id"] == "scale-001:node:0000"
+
+    neighborhood_result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pragmagraph",
+            "viewer-neighborhood",
+            str(out),
+            "scale-001:node:0000",
+            "--budget",
+            "2",
+            "--json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    path_result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pragmagraph",
+            "viewer-path",
+            str(out),
+            "scale-001:node:0000",
+            "scale-001:node:0001",
+            "--budget",
+            "4",
+            "--json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    cluster_nodes_result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pragmagraph",
+            "viewer-cluster-nodes",
+            str(out),
+            "scale-001",
+            "--role",
+            "hub",
+            "--budget",
+            "2",
+            "--json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    omitted_result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pragmagraph",
+            "viewer-omitted",
+            str(out),
+            "--reason",
+            "node_budget",
+            "--json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert json.loads(neighborhood_result.stdout)["node_id"] == "scale-001:node:0000"
+    assert json.loads(path_result.stdout)["found"] is True
+    assert json.loads(cluster_nodes_result.stdout)["node_ids"] == [
+        "scale-001:hub:00",
+        "scale-001:hub:01",
+    ]
+    assert json.loads(omitted_result.stdout)["omitted"][0]["reason"] == "node_budget"
+
+
+def test_viewer_delta_cli_reports_stable_markers(tmp_path) -> None:
+    before = tmp_path / "before.json"
+    after = tmp_path / "after.json"
+    base = _snapshot()
+    changed = GraphSnapshot(
+        namespace=base.namespace,
+        root_path=base.root_path,
+        nodes=base.nodes[:-1],
+        edges=base.edges,
+        created_at="2026-07-08T00:00:00+00:00",
+    )
+    save_snapshot(base, before)
+    save_snapshot(changed, after)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pragmagraph",
+            "viewer-delta",
+            str(before),
+            str(after),
+            "--budget",
+            "3",
+            "--json",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+
+    assert payload["structural_delta"]["removed_node_ids"] == ["node:039"]
+    assert payload["markers"][0]["freshness"] == "removed"
