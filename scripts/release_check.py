@@ -193,6 +193,7 @@ def main(argv: list[str] | None = None) -> int:
             venv_paths = _create_temp_venv(root, tmp)
             graphfakos_ui = venv_paths["venv"] / "bin" / "graphfakos-ui"
             smoke = venv_paths["venv"] / "bin" / "pragmagraph-smoke"
+            server_cli = venv_paths["venv"] / "bin" / "pragmagraph-server"
             ui_preview = venv_paths["venv"] / "bin" / "pragmagraph-ui"
             wheel = sorted((root / "dist").glob("pragmagraph-*.whl"))[-1]
             install_cmd = [str(venv_paths["pip"]), "install"]
@@ -229,6 +230,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             stdout = _run_capture([str(smoke), "--json"], cwd=root)
             _assert_smoke_payload(stdout)
+            _run([str(server_cli), "--help"], cwd=root)
             _run_capture(
                 [
                     str(ui_preview),

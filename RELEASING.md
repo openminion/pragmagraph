@@ -97,11 +97,11 @@ smoke must also be able to import `pragmagraph.ui`.
 This package now owns the same GitHub Actions release shape used by the sibling
 packages:
 
-1. RC tags such as `v0.0.4rc1` publish to TestPyPI.
+1. RC tags such as `v0.0.5rc1` publish to TestPyPI.
 2. Manual `workflow_dispatch` with `target=testpypi` publishes the final
    version to TestPyPI from the final release branch.
-3. Final tags such as `v0.0.4` publish to production PyPI.
-4. GitHub Releases should use the bare version title such as `0.0.4`.
+3. Final tags such as `v0.0.5` publish to production PyPI.
+4. GitHub Releases should use the bare version title such as `0.0.5`.
 
 The deterministic local gate still starts with the package-owned smoke script:
 

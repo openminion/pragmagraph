@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
 import tomllib
 
@@ -33,7 +35,7 @@ def test_pragmagraph_package_imports() -> None:
     import pragmagraph.ui
     import pragmagraph.workspace
 
-    assert pragmagraph.__version__ == "0.0.4"
+    assert pragmagraph.__version__ == "0.0.5"
     assert pragmagraph.PACKAGE_STATUS == "semantic-alpha"
     assert "pragmagraph.bench" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.certification" in pragmagraph.STABLE_IMPORT_ROOTS
@@ -209,6 +211,32 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         not (name.startswith("_") and not name.endswith("__"))
         for name in pragmagraph.__all__
     )
+
+
+def test_pragmagraph_core_source_does_not_import_server_subpackage() -> None:
+    root = Path(__file__).resolve().parents[1] / "src" / "pragmagraph"
+    offenders: list[str] = []
+    for path in root.rglob("*.py"):
+        if "/server/" in path.as_posix():
+            continue
+        text = path.read_text()
+        if "import pragmagraph.server" in text or "from pragmagraph.server" in text:
+            offenders.append(str(path))
+    assert offenders == []
+
+
+def test_pragmagraph_import_does_not_load_server_subpackage() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import pragmagraph, sys; print('pragmagraph.server' in sys.modules)",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert result.stdout.strip() == "False"
 
 
 def test_public_roots_expose_semantic_alpha_contracts() -> None:
