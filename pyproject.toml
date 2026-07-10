@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pragmagraph"
-version = "0.0.4"
+version = "0.0.5"
 description = "Standalone observed-fact graph substrate for code and document structure"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -31,6 +31,7 @@ Repository = "https://github.com/openminion/pragmagraph"
 Download = "https://pypi.org/project/pragmagraph/"
 
 [project.optional-dependencies]
+server = []
 precise = [
   "tree-sitter>=0.25,<1",
   "tree-sitter-language-pack>=1.8,<2",
@@ -49,6 +50,7 @@ dev = [
 pragmagraph = "pragmagraph.__main__:main"
 pragmagraph-smoke = "pragmagraph.__main__:main"
 pragmagraph-ui = "pragmagraph.__main__:ui_preview_main"
+pragmagraph-server = "pragmagraph.server.__main__:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

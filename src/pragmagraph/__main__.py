@@ -52,7 +52,20 @@ from pragmagraph.refresh import load_manifest, refresh_snapshot, save_manifest
 from pragmagraph.service import LocalQueryService, run_stdio_service
 from pragmagraph.storage import SQLiteGraphStore, load_snapshot, save_snapshot
 from pragmagraph.topology import build_topology_summary, render_markdown_topology
-from pragmagraph.ui import UiPreviewRequest, serve_ui_preview, write_ui_preview
+from pragmagraph.viewer import (
+    VIEWER_FIXTURE_SCENARIOS,
+    build_viewer_envelope,
+    build_viewer_fixture_envelope,
+    explain_omitted,
+    load_viewer_envelope,
+    viewer_cluster,
+    viewer_cluster_nodes,
+    viewer_content,
+    viewer_delta,
+    viewer_envelope_neighborhood,
+    viewer_envelope_path,
+    write_viewer_envelope,
+)
 from pragmagraph.workspace import (
     initialize_workspace,
     load_workspace_status,
@@ -91,6 +104,32 @@ def _add_git_identity_mode_argument(parser: argparse.ArgumentParser) -> None:
         "--git-identity-mode",
         choices=tuple(sorted(SUPPORTED_GIT_IDENTITY_MODES)),
         default=DEFAULT_GIT_IDENTITY_MODE,
+    )
+
+
+def _store_payload(store: SQLiteGraphStore) -> dict[str, object]:
+    return {
+        "manifest": store.manifest().to_dict(),
+        "capabilities": store.capabilities().to_dict(),
+        "health": store.health().to_dict(),
+    }
+
+
+def _service_from_args(args: argparse.Namespace) -> LocalQueryService:
+    if args.workspace:
+        return LocalQueryService.from_workspace(args.workspace)
+    if args.store:
+        return LocalQueryService.from_store_path(args.store)
+    if args.snapshot:
+        return LocalQueryService.from_snapshot_path(args.snapshot)
+    return LocalQueryService.from_root(
+        args.root,
+        namespace=args.namespace,
+        manifest_path=args.manifest_in,
+        snapshot_out_path=args.snapshot_out,
+        manifest_out_path=args.manifest_out,
+        state_out_path=args.state_out,
+        git_identity_mode=args.git_identity_mode,
     )
 
 
@@ -437,6 +476,110 @@ def main(argv: list[str] | None = None) -> int:
     ui_parser.add_argument("--port", type=int, default=8766)
     _add_json_flag(ui_parser)
 
+    viewer_export_parser = subparsers.add_parser(
+        "viewer-export",
+        help="export a snapshot as a provider-neutral viewer envelope",
+    )
+    viewer_export_parser.add_argument("snapshot")
+    viewer_export_parser.add_argument(
+        "--lod",
+        choices=("auto", "raw", "sampled", "cluster", "meta"),
+        default="auto",
+    )
+    viewer_export_parser.add_argument("--node-budget", type=int, default=240)
+    viewer_export_parser.add_argument("--edge-budget", type=int, default=480)
+    viewer_export_parser.add_argument("--cluster-size", type=int, default=24)
+    viewer_export_parser.add_argument("--out", default="")
+    _add_json_flag(viewer_export_parser)
+
+    viewer_fixture_parser = subparsers.add_parser(
+        "viewer-fixture",
+        help="generate a deterministic large-scale viewer envelope fixture",
+    )
+    viewer_fixture_parser.add_argument(
+        "--scenario",
+        choices=VIEWER_FIXTURE_SCENARIOS,
+        required=True,
+    )
+    viewer_fixture_parser.add_argument("--out", required=True)
+    viewer_fixture_parser.add_argument("--node-budget", type=int, default=240)
+    viewer_fixture_parser.add_argument("--edge-budget", type=int, default=480)
+    viewer_fixture_parser.add_argument("--seed", type=int, default=20260706)
+    _add_json_flag(viewer_fixture_parser)
+
+    viewer_cluster_parser = subparsers.add_parser(
+        "viewer-cluster",
+        help="show bounded cluster detail from a viewer envelope",
+    )
+    viewer_cluster_parser.add_argument("envelope")
+    viewer_cluster_parser.add_argument("cluster_id")
+    viewer_cluster_parser.add_argument("--budget", type=int, default=100)
+    _add_json_flag(viewer_cluster_parser)
+
+    viewer_content_parser = subparsers.add_parser(
+        "viewer-content",
+        help="show provider-owned node content from a viewer envelope",
+    )
+    viewer_content_parser.add_argument("envelope")
+    viewer_content_parser.add_argument("node_id")
+    viewer_content_parser.add_argument(
+        "--mode",
+        choices=("preview", "full"),
+        default="preview",
+    )
+    _add_json_flag(viewer_content_parser)
+
+    viewer_neighborhood_parser = subparsers.add_parser(
+        "viewer-neighborhood",
+        help="show bounded visible-node neighborhood from a viewer envelope",
+    )
+    viewer_neighborhood_parser.add_argument("envelope")
+    viewer_neighborhood_parser.add_argument("node_id")
+    viewer_neighborhood_parser.add_argument("--depth", type=int, default=1)
+    viewer_neighborhood_parser.add_argument("--budget", type=int, default=100)
+    _add_json_flag(viewer_neighborhood_parser)
+
+    viewer_path_parser = subparsers.add_parser(
+        "viewer-path",
+        help="show a bounded visible path from a viewer envelope",
+    )
+    viewer_path_parser.add_argument("envelope")
+    viewer_path_parser.add_argument("source_id")
+    viewer_path_parser.add_argument("target_id")
+    viewer_path_parser.add_argument("--budget", type=int, default=100)
+    _add_json_flag(viewer_path_parser)
+
+    viewer_cluster_nodes_parser = subparsers.add_parser(
+        "viewer-cluster-nodes",
+        help="show bounded hub or bridge node IDs for a viewer cluster",
+    )
+    viewer_cluster_nodes_parser.add_argument("envelope")
+    viewer_cluster_nodes_parser.add_argument("cluster_id")
+    viewer_cluster_nodes_parser.add_argument(
+        "--role",
+        choices=("hub", "bridge"),
+        required=True,
+    )
+    viewer_cluster_nodes_parser.add_argument("--budget", type=int, default=100)
+    _add_json_flag(viewer_cluster_nodes_parser)
+
+    viewer_omitted_parser = subparsers.add_parser(
+        "viewer-omitted",
+        help="explain omitted counts from a viewer envelope",
+    )
+    viewer_omitted_parser.add_argument("envelope")
+    viewer_omitted_parser.add_argument("--reason", default="")
+    _add_json_flag(viewer_omitted_parser)
+
+    viewer_delta_parser = subparsers.add_parser(
+        "viewer-delta",
+        help="show viewer-safe structural delta between two snapshots",
+    )
+    viewer_delta_parser.add_argument("before_snapshot")
+    viewer_delta_parser.add_argument("after_snapshot")
+    viewer_delta_parser.add_argument("--budget", type=int, default=100)
+    _add_json_flag(viewer_delta_parser)
+
     args = parser.parse_args(argv)
 
     if args.command == "index":
@@ -573,14 +716,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.backend != "sqlite":
             raise ValueError(f"unsupported store backend: {args.backend}")
         store = SQLiteGraphStore.from_snapshot(snapshot, args.out)
-        _print_payload(
-            {
-                "manifest": store.manifest().to_dict(),
-                "capabilities": store.capabilities().to_dict(),
-                "health": store.health().to_dict(),
-            },
-            as_json=True,
-        )
+        _print_payload(_store_payload(store), as_json=True)
     elif args.command == "store-export":
         store = SQLiteGraphStore(args.store)
         snapshot = store.export_snapshot()
@@ -591,14 +727,7 @@ def main(argv: list[str] | None = None) -> int:
             _print_payload(snapshot.to_dict(), as_json=True)
     elif args.command == "store-health":
         store = SQLiteGraphStore(args.store)
-        _print_payload(
-            {
-                "manifest": store.manifest().to_dict(),
-                "capabilities": store.capabilities().to_dict(),
-                "health": store.health().to_dict(),
-            },
-            as_json=True,
-        )
+        _print_payload(_store_payload(store), as_json=True)
     elif args.command == "store-query":
         store = SQLiteGraphStore(args.store)
         _print_payload(
@@ -733,24 +862,11 @@ def main(argv: list[str] | None = None) -> int:
         snapshot = load_snapshot(args.snapshot)
         _print_payload(health(snapshot), as_json=True)
     elif args.command == "serve":
-        if args.workspace:
-            service = LocalQueryService.from_workspace(args.workspace)
-        elif args.store:
-            service = LocalQueryService.from_store_path(args.store)
-        elif args.snapshot:
-            service = LocalQueryService.from_snapshot_path(args.snapshot)
-        else:
-            service = LocalQueryService.from_root(
-                args.root,
-                namespace=args.namespace,
-                manifest_path=args.manifest_in,
-                snapshot_out_path=args.snapshot_out,
-                manifest_out_path=args.manifest_out,
-                state_out_path=args.state_out,
-                git_identity_mode=args.git_identity_mode,
-            )
+        service = _service_from_args(args)
         return run_stdio_service(service)
     elif args.command == "ui-preview":
+        from pragmagraph.ui import UiPreviewRequest, serve_ui_preview, write_ui_preview
+
         request = UiPreviewRequest(
             screen=args.screen,
             workspace=args.workspace,
@@ -776,6 +892,79 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         result = write_ui_preview(request)
         _print_payload(result.to_dict(), as_json=args.json)
+    elif args.command == "viewer-export":
+        snapshot = load_snapshot(args.snapshot)
+        envelope = build_viewer_envelope(
+            snapshot,
+            level_of_detail=args.lod,
+            node_budget=args.node_budget,
+            edge_budget=args.edge_budget,
+            cluster_size=args.cluster_size,
+        )
+        if args.out:
+            _print_payload(write_viewer_envelope(envelope, args.out), as_json=True)
+        else:
+            _print_payload(envelope.to_dict(), as_json=True)
+    elif args.command == "viewer-fixture":
+        envelope = build_viewer_fixture_envelope(
+            args.scenario,
+            node_budget=args.node_budget,
+            edge_budget=args.edge_budget,
+            seed=args.seed,
+        )
+        _print_payload(write_viewer_envelope(envelope, args.out), as_json=True)
+    elif args.command == "viewer-cluster":
+        envelope = load_viewer_envelope(args.envelope)
+        _print_payload(
+            viewer_cluster(envelope, args.cluster_id, budget=args.budget),
+            as_json=True,
+        )
+    elif args.command == "viewer-content":
+        envelope = load_viewer_envelope(args.envelope)
+        _print_payload(
+            viewer_content(envelope, args.node_id, mode=args.mode),
+            as_json=True,
+        )
+    elif args.command == "viewer-neighborhood":
+        envelope = load_viewer_envelope(args.envelope)
+        _print_payload(
+            viewer_envelope_neighborhood(
+                envelope,
+                args.node_id,
+                depth=args.depth,
+                budget=args.budget,
+            ),
+            as_json=True,
+        )
+    elif args.command == "viewer-path":
+        envelope = load_viewer_envelope(args.envelope)
+        _print_payload(
+            viewer_envelope_path(
+                envelope,
+                args.source_id,
+                args.target_id,
+                budget=args.budget,
+            ),
+            as_json=True,
+        )
+    elif args.command == "viewer-cluster-nodes":
+        envelope = load_viewer_envelope(args.envelope)
+        _print_payload(
+            viewer_cluster_nodes(
+                envelope,
+                args.cluster_id,
+                role=args.role,
+                budget=args.budget,
+            ),
+            as_json=True,
+        )
+    elif args.command == "viewer-omitted":
+        envelope = load_viewer_envelope(args.envelope)
+        _print_payload(explain_omitted(envelope, reason=args.reason), as_json=True)
+    elif args.command == "viewer-delta":
+        before = load_snapshot(args.before_snapshot)
+        after = load_snapshot(args.after_snapshot)
+        _print_payload(viewer_delta(before, after, budget=args.budget), as_json=True)
     elif args.json:
         print(json.dumps(smoke_payload(), sort_keys=True))
     else:

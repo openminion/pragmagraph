@@ -482,7 +482,7 @@ class ScriptTreeSitterParser:
         )
         try:
             parser = self._parser_for_language(_tree_sitter_language(rel))
-            root = _tree_root_node(parser.parse(text))
+            root = _tree_root_node(_parse_tree(parser, text))
         except Exception as exc:
             return self._fallback_result(
                 fallback,
@@ -1260,8 +1260,16 @@ def _tree_root_node(tree: Any) -> Any:
     return root() if callable(root) else root
 
 
+def _parse_tree(parser: Any, text: str) -> Any:
+    payload = text.encode("utf-8")
+    try:
+        return parser.parse(payload)
+    except TypeError:
+        return parser.parse(text)
+
+
 def _node_kind(node: Any) -> str:
-    kind = node.kind
+    kind = getattr(node, "kind", getattr(node, "type", ""))
     return str(kind() if callable(kind) else kind)
 
 
@@ -1295,17 +1303,25 @@ def _node_point_column(point: Any) -> int:
 
 
 def _node_start_position(node: Any) -> Any:
-    value = node.start_position
+    value = _node_attribute(node, "start_position", "start_point")
     return value() if callable(value) else value
 
 
 def _node_end_position(node: Any) -> Any:
-    value = node.end_position
+    value = _node_attribute(node, "end_position", "end_point")
     return value() if callable(value) else value
 
 
 def _node_text(node: Any, text: str) -> str:
-    return text[_node_start_byte(node) : _node_end_byte(node)]
+    raw = text.encode("utf-8")[_node_start_byte(node) : _node_end_byte(node)]
+    return raw.decode("utf-8")
+
+
+def _node_attribute(node: Any, *names: str) -> Any:
+    for name in names:
+        if hasattr(node, name):
+            return getattr(node, name)
+    raise AttributeError(f"node does not expose any of: {', '.join(names)}")
 
 
 def _string_literal_value(node: Any, text: str) -> str:

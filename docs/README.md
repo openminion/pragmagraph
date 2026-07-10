@@ -38,6 +38,9 @@ This directory holds the public package documentation for standalone
   package-owned benchmark surface and repo-local regression fixture policy.
 - [`graphify-interop.md`](graphify-interop.md) records the
   deterministic Graphify-shaped JSON import/export contract.
+- [`viewer-contract.md`](viewer-contract.md) records the
+  provider-neutral viewer envelope, scale-fixture commands, and GraphFakos
+  handoff boundary.
 - [`git-history-mode.md`](git-history-mode.md) records the
   local git-overlay contract, privacy posture, and CLI shape.
 - [`advanced-structural-views.md`](advanced-structural-views.md)
@@ -46,11 +49,6 @@ This directory holds the public package documentation for standalone
 - [`certification-readiness-matrix.md`](certification-readiness-matrix.md)
   records the current standalone and OpenMinion proof targets for the public
   package surface.
-- [`specs/storage-interchange-and-search-2026-07-02-spec.md`](specs/storage-interchange-and-search-2026-07-02-spec.md)
-  defines the draft storage abstraction, materialized search store, and vector
-  sidecar direction.
-- [`trackers/storage-interchange-and-search-2026-07-02-tracker.md`](trackers/storage-interchange-and-search-2026-07-02-tracker.md)
-  tracks the review-gated storage interchange and search implementation plan.
 
 ## Package-local code/docs boundaries
 
@@ -75,7 +73,7 @@ This directory holds the public package documentation for standalone
 
 ## Public package stance
 
-The `0.0.4` semantic alpha defines the current public package contract:
+The `0.0.5` semantic alpha defines the current public package contract:
 immutable DTOs, JSON snapshots, local indexing, deterministic
 query/traversal/report/export helpers, JSON and SQLite-backed store contracts,
 compact navigation maps,

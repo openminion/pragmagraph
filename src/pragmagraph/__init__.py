@@ -97,6 +97,24 @@ from pragmagraph.topology import (
     build_topology_summary,
     render_markdown_topology,
 )
+from pragmagraph.viewer import (
+    VIEWER_ENVELOPE_SCHEMA_VERSION,
+    VIEWER_FIXTURE_SCENARIOS,
+    ViewerGraphEnvelope,
+    build_viewer_envelope,
+    build_viewer_fixture_envelope,
+    explain_omitted,
+    load_viewer_envelope,
+    viewer_cluster,
+    viewer_cluster_nodes,
+    viewer_content,
+    viewer_delta,
+    viewer_envelope_neighborhood,
+    viewer_envelope_path,
+    viewer_neighborhood,
+    viewer_path,
+    write_viewer_envelope,
+)
 from pragmagraph.query import (
     backlinks,
     commits_touching_symbol_file,
@@ -134,7 +152,7 @@ from pragmagraph.workspace import (
     refresh_workspace,
 )
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 PACKAGE_STATUS = "semantic-alpha"
 STABLE_IMPORT_ROOTS = (
@@ -165,6 +183,7 @@ STABLE_IMPORT_ROOTS = (
     "pragmagraph.certification",
     "pragmagraph.lineage",
     "pragmagraph.parser_support",
+    "pragmagraph.viewer",
 )
 
 __all__ = [
@@ -221,6 +240,9 @@ __all__ = [
     "TopologyComponent",
     "TopologyNode",
     "TopologySummary",
+    "VIEWER_ENVELOPE_SCHEMA_VERSION",
+    "VIEWER_FIXTURE_SCENARIOS",
+    "ViewerGraphEnvelope",
     "__version__",
     "backlinks",
     "commits_touching_symbol_file",
@@ -237,14 +259,18 @@ __all__ = [
     "build_repo_map",
     "build_symbol_reference_bundle",
     "build_topology_summary",
+    "build_viewer_envelope",
+    "build_viewer_fixture_envelope",
     "diff_snapshots",
     "evidence_ref_for_node",
+    "explain_omitted",
     "explain_query_plan",
     "impact",
     "index_path",
     "initialize_workspace",
     "load_workspace_metadata",
     "load_workspace_status",
+    "load_viewer_envelope",
     "recent_commits_for_path",
     "load_snapshot",
     "render_dot",
@@ -279,9 +305,18 @@ __all__ = [
     "to_graphify_payload",
     "verify_memory_evidence_ref",
     "verify_memory_evidence_refs",
+    "viewer_cluster",
+    "viewer_cluster_nodes",
+    "viewer_content",
+    "viewer_delta",
+    "viewer_envelope_neighborhood",
+    "viewer_envelope_path",
+    "viewer_neighborhood",
+    "viewer_path",
     "WorkspaceMetadata",
     "WorkspacePaths",
     "WorkspaceRefreshResult",
     "WorkspaceStatusView",
     "build_workspace_metadata",
+    "write_viewer_envelope",
 ]

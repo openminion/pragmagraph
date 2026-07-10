@@ -51,9 +51,10 @@ def test_python_m_pragmagraph_smoke() -> None:
             "pragmagraph.certification",
             "pragmagraph.lineage",
             "pragmagraph.parser_support",
+            "pragmagraph.viewer",
         ],
         "status": "semantic-alpha",
-        "version": "0.0.4",
+        "version": "0.0.5",
     }
 
 
@@ -70,9 +71,13 @@ def test_console_script_contract_and_release_smoke_shape() -> None:
     assert pyproject["project"]["scripts"]["pragmagraph-ui"] == (
         "pragmagraph.__main__:ui_preview_main"
     )
+    assert pyproject["project"]["scripts"]["pragmagraph-server"] == (
+        "pragmagraph.server.__main__:main"
+    )
     assert "twine" in release_check
     assert "pragmagraph-smoke" in release_check
     assert "pragmagraph-ui" in release_check
+    assert "pragmagraph-server" in release_check
     assert "pragmagraph-artifact.json" in release_check
     assert "pragmagraph-report.json" in release_check
     assert "pragmagraph-report.md" in release_check

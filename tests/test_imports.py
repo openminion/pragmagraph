@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
 import tomllib
 
@@ -33,7 +35,7 @@ def test_pragmagraph_package_imports() -> None:
     import pragmagraph.ui
     import pragmagraph.workspace
 
-    assert pragmagraph.__version__ == "0.0.4"
+    assert pragmagraph.__version__ == "0.0.5"
     assert pragmagraph.PACKAGE_STATUS == "semantic-alpha"
     assert "pragmagraph.bench" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.certification" in pragmagraph.STABLE_IMPORT_ROOTS
@@ -128,6 +130,9 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "TopologyComponent",
         "TopologyNode",
         "TopologySummary",
+        "VIEWER_ENVELOPE_SCHEMA_VERSION",
+        "VIEWER_FIXTURE_SCENARIOS",
+        "ViewerGraphEnvelope",
         "RepoMap",
         "RepoMapSection",
         "backlinks",
@@ -143,11 +148,14 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "build_refresh_profile",
         "build_symbol_reference_bundle",
         "build_topology_summary",
+        "build_viewer_envelope",
+        "build_viewer_fixture_envelope",
         "collect_memory_evidence",
         "collect_related_memory_evidence",
         "commits_touching_symbol_file",
         "diff_snapshots",
         "evidence_ref_for_node",
+        "explain_omitted",
         "explain_query_plan",
         "files_touched_by_commit",
         "impact",
@@ -155,6 +163,7 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "load_refresh_profile",
         "load_refresh_status",
         "load_snapshot",
+        "load_viewer_envelope",
         "recent_commits_for_path",
         "render_dot",
         "render_graph_export",
@@ -180,6 +189,14 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "to_graphify_payload",
         "verify_memory_evidence_ref",
         "verify_memory_evidence_refs",
+        "viewer_cluster",
+        "viewer_cluster_nodes",
+        "viewer_content",
+        "viewer_delta",
+        "viewer_envelope_neighborhood",
+        "viewer_envelope_path",
+        "viewer_neighborhood",
+        "viewer_path",
         "WorkspaceMetadata",
         "WorkspacePaths",
         "WorkspaceRefreshResult",
@@ -188,11 +205,38 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "initialize_workspace",
         "load_workspace_metadata",
         "load_workspace_status",
+        "write_viewer_envelope",
     }
     assert all(
         not (name.startswith("_") and not name.endswith("__"))
         for name in pragmagraph.__all__
     )
+
+
+def test_pragmagraph_core_source_does_not_import_server_subpackage() -> None:
+    root = Path(__file__).resolve().parents[1] / "src" / "pragmagraph"
+    offenders: list[str] = []
+    for path in root.rglob("*.py"):
+        if "/server/" in path.as_posix():
+            continue
+        text = path.read_text()
+        if "import pragmagraph.server" in text or "from pragmagraph.server" in text:
+            offenders.append(str(path))
+    assert offenders == []
+
+
+def test_pragmagraph_import_does_not_load_server_subpackage() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import pragmagraph, sys; print('pragmagraph.server' in sys.modules)",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert result.stdout.strip() == "False"
 
 
 def test_public_roots_expose_semantic_alpha_contracts() -> None:
@@ -220,6 +264,7 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     import pragmagraph.storage as storage
     import pragmagraph.topology as topology
     import pragmagraph.ui as ui
+    import pragmagraph.viewer as viewer
     import pragmagraph.workspace as workspace
 
     assert "index_path" in adapters.__all__
@@ -249,6 +294,9 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     assert "save_snapshot" in storage.__all__
     assert "build_topology_summary" in topology.__all__
     assert "build_ui_screen_manifest" in ui.__all__
+    assert "build_viewer_envelope" in viewer.__all__
+    assert "viewer_delta" in viewer.__all__
+    assert "viewer_envelope_neighborhood" in viewer.__all__
     assert "initialize_workspace" in workspace.__all__
 
 

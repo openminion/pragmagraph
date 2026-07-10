@@ -13,28 +13,29 @@ import tempfile
 from pathlib import Path
 
 
-def _run(cmd: list[str], *, cwd: Path, extra_env: dict[str, str] | None = None) -> None:
-    print("+", " ".join(cmd))
+def _command_env(extra_env: dict[str, str] | None = None) -> dict[str, str]:
     env = os.environ.copy()
     if extra_env:
         env.update(extra_env)
-    subprocess.run(cmd, cwd=cwd, check=True, env=env)
+    return env
+
+
+def _run(cmd: list[str], *, cwd: Path, extra_env: dict[str, str] | None = None) -> None:
+    print("+", " ".join(cmd))
+    subprocess.run(cmd, cwd=cwd, check=True, env=_command_env(extra_env))
 
 
 def _run_capture(
     cmd: list[str], *, cwd: Path, extra_env: dict[str, str] | None = None
 ) -> str:
     print("+", " ".join(cmd))
-    env = os.environ.copy()
-    if extra_env:
-        env.update(extra_env)
     result = subprocess.run(
         cmd,
         cwd=cwd,
         check=True,
         capture_output=True,
         text=True,
-        env=env,
+        env=_command_env(extra_env),
     )
     if result.stderr:
         print(result.stderr, file=sys.stderr)
@@ -108,6 +109,7 @@ def _assert_smoke_payload(stdout: str) -> None:
         "pragmagraph.certification",
         "pragmagraph.lineage",
         "pragmagraph.parser_support",
+        "pragmagraph.viewer",
     ]
     if payload.get("package") != "pragmagraph":
         raise RuntimeError(f"unexpected smoke package: {payload!r}")
@@ -132,6 +134,7 @@ def _assert_package_docs_shape(root: Path) -> None:
         root / "docs" / "service-mode.md",
         root / "docs" / "source-tree-owner-map.md",
         root / "docs" / "ui-contracts.md",
+        root / "docs" / "viewer-contract.md",
         root / "docs" / "workspace-mode.md",
         root / "src" / "pragmagraph" / "README.md",
         root / "tests" / "fixtures" / "repos",
@@ -190,6 +193,7 @@ def main(argv: list[str] | None = None) -> int:
             venv_paths = _create_temp_venv(root, tmp)
             graphfakos_ui = venv_paths["venv"] / "bin" / "graphfakos-ui"
             smoke = venv_paths["venv"] / "bin" / "pragmagraph-smoke"
+            server_cli = venv_paths["venv"] / "bin" / "pragmagraph-server"
             ui_preview = venv_paths["venv"] / "bin" / "pragmagraph-ui"
             wheel = sorted((root / "dist").glob("pragmagraph-*.whl"))[-1]
             install_cmd = [str(venv_paths["pip"]), "install"]
@@ -226,6 +230,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             stdout = _run_capture([str(smoke), "--json"], cwd=root)
             _assert_smoke_payload(stdout)
+            _run([str(server_cli), "--help"], cwd=root)
             _run_capture(
                 [
                     str(ui_preview),
