@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="https://pypi.org/project/pragmagraph/"><img alt="PyPI" src="https://img.shields.io/badge/pypi-v0.0.5-3775A9"></a>
+  <a href="https://pypi.org/project/pragmagraph/"><img alt="PyPI" src="https://img.shields.io/badge/pypi-v0.0.5rc1-3775A9"></a>
   <a href="https://pypi.org/project/pragmagraph/"><img alt="Python" src="https://img.shields.io/pypi/pyversions/pragmagraph"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
   <img alt="Status" src="https://img.shields.io/badge/status-published%20alpha-5B8DEF">
@@ -48,7 +48,7 @@ and should be treated as a scam.
 
 ## At a glance
 
-- Current public package line: `0.0.5` alpha
+- Current public package line: `0.0.5rc1` alpha
 - Best fit when: you want reproducible code, docs, git, and artifact facts that
   an indexer can recover without an LLM
 - Public shape: deterministic DTOs, local indexing, query/report/export
