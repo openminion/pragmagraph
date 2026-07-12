@@ -1,12 +1,24 @@
 from __future__ import annotations
 
-from graphfakos import FileGraphProvider, GraphFakosRequest, render_static_html
+from graphfakos import (
+    FileGraphProvider,
+    GraphFakosGraphActionProvider,
+    GraphFakosLiveSessionRequest,
+    GraphFakosRequest,
+    render_static_html,
+)
 from graphfakos.artifacts import write_graph_artifact
 from graphfakos.provider import load_provider_graph
-from graphfakos.testing import assert_graph_viewer_contract
+from graphfakos.testing import (
+    assert_graph_viewer_contract,
+    assert_live_provider_contract,
+)
 
 from pragmagraph.models import GraphEdge, GraphNode, GraphSnapshot, SourceRef
-from pragmagraph.ui.graphfakos_adapter import PragmaGraphViewerProvider
+from pragmagraph.ui.graphfakos_adapter import (
+    PragmaGraphLiveViewerProvider,
+    PragmaGraphViewerProvider,
+)
 
 
 def test_pragmagraph_adapter_returns_third_brain_graphfakos_graph() -> None:
@@ -90,3 +102,58 @@ def test_pragmagraph_adapter_artifact_round_trip_matches_loaded_graph(tmp_path) 
     assert replay_graph.to_dict() == graph.to_dict()
     assert "PragmaGraph Observed Source Graph" in replay_html
     assert "README.md" in replay_html
+
+
+def test_pragmagraph_live_adapter_emits_structural_snapshot_patch() -> None:
+    initial = GraphSnapshot(
+        namespace="demo",
+        root_path="repo",
+        nodes=(
+            GraphNode(
+                id="file:README.md",
+                kind="file",
+                label="README.md",
+                source_ref=SourceRef(path="README.md", line=1),
+                text="Repository overview.",
+            ),
+        ),
+        edges=(),
+        created_at="2026-07-12T00:00:00Z",
+    )
+    updated = GraphSnapshot(
+        namespace="demo",
+        root_path="repo",
+        nodes=(
+            *initial.nodes,
+            GraphNode(
+                id="symbol:build",
+                kind="python_function",
+                label="build",
+                source_ref=SourceRef(path="src/app.py", line=3),
+                text="Build the graph.",
+            ),
+        ),
+        edges=(
+            GraphEdge(
+                id="edge:documents",
+                kind="documents",
+                source_id="file:README.md",
+                target_id="symbol:build",
+            ),
+        ),
+        created_at="2026-07-12T00:01:00Z",
+    )
+    live_provider = PragmaGraphLiveViewerProvider(initial, (updated,))
+
+    assert not isinstance(live_provider, GraphFakosGraphActionProvider)
+
+    state = assert_live_provider_contract(
+        live_provider,
+        initial_graph=live_provider.load_graph(GraphFakosRequest()),
+        initial_revision="0",
+        request=GraphFakosLiveSessionRequest(session_id="pragmagraph-test"),
+    )
+
+    assert set(state.graph.node_map()) == {"file:README.md", "symbol:build"}
+    assert set(state.graph.edge_map()) == {"edge:documents"}
+    assert state.graph.provider_id == "pragmagraph"

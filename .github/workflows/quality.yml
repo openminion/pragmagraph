@@ -12,10 +12,21 @@ permissions:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pragmagraph
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          path: pragmagraph
+
+      - name: Check out GraphFakos live contracts
+        uses: actions/checkout@v4
+        with:
+          repository: openminion/graphfakos
+          ref: 2884a8c2ac10105e227c3d744e09900fe8c2bb79
+          path: graphfakos
 
       - uses: actions/setup-python@v5
         with:
@@ -23,6 +34,9 @@ jobs:
 
       - name: Install dev environment
         run: make dev-install
+
+      - name: Verify published-dependency import compatibility
+        run: ./.venv/bin/python3.11 -c "import pragmagraph.ui"
 
       - name: Validate pre-commit config
         run: ./.venv/bin/python3.11 -m pre_commit validate-config

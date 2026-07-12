@@ -9,7 +9,7 @@ from .contracts import (
     build_default_ui_boundary,
     build_ui_screen_manifest,
 )
-from .graphfakos_adapter import PragmaGraphViewerProvider
+from .graphfakos_adapter import PragmaGraphLiveViewerProvider, PragmaGraphViewerProvider
 from .local_server import (
     LocalVisualHttpServer,
     LocalVisualServerResult,
@@ -34,6 +34,7 @@ __all__ = [
     "LocalVisualHttpServer",
     "LocalVisualServerResult",
     "PreviewScreen",
+    "PragmaGraphLiveViewerProvider",
     "PragmaGraphViewerProvider",
     "RenderPath",
     "UiPreviewRender",

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from graphfakos import (
     GraphFakosCitation,
     GraphFakosEdge,
@@ -13,6 +15,14 @@ from graphfakos import (
 )
 
 from pragmagraph.models import GraphEdge, GraphNode, GraphSnapshot, SourceRef
+
+if TYPE_CHECKING:
+    from graphfakos.live import (
+        GraphFakosGraphPatch,
+        GraphFakosLiveSessionDiagnostics,
+        GraphFakosLiveSessionRequest,
+        GraphFakosLiveSessionStatus,
+    )
 
 
 class PragmaGraphViewerProvider(GraphFakosProvider):
@@ -47,6 +57,123 @@ class PragmaGraphViewerProvider(GraphFakosProvider):
             graph_role=self.graph_role,
             capabilities=self.capabilities,
         )
+
+
+class PragmaGraphLiveViewerProvider(PragmaGraphViewerProvider):
+    """Expose caller-supplied PragmaGraph snapshots as structural live patches."""
+
+    capabilities = (*PragmaGraphViewerProvider.capabilities, "live")
+
+    def __init__(
+        self,
+        snapshot: GraphSnapshot,
+        updates: tuple[GraphSnapshot, ...],
+    ) -> None:
+        super().__init__(snapshot)
+        try:
+            from graphfakos.live import (
+                GraphFakosGraphRevision,
+                InMemoryGraphFakosLiveProvider,
+            )
+        except ImportError as exc:
+            raise RuntimeError(
+                "PragmaGraph live viewing requires GraphFakos live-session support"
+            ) from exc
+        self._live = InMemoryGraphFakosLiveProvider(
+            revision=GraphFakosGraphRevision("0")
+        )
+        previous = _snapshot_to_graphfakos(
+            snapshot,
+            GraphFakosRequest(),
+            provider_id=self.provider_id,
+            provider_label=self.provider_label,
+            graph_role=self.graph_role,
+            capabilities=self.capabilities,
+        )
+        for index, update in enumerate(updates, start=1):
+            current = _snapshot_to_graphfakos(
+                update,
+                GraphFakosRequest(),
+                provider_id=self.provider_id,
+                provider_label=self.provider_label,
+                graph_role=self.graph_role,
+                capabilities=self.capabilities,
+            )
+            self._live.publish_patch(_snapshot_patch(previous, current, index=index))
+            previous = current
+
+    def open_live_session(
+        self, request: GraphFakosLiveSessionRequest
+    ) -> GraphFakosLiveSessionStatus:
+        return self._live.open_live_session(request)
+
+    def load_patch(
+        self, request: GraphFakosLiveSessionRequest
+    ) -> GraphFakosGraphPatch | GraphFakosLiveSessionStatus:
+        return self._live.load_patch(request)
+
+    def diagnostics(self) -> GraphFakosLiveSessionDiagnostics:
+        return self._live.diagnostics()
+
+
+def _snapshot_patch(
+    previous: GraphFakosGraph,
+    current: GraphFakosGraph,
+    *,
+    index: int,
+) -> GraphFakosGraphPatch:
+    from graphfakos.live import (
+        GraphFakosGraphPatch,
+        GraphFakosGraphRevision,
+        GraphFakosLiveSessionCursor,
+        GraphFakosPatchOperation,
+    )
+
+    previous_nodes = previous.node_map()
+    current_nodes = current.node_map()
+    previous_edges = previous.edge_map()
+    current_edges = current.edge_map()
+    operations: list[GraphFakosPatchOperation] = []
+    operations.extend(
+        GraphFakosPatchOperation(kind="edge_delete", target_id=edge_id)
+        for edge_id in sorted(previous_edges.keys() - current_edges.keys())
+    )
+    operations.extend(
+        GraphFakosPatchOperation(kind="node_delete", target_id=node_id)
+        for node_id in sorted(previous_nodes.keys() - current_nodes.keys())
+    )
+    operations.extend(
+        GraphFakosPatchOperation(kind="node_upsert", node=current_nodes[node_id])
+        for node_id in sorted(current_nodes)
+        if current_nodes[node_id] != previous_nodes.get(node_id)
+    )
+    operations.extend(
+        GraphFakosPatchOperation(kind="edge_upsert", edge=current_edges[edge_id])
+        for edge_id in sorted(current_edges)
+        if current_edges[edge_id] != previous_edges.get(edge_id)
+    )
+    if previous.provider_payload != current.provider_payload:
+        operations.append(
+            GraphFakosPatchOperation(
+                kind="graph_metadata_replace",
+                metadata=current.provider_payload,
+            )
+        )
+    if not operations:
+        operations.append(
+            GraphFakosPatchOperation(
+                kind="graph_metadata_merge",
+                metadata={"snapshot_unchanged": True},
+            )
+        )
+    return GraphFakosGraphPatch(
+        patch_id=f"pragmagraph:{index}",
+        base_revision=GraphFakosGraphRevision(str(index - 1)),
+        result_revision=GraphFakosGraphRevision(str(index)),
+        cursor=GraphFakosLiveSessionCursor(f"pragmagraph:{index}"),
+        operations=tuple(operations),
+        occurred_at=current.generated_at,
+    )
 
 
 def _snapshot_to_graphfakos(
@@ -88,18 +215,16 @@ def _snapshot_to_graphfakos(
             "root_path": snapshot.root_path,
             "schema_version": snapshot.schema_version,
             "indexer_version": snapshot.indexer_version,
-            "snapshot_label": _snapshot_label(snapshot),
+            "snapshot_label": (
+                f"{snapshot.namespace} snapshot at "
+                f"{snapshot.created_at or 'unknown time'}"
+            ),
             "integration_commands": (
                 "pragmagraph-ui --workspace .pragmagraph-workspace --screen search --serve --open",
                 "pragmagraph-ui --workspace .pragmagraph-workspace --screen provider_status --serve",
             ),
         },
     )
-
-
-def _snapshot_label(snapshot: GraphSnapshot) -> str:
-    timestamp = snapshot.created_at or "unknown time"
-    return f"{snapshot.namespace} snapshot at {timestamp}"
 
 
 def _node_to_graphfakos(node: GraphNode) -> GraphFakosNode:
@@ -222,5 +347,6 @@ def _float_or_none(value: object) -> float | None:
 
 
 __all__ = [
+    "PragmaGraphLiveViewerProvider",
     "PragmaGraphViewerProvider",
 ]
