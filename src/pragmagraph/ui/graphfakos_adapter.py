@@ -2,25 +2,27 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from graphfakos import (
     GraphFakosCitation,
     GraphFakosEdge,
     GraphFakosGraph,
-    GraphFakosGraphPatch,
-    GraphFakosGraphRevision,
-    GraphFakosLiveSessionCursor,
-    GraphFakosLiveSessionDiagnostics,
-    GraphFakosLiveSessionRequest,
-    GraphFakosLiveSessionStatus,
     GraphFakosNode,
-    GraphFakosPatchOperation,
     GraphFakosProvenance,
     GraphFakosProvider,
     GraphFakosRequest,
-    InMemoryGraphFakosLiveProvider,
 )
 
 from pragmagraph.models import GraphEdge, GraphNode, GraphSnapshot, SourceRef
+
+if TYPE_CHECKING:
+    from graphfakos.live import (
+        GraphFakosGraphPatch,
+        GraphFakosLiveSessionDiagnostics,
+        GraphFakosLiveSessionRequest,
+        GraphFakosLiveSessionStatus,
+    )
 
 
 class PragmaGraphViewerProvider(GraphFakosProvider):
@@ -68,6 +70,15 @@ class PragmaGraphLiveViewerProvider(PragmaGraphViewerProvider):
         updates: tuple[GraphSnapshot, ...],
     ) -> None:
         super().__init__(snapshot)
+        try:
+            from graphfakos.live import (
+                GraphFakosGraphRevision,
+                InMemoryGraphFakosLiveProvider,
+            )
+        except ImportError as exc:
+            raise RuntimeError(
+                "PragmaGraph live viewing requires GraphFakos live-session support"
+            ) from exc
         self._live = InMemoryGraphFakosLiveProvider(
             revision=GraphFakosGraphRevision("0")
         )
@@ -111,6 +122,13 @@ def _snapshot_patch(
     *,
     index: int,
 ) -> GraphFakosGraphPatch:
+    from graphfakos.live import (
+        GraphFakosGraphPatch,
+        GraphFakosGraphRevision,
+        GraphFakosLiveSessionCursor,
+        GraphFakosPatchOperation,
+    )
+
     previous_nodes = previous.node_map()
     current_nodes = current.node_map()
     previous_edges = previous.edge_map()

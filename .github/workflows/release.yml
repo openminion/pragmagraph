@@ -22,8 +22,20 @@ jobs:
   build-and-publish:
     runs-on: ubuntu-latest
     environment: ${{ github.event_name == 'workflow_dispatch' && inputs.target || (contains(github.ref_name, 'rc') && 'testpypi' || 'pypi') }}
+    defaults:
+      run:
+        working-directory: pragmagraph
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: pragmagraph
+
+      - name: Check out GraphFakos live contracts
+        uses: actions/checkout@v4
+        with:
+          repository: openminion/graphfakos
+          ref: 2884a8c2ac10105e227c3d744e09900fe8c2bb79
+          path: graphfakos
 
       - uses: actions/setup-python@v5
         with:
@@ -31,6 +43,9 @@ jobs:
 
       - name: Install dev environment
         run: make dev-install
+
+      - name: Verify published-dependency import compatibility
+        run: ./.venv/bin/python3.11 -c "import pragmagraph.ui"
 
       - name: Run hooks
         run: make hooks-run
@@ -45,12 +60,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pragmagraph-dist
-          path: dist/*
+          path: pragmagraph/dist/*
 
       - name: Publish to TestPyPI
         if: ${{ (github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi') || (github.event_name == 'push' && contains(github.ref_name, 'rc')) }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
+          packages-dir: pragmagraph/dist/
           repository-url: https://test.pypi.org/legacy/
           skip-existing: true
 
@@ -58,4 +74,5 @@ jobs:
         if: ${{ (github.event_name == 'push' && !contains(github.ref_name, 'rc')) || (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi') }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
+          packages-dir: pragmagraph/dist/
           skip-existing: true
