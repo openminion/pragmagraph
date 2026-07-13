@@ -1,0 +1,4 @@
+# Format: path<TAB>total<TAB>silent_pass<TAB>reason
+src/pragmagraph/parsers/__init__.py	1	0	existing broad exception ratchet
+src/pragmagraph/server/server.py	1	0	existing broad exception ratchet
+src/pragmagraph/service/runtime.py	1	0	existing broad exception ratchet

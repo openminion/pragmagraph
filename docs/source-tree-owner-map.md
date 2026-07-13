@@ -59,3 +59,6 @@ and `pragmagraph.ui`.
    and provider validation.
 3. `examples/` are usage demos, not additional stability guarantees beyond the
    documented public surface.
+4. `scripts/validate_quality_patterns.py` and `scripts/baselines/` own the
+   package-local structural quality ratchets used by `make validate-patterns`
+   and `make check`.

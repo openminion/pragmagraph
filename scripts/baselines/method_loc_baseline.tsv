@@ -1,0 +1,7 @@
+# Format: path<TAB>qualname<TAB>loc<TAB>reason
+src/pragmagraph/__main__.py	main	900	existing over-ceiling function ratchet
+src/pragmagraph/adapters/__init__.py	index_path	144	existing over-ceiling function ratchet
+src/pragmagraph/adapters/git_history.py	collect_git_overlay	214	existing over-ceiling function ratchet
+src/pragmagraph/bench/__init__.py	benchmark_root	141	existing over-ceiling function ratchet
+src/pragmagraph/parsers/__init__.py	ScriptLexicalParser._parse_symbols	138	existing over-ceiling function ratchet
+src/pragmagraph/storage/backends.py	SQLiteGraphStore.import_snapshot	117	existing over-ceiling function ratchet

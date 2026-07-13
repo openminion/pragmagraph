@@ -46,6 +46,10 @@ make check
 Use `make lint` or `make test` directly only when you need a narrower
 iteration loop.
 
+Run `make validate-patterns` when you only need the structural ratchets for
+file/function size, duplicate helpers, path/name hygiene, broad exceptions,
+type-ignore hygiene, and public-surface imports.
+
 ## Focused regression tests
 
 The public standalone surface is protected by targeted tests under `tests/`.
