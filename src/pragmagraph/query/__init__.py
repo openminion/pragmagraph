@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
+import json
 import re
 from collections import deque
+from collections.abc import Callable, Iterable
 
 from pragmagraph.contracts import (
     EDGE_GIT_CHANGES_PATH,
@@ -19,11 +23,14 @@ from pragmagraph.models import (
     HealthSummary,
     OmittedDiagnostic,
     PathResult,
+    PragmaGraphError,
     QueryExplanation,
     QueryHit,
     QueryRequest,
     QueryResult,
 )
+
+QUERY_CURSOR_VERSION = "pragmagraph.query_cursor.v1alpha1"
 
 
 def _tokens(text: str) -> set[str]:
@@ -46,9 +53,14 @@ def _node_text(node: GraphNode) -> str:
 
 def _incident_edges(snapshot: GraphSnapshot, node_id: str) -> tuple[GraphEdge, ...]:
     return tuple(
-        edge
-        for edge in snapshot.edges
-        if edge.source_id == node_id or edge.target_id == node_id
+        sorted(
+            (
+                edge
+                for edge in snapshot.edges
+                if edge.source_id == node_id or edge.target_id == node_id
+            ),
+            key=lambda item: item.id,
+        )
     )
 
 
@@ -147,9 +159,45 @@ def _static_hit(
 def query(snapshot: GraphSnapshot, request: QueryRequest | str) -> QueryResult:
     """Run deterministic lexical/structural search over a snapshot."""
     req = request if isinstance(request, QueryRequest) else QueryRequest(query=request)
+    return query_nodes(
+        snapshot.nodes,
+        req,
+        incident_edges=lambda node_id: _incident_edges(snapshot, node_id),
+    )
+
+
+def query_nodes(
+    nodes: Iterable[GraphNode],
+    request: QueryRequest | str,
+    *,
+    incident_edges: Callable[[str], tuple[GraphEdge, ...]] | None = None,
+) -> QueryResult:
+    """Apply canonical scoring to a complete caller-selected node set."""
+    req = request if isinstance(request, QueryRequest) else QueryRequest(query=request)
+    node_items = tuple(nodes)
+    if req.max_examined is not None and len(node_items) > req.max_examined:
+        return QueryResult(
+            query=req.query,
+            omitted=(
+                OmittedDiagnostic(
+                    reason="work_budget_exhausted",
+                    item_id="query",
+                    details={
+                        "max_examined": req.max_examined,
+                        "required_examined": len(node_items),
+                    },
+                ),
+            ),
+            diagnostics={
+                "candidate_count": len(node_items),
+                "examined_count": 0,
+                "page_complete": False,
+                "work_budget_exhausted": True,
+            },
+        )
     scored = [
         (score, explanation, node)
-        for node in snapshot.nodes
+        for node in node_items
         for score, explanation in (_score_node(node, req),)
         if score > 0
     ]
@@ -161,31 +209,103 @@ def query(snapshot: GraphSnapshot, request: QueryRequest | str) -> QueryResult:
             item[2].id,
         )
     )
+    offset = _cursor_offset(req)
+    if offset > len(scored):
+        raise PragmaGraphError(
+            "query cursor offset exceeds the result set",
+            code="QUERY_CURSOR_OUT_OF_RANGE",
+            details={"offset": offset, "candidate_count": len(scored)},
+        )
+    page = scored[offset : offset + req.max_results]
     hits = tuple(
         QueryHit(
             node=node,
             score=score,
-            edges=_incident_edges(snapshot, node.id) if req.include_edges else (),
+            edges=(
+                incident_edges(node.id)
+                if req.include_edges and incident_edges is not None
+                else ()
+            ),
             snippet=_snippet(node),
             explanation=explanation,
         )
-        for score, explanation, node in scored[: req.max_results]
+        for score, explanation, node in page
     )
+    next_offset = offset + len(page)
+    next_cursor = _encode_cursor(req, next_offset) if next_offset < len(scored) else ""
     omitted = ()
-    if len(scored) > req.max_results:
+    if next_offset < len(scored):
         omitted = (
             OmittedDiagnostic(
                 reason="max_results",
                 item_id="query",
-                details={"omitted": len(scored) - req.max_results},
+                details={"omitted": len(scored) - next_offset},
             ),
         )
     return QueryResult(
         query=req.query,
         hits=hits,
         omitted=omitted,
-        diagnostics={"candidate_count": len(scored)},
+        diagnostics={
+            "candidate_count": len(scored),
+            "examined_count": len(node_items),
+            "page_complete": not next_cursor,
+            "page_offset": offset,
+            "work_budget_exhausted": False,
+        },
+        next_cursor=next_cursor,
     )
+
+
+def _request_fingerprint(request: QueryRequest) -> str:
+    payload = {
+        "include_edges": request.include_edges,
+        "max_examined": request.max_examined,
+        "max_results": request.max_results,
+        "node_ids": list(request.node_ids),
+        "query": request.query,
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _encode_cursor(request: QueryRequest, offset: int) -> str:
+    payload = {
+        "fingerprint": _request_fingerprint(request),
+        "offset": offset,
+        "version": QUERY_CURSOR_VERSION,
+    }
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    return base64.urlsafe_b64encode(raw).decode().rstrip("=")
+
+
+def _cursor_offset(request: QueryRequest) -> int:
+    if not request.cursor:
+        return 0
+    try:
+        padded = request.cursor + "=" * (-len(request.cursor) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(padded).decode())
+        if not isinstance(payload, dict):
+            raise ValueError("cursor payload is not an object")
+        if payload.get("version") != QUERY_CURSOR_VERSION:
+            raise ValueError("unsupported cursor version")
+        if payload.get("fingerprint") != _request_fingerprint(request):
+            raise PragmaGraphError(
+                "query cursor does not match the request",
+                code="QUERY_CURSOR_MISMATCH",
+            )
+        offset = int(payload.get("offset", -1))
+        if offset < 0:
+            raise ValueError("cursor offset must be non-negative")
+        return offset
+    except PragmaGraphError:
+        raise
+    except (ValueError, TypeError, json.JSONDecodeError) as exc:
+        raise PragmaGraphError(
+            "query cursor is malformed",
+            code="INVALID_QUERY_CURSOR",
+            details={"error": str(exc)},
+        ) from exc
 
 
 def neighborhood(
@@ -717,6 +837,7 @@ __all__ = [
     "neighborhood",
     "path",
     "query",
+    "query_nodes",
     "reverse_dependencies",
     "reverse_imports",
 ]

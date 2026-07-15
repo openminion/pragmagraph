@@ -27,6 +27,7 @@ WORKSPACE_PROFILE_FILE = "profile.json"
 WORKSPACE_SNAPSHOT_FILE = "snapshot.json"
 WORKSPACE_MANIFEST_FILE = "manifest.json"
 WORKSPACE_STATUS_FILE = "status.json"
+WORKSPACE_CACHE_FILE = "cache/extraction-cache.json"
 
 
 def _stable_json(payload: Mapping[str, Any]) -> str:
@@ -43,6 +44,7 @@ class WorkspacePaths:
     snapshot_path: str
     manifest_path: str
     status_path: str
+    cache_path: str
 
     @classmethod
     def from_workspace(cls, workspace_path: str | Path) -> "WorkspacePaths":
@@ -54,6 +56,7 @@ class WorkspacePaths:
             snapshot_path=str(root / WORKSPACE_SNAPSHOT_FILE),
             manifest_path=str(root / WORKSPACE_MANIFEST_FILE),
             status_path=str(root / WORKSPACE_STATUS_FILE),
+            cache_path=str(root / WORKSPACE_CACHE_FILE),
         )
 
     def to_dict(self) -> dict[str, str]:
@@ -64,6 +67,7 @@ class WorkspacePaths:
             "snapshot_path": self.snapshot_path,
             "manifest_path": self.manifest_path,
             "status_path": self.status_path,
+            "cache_path": self.cache_path,
         }
 
 
@@ -125,6 +129,11 @@ class WorkspaceMetadata:
                 snapshot_path=str(paths_payload.get("snapshot_path", "") or ""),
                 manifest_path=str(paths_payload.get("manifest_path", "") or ""),
                 status_path=str(paths_payload.get("status_path", "") or ""),
+                cache_path=str(
+                    paths_payload.get("cache_path", "")
+                    or Path(str(paths_payload.get("workspace_path", "") or ""))
+                    / WORKSPACE_CACHE_FILE
+                ),
             ),
         )
 
@@ -135,6 +144,7 @@ class WorkspaceMetadata:
             snapshot_path=self.paths.snapshot_path,
             manifest_path=self.paths.manifest_path,
             state_path=self.paths.status_path,
+            cache_path=self.paths.cache_path,
             namespace=self.namespace,
             git_identity_mode=self.git_identity_mode,
         )
@@ -149,6 +159,7 @@ class WorkspaceStatusView:
     snapshot_present: bool = False
     manifest_present: bool = False
     profile_present: bool = False
+    cache_present: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -161,6 +172,7 @@ class WorkspaceStatusView:
             "snapshot_present": self.snapshot_present,
             "manifest_present": self.manifest_present,
             "profile_present": self.profile_present,
+            "cache_present": self.cache_present,
         }
 
 
@@ -265,6 +277,7 @@ def load_workspace_status(workspace_path: str | Path) -> WorkspaceStatusView:
         snapshot_present=Path(metadata.paths.snapshot_path).exists(),
         manifest_present=Path(metadata.paths.manifest_path).exists(),
         profile_present=Path(metadata.paths.profile_path).exists(),
+        cache_present=Path(metadata.paths.cache_path).exists(),
     )
 
 
@@ -276,8 +289,17 @@ def ensure_workspace_snapshot(workspace_path: str | Path) -> WorkspaceMetadata:
     return metadata
 
 
+from pragmagraph.workspace.multi_root import (  # noqa: E402
+    MULTI_ROOT_SCHEMA_VERSION,
+    WorkspaceRoot,
+    index_multi_root,
+)
+
+
 __all__ = [
+    "MULTI_ROOT_SCHEMA_VERSION",
     "WORKSPACE_MANIFEST_FILE",
+    "WORKSPACE_CACHE_FILE",
     "WORKSPACE_METADATA_FILE",
     "WORKSPACE_PROFILE_FILE",
     "WORKSPACE_SCHEMA_VERSION",
@@ -287,9 +309,11 @@ __all__ = [
     "WorkspacePaths",
     "WorkspaceRefreshResult",
     "WorkspaceStatusView",
+    "WorkspaceRoot",
     "build_workspace_metadata",
     "ensure_workspace_snapshot",
     "initialize_workspace",
+    "index_multi_root",
     "load_workspace_metadata",
     "load_workspace_status",
     "refresh_workspace",

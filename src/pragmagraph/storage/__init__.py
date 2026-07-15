@@ -88,6 +88,7 @@ from pragmagraph.storage.backends import (  # noqa: E402
     SQLiteGraphStore,
     StoreCapabilityReport,
     StoreManifest,
+    StoreUpdateReport,
     open_store,
 )
 
@@ -99,6 +100,7 @@ __all__ = [
     "SnapshotRepository",
     "StoreCapabilityReport",
     "StoreManifest",
+    "StoreUpdateReport",
     "load_snapshot",
     "open_store",
     "save_snapshot",

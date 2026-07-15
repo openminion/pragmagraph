@@ -53,13 +53,17 @@ def _handle_initialize(
     request_id: Any,
     params: Mapping[str, Any],
     server_info: ServerInfo,
+    registry: ToolRegistry,
 ) -> dict[str, Any]:
     requested_version = str(params.get("protocolVersion") or "")
+    capabilities = {"tools": {"listChanged": False}}
+    if registry.resources is not None:
+        capabilities["resources"] = {"listChanged": False}
     return _ok_response(
         request_id,
         {
             "protocolVersion": MCP_PROTOCOL_VERSION,
-            "capabilities": {"tools": {"listChanged": False}},
+            "capabilities": capabilities,
             "serverInfo": {"name": server_info.name, "version": server_info.version},
             "negotiated": {
                 "client_requested": requested_version,
@@ -127,6 +131,45 @@ def _handle_tools_call(
     )
 
 
+def _handle_resources_list(request_id: Any, registry: ToolRegistry) -> dict[str, Any]:
+    resources = registry.resources
+    payload = (
+        []
+        if resources is None
+        else [item.to_dict() for item in resources.list_resources()]
+    )
+    return _ok_response(request_id, {"resources": payload})
+
+
+def _handle_resource_templates_list(
+    request_id: Any,
+    registry: ToolRegistry,
+) -> dict[str, Any]:
+    resources = registry.resources
+    payload = [] if resources is None else list(resources.list_templates())
+    return _ok_response(request_id, {"resourceTemplates": payload})
+
+
+def _handle_resources_read(
+    request_id: Any,
+    params: Mapping[str, Any],
+    registry: ToolRegistry,
+) -> dict[str, Any]:
+    uri = params.get("uri")
+    if not isinstance(uri, str) or not uri:
+        return _err_response(
+            request_id, JSONRPC_INVALID_PARAMS, "resources/read requires uri"
+        )
+    if registry.resources is None:
+        return _err_response(
+            request_id, JSONRPC_INVALID_REQUEST, "resources are not wired"
+        )
+    try:
+        return _ok_response(request_id, registry.resources.read(uri))
+    except ValueError as exc:
+        return _err_response(request_id, JSONRPC_INVALID_PARAMS, str(exc), {"uri": uri})
+
+
 def dispatch(
     message: Mapping[str, Any],
     *,
@@ -148,13 +191,19 @@ def dispatch(
         )
     is_notification = "id" not in message
     if method == "initialize":
-        return _handle_initialize(request_id, params, server_info)
+        return _handle_initialize(request_id, params, server_info, registry)
     if method in {"initialized", "notifications/initialized"}:
         return None if is_notification else _ok_response(request_id, {})
     if method == "tools/list":
         return _handle_tools_list(request_id, registry)
     if method == "tools/call":
         return _handle_tools_call(request_id, params, registry)
+    if method == "resources/list":
+        return _handle_resources_list(request_id, registry)
+    if method == "resources/templates/list":
+        return _handle_resource_templates_list(request_id, registry)
+    if method == "resources/read":
+        return _handle_resources_read(request_id, params, registry)
     if method == "ping":
         return _ok_response(request_id, {})
     if is_notification:

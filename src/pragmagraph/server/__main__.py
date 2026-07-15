@@ -30,6 +30,7 @@ def _build_parser() -> argparse.ArgumentParser:
     stdio_parser.add_argument("--snapshot-out", default=None)
     stdio_parser.add_argument("--manifest-out", default=None)
     stdio_parser.add_argument("--state-out", default=None)
+    stdio_parser.add_argument("--cache", default=None)
     stdio_parser.add_argument(
         "--git-identity-mode",
         choices=tuple(sorted(SUPPORTED_GIT_IDENTITY_MODES)),
@@ -51,6 +52,7 @@ def main(argv: list[str] | None = None) -> int:
                 snapshot_out=args.snapshot_out,
                 manifest_out=args.manifest_out,
                 state_out=args.state_out,
+                cache_path=args.cache,
                 git_identity_mode=args.git_identity_mode,
             )
         )

@@ -5,7 +5,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-from pragmagraph.bench import benchmark_root, render_markdown_benchmark
+from pragmagraph.bench import (
+    benchmark_generated_scale,
+    benchmark_root,
+    render_markdown_benchmark,
+)
 
 from .package_paths import fixture_repo
 
@@ -103,3 +107,18 @@ def test_cli_benchmark_emits_json_and_markdown() -> None:
     assert payload["node_count"] >= 12
     assert payload["fixture_profile"] == "medium"
     assert payload["measurements"][0]["name"] == "index"
+
+
+def test_generated_scale_profiles_report_deterministic_bounded_work() -> None:
+    small = benchmark_generated_scale(1_000)
+    medium = benchmark_generated_scale(10_000)
+
+    for evidence, expected in ((small, 1_000), (medium, 10_000)):
+        assert evidence.node_count == expected
+        assert evidence.edge_count == expected - 1
+        assert evidence.query_strategy in {"direct_exact", "indexed_trigram"}
+        assert evidence.query_rows_examined < expected
+        assert evidence.traversal_rows_examined < expected
+        assert evidence.snapshot_deserialized is False
+        assert evidence.normalized_rows_written == 0
+        assert evidence.snapshot_payload_bytes_written == evidence.snapshot_bytes

@@ -101,6 +101,7 @@ def test_cli_profile_init_run_and_status_commands(tmp_path: Path) -> None:
     snapshot_path = tmp_path / "snapshot.json"
     manifest_path = tmp_path / "manifest.json"
     state_path = tmp_path / "status.json"
+    cache_path = tmp_path / "cache.json"
 
     init = subprocess.run(
         [
@@ -121,6 +122,8 @@ def test_cli_profile_init_run_and_status_commands(tmp_path: Path) -> None:
             str(manifest_path),
             "--state-out",
             str(state_path),
+            "--cache-out",
+            str(cache_path),
             "--json",
         ],
         check=True,
@@ -146,6 +149,8 @@ def test_cli_profile_init_run_and_status_commands(tmp_path: Path) -> None:
     )
     run_payload = json.loads(run.stdout)
     assert run_payload["status"]["status"] == "fresh"
+    assert run_payload["work"]["strategy"] == "incremental"
+    assert cache_path.is_file()
 
     status = subprocess.run(
         [

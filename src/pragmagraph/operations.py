@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -16,14 +16,16 @@ from pragmagraph.models import (
     RefreshPathChange,
     RefreshResult,
 )
+from pragmagraph.incremental import load_extraction_cache, save_extraction_cache
 from pragmagraph.refresh import (
     build_manifest,
     describe_manifest_changes,
     load_manifest,
     refresh_snapshot,
+    refresh_snapshot_incremental,
     save_manifest,
 )
-from pragmagraph.storage import save_snapshot, stable_dumps
+from pragmagraph.storage import load_snapshot, save_snapshot, stable_dumps
 
 _STATUS_SCHEMA_VERSION = "pragmagraph.refresh_status.v1alpha1"
 _PROFILE_SCHEMA_VERSION = "pragmagraph.refresh_profile.v1alpha1"
@@ -49,6 +51,7 @@ class RefreshProfile:
     snapshot_path: str = ""
     manifest_path: str = ""
     state_path: str = ""
+    cache_path: str = ""
     git_identity_mode: str = DEFAULT_GIT_IDENTITY_MODE
     schema_version: str = _PROFILE_SCHEMA_VERSION
 
@@ -73,6 +76,7 @@ class RefreshProfile:
             "snapshot_path": self.snapshot_path,
             "manifest_path": self.manifest_path,
             "state_path": self.state_path,
+            "cache_path": self.cache_path,
             "git_identity_mode": self.git_identity_mode,
         }
 
@@ -88,6 +92,7 @@ class RefreshProfile:
             snapshot_path=str(payload.get("snapshot_path", "") or ""),
             manifest_path=str(payload.get("manifest_path", "") or ""),
             state_path=str(payload.get("state_path", "") or ""),
+            cache_path=str(payload.get("cache_path", "") or ""),
             git_identity_mode=str(
                 payload.get("git_identity_mode", "") or DEFAULT_GIT_IDENTITY_MODE
             ),
@@ -248,6 +253,10 @@ class RefreshOperationResult:
             "removed_paths": list(self.result.removed_paths),
             "path_changes": [item.to_dict() for item in self.result.path_changes],
             "snapshot_delta": self.result.snapshot_delta.to_dict(),
+            "identity_transitions": [
+                item.to_dict() for item in self.result.identity_transitions
+            ],
+            "work": self.result.work.to_dict(),
         }
 
 
@@ -327,6 +336,7 @@ def build_refresh_profile(
     snapshot_path: str | Path,
     manifest_path: str | Path,
     state_path: str | Path,
+    cache_path: str | Path = "",
     namespace: str = "default",
     git_identity_mode: str = DEFAULT_GIT_IDENTITY_MODE,
 ) -> RefreshProfile:
@@ -337,6 +347,7 @@ def build_refresh_profile(
         snapshot_path=str(Path(snapshot_path)),
         manifest_path=str(Path(manifest_path)),
         state_path=str(Path(state_path)),
+        cache_path=str(Path(cache_path)) if cache_path else "",
         namespace=namespace,
         git_identity_mode=git_identity_mode,
     )
@@ -351,14 +362,44 @@ def run_refresh_profile(
     previous_manifest = None
     if profile.manifest_path and Path(profile.manifest_path).exists():
         previous_manifest = load_manifest(profile.manifest_path)
+    previous_snapshot = None
+    if profile.snapshot_path and Path(profile.snapshot_path).exists():
+        previous_snapshot = load_snapshot(profile.snapshot_path)
     try:
-        result = refresh_snapshot(
-            profile.root_path,
-            namespace=profile.namespace,
-            previous_manifest=previous_manifest,
-            created_at=attempted_at,
-            git_identity_mode=profile.git_identity_mode,
-        )
+        cache = None
+        cache_fallback_reason = ""
+        if profile.cache_path and Path(profile.cache_path).exists():
+            try:
+                cache = load_extraction_cache(profile.cache_path)
+            except PragmaGraphError as exc:
+                cache_fallback_reason = exc.code.lower()
+        if profile.cache_path:
+            result, next_cache = refresh_snapshot_incremental(
+                profile.root_path,
+                namespace=profile.namespace,
+                previous_manifest=previous_manifest,
+                previous_snapshot=previous_snapshot,
+                previous_cache=cache,
+                created_at=attempted_at,
+                git_identity_mode=profile.git_identity_mode,
+            )
+            if cache_fallback_reason:
+                result = replace(
+                    result,
+                    work=replace(
+                        result.work,
+                        cache_fallback_reason=cache_fallback_reason,
+                    ),
+                )
+        else:
+            result = refresh_snapshot(
+                profile.root_path,
+                namespace=profile.namespace,
+                previous_manifest=previous_manifest,
+                previous_snapshot=previous_snapshot,
+                created_at=attempted_at,
+                git_identity_mode=profile.git_identity_mode,
+            )
     except PragmaGraphError as exc:
         status = RefreshStatus(
             root_path=profile.root_path,
@@ -384,6 +425,8 @@ def run_refresh_profile(
     )
     if profile.state_path:
         save_refresh_status(status, profile.state_path)
+    if profile.cache_path:
+        save_extraction_cache(next_cache, profile.cache_path)
     return RefreshOperationResult(result=result, status=status)
 
 

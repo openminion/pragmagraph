@@ -10,6 +10,7 @@ from pragmagraph.server.contracts import (
     BackendNotWiredError,
     SemanticEndpointRefusedError,
 )
+from pragmagraph.server.resources import ResourceRegistry
 
 
 SUPPORTED_TOOL_NAMES: tuple[str, ...] = (
@@ -39,6 +40,22 @@ BANNED_SEMANTIC_TOOL_NAMES: frozenset[str] = frozenset(
         "pragmagraph_recommend_refactor",
     }
 )
+
+
+def _query_input_schema() -> dict[str, Any]:
+    return {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+            "text": {"type": "string"},
+            "node_ids": {"type": "array", "items": {"type": "string"}},
+            "max_results": {"type": "integer", "minimum": 1},
+            "include_edges": {"type": "boolean"},
+            "cursor": {"type": "string"},
+            "max_examined": {"type": "integer", "minimum": 1},
+        },
+        "additionalProperties": False,
+    }
 
 
 @dataclass(frozen=True)
@@ -95,17 +112,7 @@ _TOOL_SCHEMAS: tuple[ToolSchema, ...] = (
     ToolSchema(
         name="pragmagraph_query",
         description="Run deterministic structural query.",
-        input_schema={
-            "type": "object",
-            "required": ["text"],
-            "properties": {
-                "text": {"type": "string"},
-                "node_ids": {"type": "array", "items": {"type": "string"}},
-                "max_results": {"type": "integer", "minimum": 1},
-                "include_edges": {"type": "boolean"},
-            },
-            "additionalProperties": False,
-        },
+        input_schema=_query_input_schema(),
         output_schema={
             "type": "object",
             "required": ["query_result"],
@@ -116,17 +123,7 @@ _TOOL_SCHEMAS: tuple[ToolSchema, ...] = (
     ToolSchema(
         name="pragmagraph_explain",
         description="Run deterministic query with explanation-bearing hits.",
-        input_schema={
-            "type": "object",
-            "required": ["text"],
-            "properties": {
-                "text": {"type": "string"},
-                "node_ids": {"type": "array", "items": {"type": "string"}},
-                "max_results": {"type": "integer", "minimum": 1},
-                "include_edges": {"type": "boolean"},
-            },
-            "additionalProperties": False,
-        },
+        input_schema=_query_input_schema(),
         output_schema={
             "type": "object",
             "required": ["query_result"],
@@ -144,6 +141,8 @@ _TOOL_SCHEMAS: tuple[ToolSchema, ...] = (
                 "node_id": {"type": "string"},
                 "depth": {"type": "integer", "minimum": 1},
                 "max_results": {"type": "integer", "minimum": 1},
+                "edge_kinds": {"type": "array", "items": {"type": "string"}},
+                "node_kinds": {"type": "array", "items": {"type": "string"}},
             },
             "additionalProperties": False,
         },
@@ -164,6 +163,8 @@ _TOOL_SCHEMAS: tuple[ToolSchema, ...] = (
                 "source_id": {"type": "string"},
                 "target_id": {"type": "string"},
                 "max_hops": {"type": "integer", "minimum": 1},
+                "edge_kinds": {"type": "array", "items": {"type": "string"}},
+                "node_kinds": {"type": "array", "items": {"type": "string"}},
             },
             "additionalProperties": False,
         },
@@ -199,6 +200,10 @@ _TOOL_SCHEMAS: tuple[ToolSchema, ...] = (
             "type": "object",
             "properties": {
                 "format": {"type": "string", "enum": ["dot", "mermaid"]},
+                "profile": {
+                    "type": "string",
+                    "enum": ["full", "no_content", "no_identities", "portable"],
+                },
             },
             "additionalProperties": False,
         },
@@ -252,7 +257,7 @@ def _backend_not_wired_handler(tool_name: str) -> ToolHandler:
     return _handler
 
 
-def _capabilities_handler() -> ToolHandler:
+def _unwired_capabilities_handler() -> ToolHandler:
     def _handler(**_kwargs: Any) -> Mapping[str, Any]:
         return {
             "protocol_version": "2025-06-18",
@@ -269,13 +274,14 @@ def _capabilities_handler() -> ToolHandler:
 class ToolRegistry:
     _handlers: dict[str, ToolHandler] = field(default_factory=dict)
     _schemas: dict[str, ToolSchema] = field(default_factory=dict)
+    resources: ResourceRegistry | None = None
 
     @classmethod
     def default(cls) -> "ToolRegistry":
         registry = cls()
         for schema in _TOOL_SCHEMAS:
             if schema.name == "pragmagraph_capabilities":
-                handler = _capabilities_handler()
+                handler = _unwired_capabilities_handler()
             else:
                 handler = _backend_not_wired_handler(schema.name)
             registry.register(schema, handler)

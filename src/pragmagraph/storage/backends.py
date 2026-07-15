@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from dataclasses import dataclass, field, fields
 from pathlib import Path
@@ -18,7 +19,7 @@ from pragmagraph.models import (
     QueryRequest,
     QueryResult,
 )
-from pragmagraph.query import health, neighborhood, path, query
+from pragmagraph.query import health, neighborhood, path, query, query_nodes
 from pragmagraph.storage import (
     load_snapshot,
     save_snapshot,
@@ -26,9 +27,37 @@ from pragmagraph.storage import (
     snapshot_to_dict,
     stable_dumps,
 )
+from pragmagraph.storage.sqlite_operations import (
+    apply_edge_delta as _apply_edge_delta,
+    apply_node_delta as _apply_node_delta,
+    fail_if_requested as _fail_if_requested,
+    incident_edges as _incident_edges_sql,
+    node_from_payload as _node_from_payload,
+    node_search_text as _node_search_text,
+    replace_omitted as _replace_omitted,
+    sqlite_neighborhood as _sqlite_neighborhood,
+    sqlite_path as _sqlite_path,
+    source_ref_row as _source_ref_row,
+    table_exists as _table_exists,
+)
 
 STORE_MANIFEST_SCHEMA_VERSION = "pragmagraph.store_manifest.v1alpha1"
-SQLITE_STORE_SCHEMA_VERSION = "pragmagraph.sqlite_store.v1alpha1"
+SQLITE_STORE_SCHEMA_VERSION_V1 = "pragmagraph.sqlite_store.v1alpha1"
+SQLITE_STORE_SCHEMA_VERSION = "pragmagraph.sqlite_store.v2alpha1"
+
+
+@dataclass(frozen=True)
+class StoreUpdateReport:
+    """Deterministic work counts for one materialized-store update."""
+
+    normalized_rows_written: int = 0
+    normalized_rows_removed: int = 0
+    snapshot_payload_bytes_written: int = 0
+    fts_rows_written: int = 0
+    strategy: str = "replace_all"
+
+    def to_dict(self) -> dict[str, Any]:
+        return _dataclass_payload(self)
 
 
 @dataclass(frozen=True)
@@ -133,6 +162,8 @@ class GraphStore(Protocol):
         *,
         depth: int = 1,
         max_results: int = 10,
+        edge_kinds: tuple[str, ...] = (),
+        node_kinds: tuple[str, ...] = (),
     ) -> QueryResult:
         """Return nodes around ``node_id`` through the store contract."""
 
@@ -142,6 +173,8 @@ class GraphStore(Protocol):
         target_id: str,
         *,
         max_hops: int = 4,
+        edge_kinds: tuple[str, ...] = (),
+        node_kinds: tuple[str, ...] = (),
     ) -> PathResult:
         """Return one bounded path through the store contract."""
 
@@ -206,9 +239,16 @@ class JsonSnapshotStore:
         *,
         depth: int = 1,
         max_results: int = 10,
+        edge_kinds: tuple[str, ...] = (),
+        node_kinds: tuple[str, ...] = (),
     ) -> QueryResult:
         return neighborhood(
-            self._snapshot, node_id, depth=depth, max_results=max_results
+            self._snapshot,
+            node_id,
+            depth=depth,
+            max_results=max_results,
+            edge_kinds=edge_kinds,
+            node_kinds=node_kinds,
         )
 
     def path(
@@ -217,8 +257,17 @@ class JsonSnapshotStore:
         target_id: str,
         *,
         max_hops: int = 4,
+        edge_kinds: tuple[str, ...] = (),
+        node_kinds: tuple[str, ...] = (),
     ) -> PathResult:
-        return path(self._snapshot, source_id, target_id, max_hops=max_hops)
+        return path(
+            self._snapshot,
+            source_id,
+            target_id,
+            max_hops=max_hops,
+            edge_kinds=edge_kinds,
+            node_kinds=node_kinds,
+        )
 
     def health(self) -> HealthSummary:
         return health(self._snapshot)
@@ -245,6 +294,7 @@ class SQLiteGraphStore:
         with self._connect() as connection:
             _initialize_sqlite_schema(connection)
             fts_available, diagnostics = _initialize_fts(connection)
+            trigram_available = _initialize_trigram_fts(connection)
             connection.execute("DELETE FROM store_manifest")
             connection.execute("DELETE FROM snapshots")
             connection.execute("DELETE FROM nodes")
@@ -253,6 +303,8 @@ class SQLiteGraphStore:
             connection.execute("DELETE FROM source_refs")
             if fts_available:
                 connection.execute("DELETE FROM node_fts")
+            if trigram_available:
+                connection.execute("DELETE FROM node_fts_trigram")
             connection.execute(
                 "INSERT INTO snapshots (id, payload) VALUES (?, ?)",
                 ("current", stable_dumps(snapshot)),
@@ -296,6 +348,15 @@ class SQLiteGraphStore:
                             node.text,
                             " ".join(str(value) for value in node.metadata.values()),
                         ),
+                    )
+                if trigram_available:
+                    connection.execute(
+                        """
+                        INSERT INTO node_fts_trigram
+                        (id, searchable)
+                        VALUES (?, ?)
+                        """,
+                        (node.id, _node_search_text(node)),
                     )
             for edge in sorted(snapshot.edges, key=lambda item: item.id):
                 connection.execute(
@@ -347,19 +408,111 @@ class SQLiteGraphStore:
                 ("current", json.dumps(manifest.to_dict(), sort_keys=True)),
             )
 
+    def migrate(self) -> StoreManifest:
+        """Explicitly and idempotently migrate a readable v1 store to v2."""
+        with self._connect() as connection:
+            _initialize_sqlite_schema(connection)
+            manifest = _read_manifest(connection, self.store_path)
+            if manifest.schema_version == SQLITE_STORE_SCHEMA_VERSION:
+                return manifest
+            if manifest.schema_version != SQLITE_STORE_SCHEMA_VERSION_V1:
+                raise _store_error(
+                    "unsupported SQLite store schema",
+                    code="STORE_MIGRATION_UNSUPPORTED",
+                    details={"schema_version": manifest.schema_version},
+                )
+            trigram_available = _initialize_trigram_fts(connection)
+            if trigram_available:
+                connection.execute("DELETE FROM node_fts_trigram")
+                for row in connection.execute("SELECT id, payload FROM nodes"):
+                    node = _node_from_payload(row["payload"])
+                    connection.execute(
+                        "INSERT INTO node_fts_trigram (id, searchable) VALUES (?, ?)",
+                        (node.id, _node_search_text(node)),
+                    )
+            migrated = StoreManifest(
+                **{
+                    **manifest.to_dict(),
+                    "schema_version": SQLITE_STORE_SCHEMA_VERSION,
+                    "diagnostics": tuple(
+                        item
+                        for item in manifest.diagnostics
+                        if item != "migration_required"
+                    ),
+                }
+            )
+            connection.execute(
+                "UPDATE store_manifest SET payload = ? WHERE id = 'current'",
+                (json.dumps(migrated.to_dict(), sort_keys=True),),
+            )
+            return migrated
+
+    def apply_snapshot_delta(
+        self,
+        snapshot: GraphSnapshot,
+        *,
+        fail_after: str = "",
+    ) -> StoreUpdateReport:
+        """Atomically apply changed normalized facts and rewrite canonical payload."""
+        manifest = self.manifest()
+        if manifest.schema_version != SQLITE_STORE_SCHEMA_VERSION:
+            raise _store_error(
+                "SQLite store migration is required before delta apply",
+                code="STORE_MIGRATION_REQUIRED",
+                details={"schema_version": manifest.schema_version},
+            )
+        payload = stable_dumps(snapshot)
+        with self._connect() as connection:
+            current = self.export_snapshot()
+            current_nodes = {item.id: item for item in current.nodes}
+            next_nodes = {item.id: item for item in snapshot.nodes}
+            current_edges = {item.id: item for item in current.edges}
+            next_edges = {item.id: item for item in snapshot.edges}
+            removed_nodes = sorted(set(current_nodes) - set(next_nodes))
+            removed_edges = sorted(set(current_edges) - set(next_edges))
+            changed_nodes = [
+                item
+                for item_id, item in sorted(next_nodes.items())
+                if current_nodes.get(item_id) != item
+            ]
+            changed_edges = [
+                item
+                for item_id, item in sorted(next_edges.items())
+                if current_edges.get(item_id) != item
+            ]
+            _apply_node_delta(connection, removed_nodes, changed_nodes)
+            _fail_if_requested(fail_after, "rows")
+            _apply_edge_delta(connection, removed_edges, changed_edges)
+            _replace_omitted(connection, snapshot)
+            _fail_if_requested(fail_after, "fts")
+            connection.execute(
+                "UPDATE snapshots SET payload = ? WHERE id = 'current'",
+                (payload,),
+            )
+            _fail_if_requested(fail_after, "snapshot")
+            next_manifest = _manifest_for_snapshot(
+                snapshot,
+                backend=self.backend,
+                schema_version=SQLITE_STORE_SCHEMA_VERSION,
+                fts_available=manifest.fts_available,
+                diagnostics=manifest.diagnostics,
+            )
+            connection.execute(
+                "UPDATE store_manifest SET payload = ? WHERE id = 'current'",
+                (json.dumps(next_manifest.to_dict(), sort_keys=True),),
+            )
+            _fail_if_requested(fail_after, "manifest")
+        return StoreUpdateReport(
+            normalized_rows_written=len(changed_nodes) + len(changed_edges),
+            normalized_rows_removed=len(removed_nodes) + len(removed_edges),
+            snapshot_payload_bytes_written=len(payload.encode("utf-8")),
+            fts_rows_written=len(changed_nodes),
+            strategy="delta",
+        )
+
     def manifest(self) -> StoreManifest:
         with self._connect() as connection:
-            row = connection.execute(
-                "SELECT payload FROM store_manifest WHERE id = ?",
-                ("current",),
-            ).fetchone()
-        if row is None:
-            raise _store_error(
-                "store manifest not found",
-                code="STORE_MANIFEST_NOT_FOUND",
-                details={"path": str(self.store_path)},
-            )
-        return _manifest_from_dict(json.loads(str(row["payload"])))
+            return _read_manifest(connection, self.store_path)
 
     def capabilities(self) -> StoreCapabilityReport:
         manifest = self.manifest()
@@ -409,24 +562,45 @@ class SQLiteGraphStore:
             if isinstance(request, QueryRequest)
             else QueryRequest(query=request)
         )
-        snapshot = self.export_snapshot()
-        result = query(snapshot, req)
         manifest = self.manifest()
-        diagnostics = dict(result.diagnostics)
-        diagnostics["store_backend"] = self.backend
-        diagnostics["fts_available"] = manifest.fts_available
-        diagnostics["candidate_node_ids"] = list(
-            _sqlite_candidate_node_ids(
-                self.store_path,
-                req.query,
-                req.max_results * 4,
+        if manifest.schema_version == SQLITE_STORE_SCHEMA_VERSION_V1:
+            result = query(self.export_snapshot(), req)
+            diagnostics = dict(result.diagnostics)
+            diagnostics.update(
+                store_backend=self.backend,
+                strategy="snapshot_fallback",
+                fallback_reason="migration_required",
+                snapshot_deserialized=True,
             )
+            return QueryResult(
+                query=result.query,
+                hits=result.hits,
+                omitted=result.omitted,
+                diagnostics=diagnostics,
+                next_cursor=result.next_cursor,
+            )
+        with self._connect() as connection:
+            strategy, rows = _query_candidate_rows(connection, req)
+            result = query_nodes(
+                (_node_from_payload(row["payload"]) for row in rows),
+                req,
+                incident_edges=lambda node_id: _incident_edges_sql(connection, node_id),
+            )
+        diagnostics = dict(result.diagnostics)
+        diagnostics.update(
+            store_backend=self.backend,
+            fts_available=manifest.fts_available,
+            strategy=strategy,
+            rows_examined=len(rows),
+            snapshot_deserialized=False,
+            candidate_node_ids=[str(row["id"]) for row in rows],
         )
         return QueryResult(
             query=result.query,
             hits=result.hits,
             omitted=result.omitted,
             diagnostics=diagnostics,
+            next_cursor=result.next_cursor,
         )
 
     def neighborhood(
@@ -435,13 +609,22 @@ class SQLiteGraphStore:
         *,
         depth: int = 1,
         max_results: int = 10,
+        edge_kinds: tuple[str, ...] = (),
+        node_kinds: tuple[str, ...] = (),
     ) -> QueryResult:
-        return neighborhood(
-            self.export_snapshot(),
-            node_id,
-            depth=depth,
-            max_results=max_results,
-        )
+        if self.manifest().schema_version == SQLITE_STORE_SCHEMA_VERSION_V1:
+            return neighborhood(
+                self.export_snapshot(), node_id, depth=depth, max_results=max_results
+            )
+        with self._connect() as connection:
+            return _sqlite_neighborhood(
+                connection,
+                node_id,
+                depth=depth,
+                max_results=max_results,
+                edge_kinds=edge_kinds,
+                node_kinds=node_kinds,
+            )
 
     def path(
         self,
@@ -449,13 +632,20 @@ class SQLiteGraphStore:
         target_id: str,
         *,
         max_hops: int = 4,
+        edge_kinds: tuple[str, ...] = (),
+        node_kinds: tuple[str, ...] = (),
     ) -> PathResult:
-        return path(
-            self.export_snapshot(),
-            source_id,
-            target_id,
-            max_hops=max_hops,
-        )
+        if self.manifest().schema_version == SQLITE_STORE_SCHEMA_VERSION_V1:
+            return path(self.export_snapshot(), source_id, target_id, max_hops=max_hops)
+        with self._connect() as connection:
+            return _sqlite_path(
+                connection,
+                source_id,
+                target_id,
+                max_hops=max_hops,
+                edge_kinds=edge_kinds,
+                node_kinds=node_kinds,
+            )
 
     def health(self) -> HealthSummary:
         return health(self.export_snapshot())
@@ -545,57 +735,85 @@ def _initialize_fts(connection: sqlite3.Connection) -> tuple[bool, list[str]]:
     return True, []
 
 
-def _sqlite_candidate_node_ids(
-    store_path: Path,
-    query_text: str,
-    limit: int,
-) -> tuple[str, ...]:
-    query_text = query_text.strip()
-    if not query_text:
-        return ()
-    with sqlite3.connect(store_path) as connection:
-        connection.row_factory = sqlite3.Row
-        manifest = SQLiteGraphStore(store_path).manifest()
-        if manifest.fts_available:
-            rows = connection.execute(
-                """
-                SELECT id FROM node_fts
-                WHERE node_fts MATCH ?
-                ORDER BY rank
-                LIMIT ?
-                """,
-                (_escape_fts_query(query_text), max(1, limit)),
-            ).fetchall()
-        else:
-            pattern = f"%{query_text}%"
-            rows = connection.execute(
-                """
-                SELECT id FROM nodes
-                WHERE id LIKE ? OR kind LIKE ? OR label LIKE ?
-                   OR source_path LIKE ? OR text LIKE ?
-                ORDER BY kind, source_path, id
-                LIMIT ?
-                """,
-                (pattern, pattern, pattern, pattern, pattern, max(1, limit)),
-            ).fetchall()
-    return tuple(str(row["id"]) for row in rows)
+def _initialize_trigram_fts(connection: sqlite3.Connection) -> bool:
+    try:
+        connection.execute(
+            """
+            CREATE VIRTUAL TABLE IF NOT EXISTS node_fts_trigram
+            USING fts5(id UNINDEXED, searchable, tokenize='trigram')
+            """
+        )
+    except sqlite3.OperationalError:
+        return False
+    return True
+
+
+def _read_manifest(connection: sqlite3.Connection, path: Path) -> StoreManifest:
+    row = connection.execute(
+        "SELECT payload FROM store_manifest WHERE id = ?", ("current",)
+    ).fetchone()
+    if row is None:
+        raise _store_error(
+            "store manifest not found",
+            code="STORE_MANIFEST_NOT_FOUND",
+            details={"path": str(path)},
+        )
+    return _manifest_from_dict(json.loads(str(row["payload"])))
+
+
+def _query_candidate_rows(
+    connection: sqlite3.Connection,
+    request: QueryRequest,
+) -> tuple[str, list[sqlite3.Row]]:
+    query_text = request.query.strip().lower()
+    tokens = [token for token in re.split(r"[^a-zA-Z0-9_]+", query_text) if token]
+    exact = connection.execute(
+        """
+        SELECT id, payload FROM nodes
+        WHERE lower(id) = ? OR lower(label) = ? OR lower(source_path) = ?
+        """,
+        (query_text, query_text, query_text),
+    ).fetchall()
+    requested = []
+    if request.node_ids:
+        placeholders = ",".join("?" for _ in request.node_ids)
+        requested = connection.execute(
+            f"SELECT id, payload FROM nodes WHERE id IN ({placeholders})",
+            tuple(request.node_ids),
+        ).fetchall()
+    strategy = "sql_canonical_scan"
+    rows: list[sqlite3.Row]
+    trigram_available = _table_exists(connection, "node_fts_trigram")
+    if (
+        query_text
+        and tokens
+        and all(len(token) >= 3 for token in tokens)
+        and trigram_available
+    ):
+        strategy = "direct_exact" if exact else "indexed_trigram"
+        matched = connection.execute(
+            """
+            SELECT n.id, n.payload
+            FROM node_fts_trigram AS f
+            JOIN nodes AS n ON n.id = f.id
+            WHERE node_fts_trigram MATCH ?
+            ORDER BY n.kind, n.source_path, n.id
+            """,
+            (_escape_fts_query(query_text),),
+        ).fetchall()
+        rows = [*exact, *matched, *requested]
+    else:
+        rows = connection.execute(
+            "SELECT id, payload FROM nodes ORDER BY kind, source_path, id"
+        ).fetchall()
+        rows.extend(requested)
+    by_id = {str(row["id"]): row for row in rows}
+    return strategy, [by_id[key] for key in sorted(by_id)]
 
 
 def _escape_fts_query(query_text: str) -> str:
     tokens = [token for token in query_text.replace('"', " ").split() if token]
     return " OR ".join(f'"{token}"' for token in tokens) or '""'
-
-
-def _source_ref_row(owner_type: str, owner_id: str, source_ref: Any) -> tuple[Any, ...]:
-    return (
-        owner_type,
-        owner_id,
-        source_ref.path,
-        source_ref.line,
-        source_ref.column,
-        source_ref.section,
-        source_ref.uri,
-    )
 
 
 def _manifest_for_snapshot(
@@ -655,9 +873,11 @@ __all__ = [
     "GraphStore",
     "JsonSnapshotStore",
     "SQLITE_STORE_SCHEMA_VERSION",
+    "SQLITE_STORE_SCHEMA_VERSION_V1",
     "STORE_MANIFEST_SCHEMA_VERSION",
     "SQLiteGraphStore",
     "StoreCapabilityReport",
     "StoreManifest",
+    "StoreUpdateReport",
     "open_store",
 ]

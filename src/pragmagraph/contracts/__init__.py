@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 SCHEMA_VERSION = "pragmagraph.snapshot.v1alpha1"
-INDEXER_VERSION = "pragmagraph.indexer.v1alpha1"
+INDEXER_VERSION = "pragmagraph.indexer.v1alpha2"
 
 CAPABILITY_QUERY = "query"
 CAPABILITY_NEIGHBORHOOD = "neighborhood"
@@ -15,6 +15,13 @@ CAPABILITY_PROVENANCE = "provenance"
 CAPABILITY_EXPLAIN = "explain"
 CAPABILITY_SECURITY_POLICY = "security_policy"
 CAPABILITY_GIT_HISTORY = "git_history"
+CAPABILITY_QUERY_PAGINATION = "query_pagination"
+CAPABILITY_MULTI_ROOT = "multi_root"
+CAPABILITY_PRECISE_INTERCHANGE = "precise_interchange"
+CAPABILITY_ARTIFACT_FACTS = "artifact_facts"
+CAPABILITY_CI_DELTA = "ci_delta"
+CAPABILITY_MCP_RESOURCES = "mcp_resources"
+CAPABILITY_EXPORT_REDACTION = "export_redaction"
 
 CAPABILITIES = frozenset(
     {
@@ -28,10 +35,19 @@ CAPABILITIES = frozenset(
         CAPABILITY_EXPLAIN,
         CAPABILITY_SECURITY_POLICY,
         CAPABILITY_GIT_HISTORY,
+        CAPABILITY_QUERY_PAGINATION,
+        CAPABILITY_MULTI_ROOT,
+        CAPABILITY_PRECISE_INTERCHANGE,
+        CAPABILITY_ARTIFACT_FACTS,
+        CAPABILITY_CI_DELTA,
+        CAPABILITY_MCP_RESOURCES,
+        CAPABILITY_EXPORT_REDACTION,
     }
 )
 
 NODE_PROJECT = "project"
+NODE_SYMBOL = "symbol"
+NODE_WORKSPACE = "workspace"
 NODE_DIRECTORY = "directory"
 NODE_FILE = "file"
 NODE_DOC_SECTION = "doc_section"
@@ -49,10 +65,22 @@ NODE_CONFIG = "config"
 NODE_CONFIG_KEY = "config_key"
 NODE_GIT_COMMIT = "git_commit"
 NODE_GIT_CHANGED_PATH = "git_changed_path"
+NODE_API_ENDPOINT = "api_endpoint"
+NODE_API_SCHEMA = "api_schema"
+NODE_PROTO_MESSAGE = "proto_message"
+NODE_PROTO_SERVICE = "proto_service"
+NODE_PROTO_RPC = "proto_rpc"
+NODE_SQL_TABLE = "sql_table"
+NODE_TERRAFORM_BLOCK = "terraform_block"
+NODE_CI_JOB = "ci_job"
+NODE_DEPENDENCY_DECLARATION = "dependency_declaration"
+NODE_DEPENDENCY_RESOLUTION = "dependency_resolution"
 
 NODE_KINDS = frozenset(
     {
         NODE_PROJECT,
+        NODE_SYMBOL,
+        NODE_WORKSPACE,
         NODE_DIRECTORY,
         NODE_FILE,
         NODE_DOC_SECTION,
@@ -70,6 +98,16 @@ NODE_KINDS = frozenset(
         NODE_CONFIG_KEY,
         NODE_GIT_COMMIT,
         NODE_GIT_CHANGED_PATH,
+        NODE_API_ENDPOINT,
+        NODE_API_SCHEMA,
+        NODE_PROTO_MESSAGE,
+        NODE_PROTO_SERVICE,
+        NODE_PROTO_RPC,
+        NODE_SQL_TABLE,
+        NODE_TERRAFORM_BLOCK,
+        NODE_CI_JOB,
+        NODE_DEPENDENCY_DECLARATION,
+        NODE_DEPENDENCY_RESOLUTION,
     }
 )
 
@@ -87,6 +125,7 @@ EDGE_DEPENDS_ON = "depends_on"
 EDGE_GIT_PARENT = "git_parent"
 EDGE_GIT_CHANGES_PATH = "git_changes_path"
 EDGE_GIT_TOUCHES = "git_touches"
+EDGE_RESOLVES_TO = "resolves_to"
 
 EDGE_KINDS = frozenset(
     {
@@ -104,6 +143,7 @@ EDGE_KINDS = frozenset(
         EDGE_GIT_PARENT,
         EDGE_GIT_CHANGES_PATH,
         EDGE_GIT_TOUCHES,
+        EDGE_RESOLVES_TO,
     }
 )
 
@@ -144,6 +184,13 @@ __all__ = [
     "CAPABILITY_CITATIONS",
     "CAPABILITY_EXPLAIN",
     "CAPABILITY_GIT_HISTORY",
+    "CAPABILITY_QUERY_PAGINATION",
+    "CAPABILITY_MULTI_ROOT",
+    "CAPABILITY_PRECISE_INTERCHANGE",
+    "CAPABILITY_ARTIFACT_FACTS",
+    "CAPABILITY_CI_DELTA",
+    "CAPABILITY_MCP_RESOURCES",
+    "CAPABILITY_EXPORT_REDACTION",
     "CAPABILITY_HEALTH",
     "CAPABILITY_NEIGHBORHOOD",
     "CAPABILITY_PATH",
@@ -166,6 +213,7 @@ __all__ = [
     "EDGE_PARENT_SYMBOL",
     "EDGE_REFERENCES_DOC",
     "EDGE_REFERENCES_SECTION",
+    "EDGE_RESOLVES_TO",
     "EVIDENCE_QUERY_COLLECT_RELATED",
     "EVIDENCE_QUERY_KINDS",
     "EVIDENCE_QUERY_RECHECK_STALENESS",
@@ -184,9 +232,21 @@ __all__ = [
     "NODE_FILE",
     "NODE_GIT_CHANGED_PATH",
     "NODE_GIT_COMMIT",
+    "NODE_API_ENDPOINT",
+    "NODE_API_SCHEMA",
+    "NODE_CI_JOB",
+    "NODE_DEPENDENCY_DECLARATION",
+    "NODE_DEPENDENCY_RESOLUTION",
+    "NODE_PROTO_MESSAGE",
+    "NODE_PROTO_RPC",
+    "NODE_PROTO_SERVICE",
+    "NODE_SQL_TABLE",
+    "NODE_TERRAFORM_BLOCK",
     "NODE_IMPORT",
     "NODE_KINDS",
     "NODE_PROJECT",
+    "NODE_SYMBOL",
+    "NODE_WORKSPACE",
     "NODE_PYTHON_CLASS",
     "NODE_PYTHON_FUNCTION",
     "NODE_PYTHON_METHOD",

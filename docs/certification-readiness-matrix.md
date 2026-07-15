@@ -41,6 +41,7 @@ target that exercises only the public package surface.
 | Graphify-shaped JSON interop | `pragmagraph/tests/test_graphify_interop.py` | `n/a` |
 | Workspace persistence and `serve --workspace` | `pragmagraph/tests/test_workspace.py`, `pragmagraph/tests/test_service.py::test_service_workspace_startup_uses_persisted_workspace` | `n/a` |
 | Benchmark and medium-fixture readiness | `pragmagraph/tests/test_bench.py` | `n/a` |
+| Incremental extraction and SQLite v2 scale | `pragmagraph/tests/test_incremental_materialization.py`, `pragmagraph/tests/test_bench.py::test_generated_scale_profiles_report_deterministic_bounded_work` | `n/a` |
 | Release and smoke contract | `pragmagraph/tests/test_standalone_smoke.py`, `pragmagraph/scripts/release_check.py` | `openminion/tests/runtime/test_bootstrap_memory_retrieve_di.py` |
 
 ## Run-the-suite commands

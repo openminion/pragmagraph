@@ -1,3 +1,1 @@
 # Format: directory<TAB>function<TAB>files<TAB>reason
-src/pragmagraph/server	_backend_not_wired_handler	src/pragmagraph/server/backend.py,src/pragmagraph/server/tools.py	existing duplicate private helper ratchet
-src/pragmagraph/server	_capabilities_handler	src/pragmagraph/server/backend.py,src/pragmagraph/server/tools.py	existing duplicate private helper ratchet

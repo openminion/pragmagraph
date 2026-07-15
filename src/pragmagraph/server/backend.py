@@ -27,7 +27,6 @@ from pragmagraph.service import (
 )
 
 from pragmagraph.server.contracts import (
-    BackendNotWiredError,
     JSONRPC_INVALID_PARAMS,
     JSONRPC_INVALID_REQUEST,
     PragmaGraphServerError,
@@ -35,6 +34,7 @@ from pragmagraph.server.contracts import (
     UnsupportedCapabilityError,
 )
 from pragmagraph.server.service_core import assert_request_keys_subset
+from pragmagraph.server.resources import ResourceRegistry
 from pragmagraph.server.tools import ToolHandler, ToolRegistry
 
 
@@ -49,6 +49,7 @@ class ServiceConfig:
     snapshot_out: str | None = None
     manifest_out: str | None = None
     state_out: str | None = None
+    cache_path: str | None = None
     git_identity_mode: str = DEFAULT_GIT_IDENTITY_MODE
 
     def __post_init__(self) -> None:
@@ -65,11 +66,17 @@ class ServiceConfig:
             )
 
 
-def _backend_not_wired_handler(tool_name: str) -> ToolHandler:
-    def _handler(**_kwargs: Any) -> Mapping[str, Any]:
-        raise BackendNotWiredError(tool_name)
-
-    return _handler
+_SERVICE_TOOL_BINDINGS = {
+    "pragmagraph_health": (METHOD_HEALTH, "health"),
+    "pragmagraph_query": (METHOD_QUERY, "query_result"),
+    "pragmagraph_explain": (METHOD_EXPLAIN, "query_result"),
+    "pragmagraph_neighborhood": (METHOD_NEIGHBORHOOD, "neighborhood"),
+    "pragmagraph_path": (METHOD_PATH, "path"),
+    "pragmagraph_report": (METHOD_REPORT, "report"),
+    "pragmagraph_export": (METHOD_EXPORT, "export"),
+    "pragmagraph_graphify_export": (METHOD_GRAPHIFY_EXPORT, "graphify_export"),
+    "pragmagraph_refresh": (METHOD_REFRESH, "refresh"),
+}
 
 
 def _service_from_config(config: ServiceConfig) -> LocalQueryService:
@@ -82,6 +89,7 @@ def _service_from_config(config: ServiceConfig) -> LocalQueryService:
         snapshot_out_path=config.snapshot_out,
         manifest_out_path=config.manifest_out,
         state_out_path=config.state_out,
+        cache_path=config.cache_path,
         git_identity_mode=config.git_identity_mode,
     )
 
@@ -150,7 +158,7 @@ def _invoke_service(
     )
 
 
-def _capabilities_handler(service: LocalQueryService) -> ToolHandler:
+def _wired_capabilities_handler(service: LocalQueryService) -> ToolHandler:
     def _handler(**kwargs: Any) -> Mapping[str, Any]:
         assert_request_keys_subset("pragmagraph_capabilities", set(kwargs.keys()))
         return {
@@ -191,76 +199,25 @@ def build_wired_registry(config: ServiceConfig) -> ToolRegistry:
 
     service = _service_from_config(config)
     registry = ToolRegistry.default()
+    registry.resources = ResourceRegistry(service)
     registry._handlers = {}
 
     for schema in registry.schemas():
         if schema.name == "pragmagraph_capabilities":
-            handler = _capabilities_handler(service)
-        elif schema.name == "pragmagraph_health":
+            handler = _wired_capabilities_handler(service)
+        else:
+            try:
+                method, result_key = _SERVICE_TOOL_BINDINGS[schema.name]
+            except KeyError as exc:  # pragma: no cover - closed schema set
+                raise RuntimeError(
+                    f"missing service binding for {schema.name}"
+                ) from exc
             handler = _service_tool_handler(
                 service,
                 tool_name=schema.name,
-                method=METHOD_HEALTH,
-                result_key="health",
+                method=method,
+                result_key=result_key,
             )
-        elif schema.name == "pragmagraph_query":
-            handler = _service_tool_handler(
-                service,
-                tool_name=schema.name,
-                method=METHOD_QUERY,
-                result_key="query_result",
-            )
-        elif schema.name == "pragmagraph_explain":
-            handler = _service_tool_handler(
-                service,
-                tool_name=schema.name,
-                method=METHOD_EXPLAIN,
-                result_key="query_result",
-            )
-        elif schema.name == "pragmagraph_neighborhood":
-            handler = _service_tool_handler(
-                service,
-                tool_name=schema.name,
-                method=METHOD_NEIGHBORHOOD,
-                result_key="neighborhood",
-            )
-        elif schema.name == "pragmagraph_path":
-            handler = _service_tool_handler(
-                service,
-                tool_name=schema.name,
-                method=METHOD_PATH,
-                result_key="path",
-            )
-        elif schema.name == "pragmagraph_report":
-            handler = _service_tool_handler(
-                service,
-                tool_name=schema.name,
-                method=METHOD_REPORT,
-                result_key="report",
-            )
-        elif schema.name == "pragmagraph_export":
-            handler = _service_tool_handler(
-                service,
-                tool_name=schema.name,
-                method=METHOD_EXPORT,
-                result_key="export",
-            )
-        elif schema.name == "pragmagraph_graphify_export":
-            handler = _service_tool_handler(
-                service,
-                tool_name=schema.name,
-                method=METHOD_GRAPHIFY_EXPORT,
-                result_key="graphify_export",
-            )
-        elif schema.name == "pragmagraph_refresh":
-            handler = _service_tool_handler(
-                service,
-                tool_name=schema.name,
-                method=METHOD_REFRESH,
-                result_key="refresh",
-            )
-        else:  # pragma: no cover - closed set
-            handler = _backend_not_wired_handler(schema.name)
         registry.register(schema, handler)
     return registry
 

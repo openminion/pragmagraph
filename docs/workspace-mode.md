@@ -18,6 +18,8 @@ repeatable local operation without widening into background automation.
 - typed workspace status inspection via `load_workspace_status(...)`
 - workspace-backed service startup via `LocalQueryService.from_workspace(...)`
   and `pragmagraph serve --workspace ...`
+- deterministic multi-root overlays via `WorkspaceRoot` and
+  `index_multi_root(...)`
 
 ## CLI entrypoints
 
@@ -25,6 +27,7 @@ repeatable local operation without widening into background automation.
 - `pragmagraph workspace-refresh <dir> --json`
 - `pragmagraph workspace-status <dir> --json`
 - `pragmagraph serve --workspace <dir>`
+- `pragmagraph multi-root-index --root api=../api --root web=../web --out snapshot.json --json`
 
 ## Workspace layout
 
@@ -35,6 +38,13 @@ Each workspace directory owns one deterministic file set:
 - `snapshot.json`
 - `manifest.json`
 - `status.json`
+- `cache/extraction-cache.json`
+
+Workspace refresh is the one mode that enables the package-owned extraction
+cache without a caller-supplied path. The cache is rebuildable and
+non-canonical; `snapshot.json` remains the portable truth. Status output
+reports whether the cache is present, and refresh output reports parsed versus
+reused paths.
 
 ## Boundary
 
@@ -52,3 +62,8 @@ It does **not** reopen:
 3. git-hook-triggered refresh
 4. hosted auth or remote multi-tenant operation
 5. semantic interpretation of refresh outcomes
+
+Multi-root composition is an explicit one-shot index operation. Each root must
+have a unique name/namespace, every fact retains root attribution, and argument
+order does not affect output. It does not add multi-root watching or background
+refresh.
