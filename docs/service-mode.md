@@ -14,10 +14,12 @@ queries without reloading state on every call.
 
 - `pragmagraph serve --snapshot <snapshot.json>`
 - `pragmagraph serve --root <repo-root> --namespace <name>`
+- `pragmagraph serve --root <repo-root> --cache <cache.json>`
 - `pragmagraph serve --workspace <workspace-dir>`
 
-The service is deliberately local-first and single-process. It does not claim
-HTTP, MCP, hosted transport, background watching, auth, or daemon supervision.
+The service is deliberately local-first and single-process. The package also
+ships a bounded MCP stdio adapter over this service. It does not claim HTTP,
+hosted transport, background watching, auth, or daemon supervision.
 
 Capabilities and health responses are intentionally richer than the MVP surface:
 
@@ -46,7 +48,7 @@ One JSON object per line:
 Success:
 
 ```json
-{"id":"req-1","ok":true,"result":{"query":"RuntimeGraph","hits":[],"omitted":[],"diagnostics":{}}}
+{"id":"req-1","ok":true,"result":{"query":"RuntimeGraph","hits":[],"omitted":[],"diagnostics":{},"next_cursor":""}}
 ```
 
 Failure:
@@ -70,8 +72,19 @@ Failure:
 - `shutdown`
 
 Root-backed and workspace-backed `refresh` responses include deterministic
-`path_changes`, `snapshot_delta`, and `health` summaries so callers can inspect
-structural change without reparsing the whole service response by hand.
+`path_changes`, `snapshot_delta`, `identity_transitions`, `work`, and `health`
+summaries. `neighborhood` and `path` accept optional `edge_kinds` and
+`node_kinds` arrays; omitted filters preserve the original behavior.
+`query` and `explain` accept optional `cursor` and `max_examined` values.
+`export` accepts `profile` with `full`, `no_content`, `no_identities`, or
+`portable`.
+
+## MCP resources
+
+`pragmagraph-server serve-stdio` exposes the existing tools plus read-only
+`pragma://status`, `pragma://snapshot`, `pragma://report`, and
+`pragma://node/{node_id}` resources. Listing and reading resources reuse the
+already-loaded service state and never trigger refresh or semantic inference.
 
 ## Boundary
 

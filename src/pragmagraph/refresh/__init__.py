@@ -4,19 +4,25 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from pragmagraph.adapters import index_path
 from pragmagraph.adapters.git_history import DEFAULT_GIT_IDENTITY_MODE
 from pragmagraph.parsers import ParserRegistry, get_default_registry
 from pragmagraph.models import (
     GraphSnapshot,
+    IdentityTransition,
     RefreshManifest,
     RefreshManifestEntry,
     RefreshPathChange,
     RefreshResult,
+    RefreshWorkStats,
     SnapshotStructuralDelta,
 )
+from pragmagraph.incremental.engine import build_incremental_snapshot
+from pragmagraph.incremental.models import ExtractionCacheBundle
 from pragmagraph.portability import normalize_relative_path
 from pragmagraph.security import ScopePolicy, load_gitignore, should_index_path
 
@@ -79,6 +85,73 @@ def refresh_snapshot(
         git_identity_mode=git_identity_mode,
         parser_registry=registry,
     )
+    return _build_refresh_result(
+        snapshot=snapshot,
+        manifest=manifest,
+        namespace=namespace,
+        previous_manifest=previous_manifest,
+        previous_snapshot=previous_snapshot,
+        work=RefreshWorkStats(
+            strategy="full",
+            paths_walked=sum(1 for _ in root.rglob("*")),
+            source_bytes_hashed=sum(entry.size_bytes for entry in manifest.entries),
+            parsed_path_count=len(manifest.entries),
+            resolution_overlay_rebuilt=True,
+            git_overlay_rebuilt=True,
+        ),
+    )
+
+
+def refresh_snapshot_incremental(
+    root_path: str | Path,
+    *,
+    namespace: str = "default",
+    previous_manifest: RefreshManifest | None = None,
+    previous_snapshot: GraphSnapshot | None = None,
+    previous_cache: ExtractionCacheBundle | None = None,
+    policy: ScopePolicy | None = None,
+    created_at: str = "",
+    git_identity_mode: str = DEFAULT_GIT_IDENTITY_MODE,
+    parser_registry: ParserRegistry | None = None,
+) -> tuple[RefreshResult, ExtractionCacheBundle]:
+    """Refresh with an explicit rebuildable extraction cache."""
+    root = Path(root_path).resolve()
+    scope = policy or ScopePolicy()
+    registry = parser_registry or get_default_registry()
+    manifest = build_manifest(root, policy=scope, parser_registry=registry)
+    build = build_incremental_snapshot(
+        root,
+        namespace=namespace,
+        manifest=manifest,
+        previous_snapshot=previous_snapshot,
+        previous_cache=previous_cache,
+        policy=scope,
+        parser_registry=registry,
+        created_at=created_at,
+        git_identity_mode=git_identity_mode,
+    )
+    result = _build_refresh_result(
+        snapshot=build.snapshot,
+        manifest=manifest,
+        namespace=namespace,
+        previous_manifest=previous_manifest,
+        previous_snapshot=previous_snapshot,
+        work=build.work,
+        identity_transitions=build.identity_transitions,
+    )
+    return result, build.cache
+
+
+def _build_refresh_result(
+    *,
+    snapshot: GraphSnapshot,
+    manifest: RefreshManifest,
+    namespace: str,
+    previous_manifest: RefreshManifest | None,
+    previous_snapshot: GraphSnapshot | None,
+    work: RefreshWorkStats,
+    identity_transitions: tuple[IdentityTransition, ...] = (),
+) -> RefreshResult:
     previous = (previous_manifest or RefreshManifest()).by_path()
     current = manifest.by_path()
     changed = tuple(
@@ -106,9 +179,11 @@ def refresh_snapshot(
         path_changes=path_changes,
         snapshot_delta=diff_snapshots(
             previous_snapshot
-            or GraphSnapshot(namespace=namespace, root_path=str(root)),
+            or GraphSnapshot(namespace=namespace, root_path=snapshot.root_path),
             snapshot,
         ),
+        identity_transitions=identity_transitions,
+        work=work,
     )
 
 
@@ -240,11 +315,77 @@ def diff_snapshots(
     )
 
 
+@dataclass(frozen=True)
+class CiDeltaReport:
+    """Deterministic CI-facing snapshot delta without semantic judgment."""
+
+    structural: SnapshotStructuralDelta
+    changed_node_ids: tuple[str, ...] = ()
+    changed_edge_ids: tuple[str, ...] = ()
+    fail_on_changes: bool = False
+
+    @property
+    def has_changes(self) -> bool:
+        structural_changes = any(self.structural.to_dict().values())
+        return bool(
+            self.changed_node_ids or self.changed_edge_ids or structural_changes
+        )
+
+    @property
+    def exit_code(self) -> int:
+        return 1 if self.fail_on_changes and self.has_changes else 0
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "format": "pragmagraph.ci_delta.v1alpha1",
+            "has_changes": self.has_changes,
+            "exit_code": self.exit_code,
+            "fail_on_changes": self.fail_on_changes,
+            "structural": self.structural.to_dict(),
+            "changed_node_ids": list(self.changed_node_ids),
+            "changed_edge_ids": list(self.changed_edge_ids),
+        }
+
+
+def build_ci_delta(
+    before: GraphSnapshot,
+    after: GraphSnapshot,
+    *,
+    fail_on_changes: bool = False,
+) -> CiDeltaReport:
+    """Compare canonical fact payloads for use in explicit CI jobs."""
+    before_nodes = {item.id: item.to_dict() for item in before.nodes}
+    after_nodes = {item.id: item.to_dict() for item in after.nodes}
+    before_edges = {item.id: item.to_dict() for item in before.edges}
+    after_edges = {item.id: item.to_dict() for item in after.edges}
+    return CiDeltaReport(
+        structural=diff_snapshots(before, after),
+        changed_node_ids=tuple(
+            sorted(
+                item_id
+                for item_id in before_nodes.keys() & after_nodes.keys()
+                if before_nodes[item_id] != after_nodes[item_id]
+            )
+        ),
+        changed_edge_ids=tuple(
+            sorted(
+                item_id
+                for item_id in before_edges.keys() & after_edges.keys()
+                if before_edges[item_id] != after_edges[item_id]
+            )
+        ),
+        fail_on_changes=fail_on_changes,
+    )
+
+
 __all__ = [
+    "CiDeltaReport",
+    "build_ci_delta",
     "build_manifest",
     "describe_manifest_changes",
     "diff_snapshots",
     "load_manifest",
     "refresh_snapshot",
+    "refresh_snapshot_incremental",
     "save_manifest",
 ]

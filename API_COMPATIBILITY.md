@@ -64,6 +64,9 @@ The following top-level exports are part of the current public contract:
 - compact navigation helpers `build_repo_map`, `render_markdown_repo_map`, and
   `render_compact_handoff`
 - stable symbol/reference interchange helper `build_symbol_reference_bundle`
+- precise-fact interchange helpers under `pragmagraph.interchange`, including
+  `snapshot_from_compiler_facts`, `snapshot_to_scip_json`, and
+  `snapshot_from_scip_json`
 - topology and document-graph helpers `build_topology_summary` and
   `build_doc_graph_summary`
 - query-plan evidence helper `explain_query_plan`
@@ -71,14 +74,15 @@ The following top-level exports are part of the current public contract:
   `build_privacy_profile`
 - git lineage helper `build_git_lineage`
 - parser support helper `build_parser_support_matrix`
-- refresh helpers `refresh_snapshot` and `diff_snapshots`
+- refresh helpers `refresh_snapshot`, `diff_snapshots`, and `build_ci_delta`
 - structural navigation helpers `reverse_imports`, `reverse_dependencies`,
   `backlinks`, and `impact`
 - service contracts `ServiceRequest`, `ServiceResponse`, and `LocalQueryService`
 - workspace contracts `WorkspaceMetadata`, `WorkspacePaths`,
   `WorkspaceStatusView`, `WorkspaceRefreshResult`, and helpers such as
   `initialize_workspace`, `refresh_workspace`, `load_workspace_metadata`, and
-  `load_workspace_status`
+  `load_workspace_status`, plus `WorkspaceRoot` and `index_multi_root`
+- export projection helpers `project_snapshot` and `ExportProjection`
 - typed UI boundary contracts such as `UiTransportBoundary`,
   `UiScreenDefinition`, and `build_ui_screen_manifest`
 - parser/scope DTOs such as `ParserDiagnostic`, `ParserResult`,

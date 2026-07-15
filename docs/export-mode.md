@@ -26,10 +26,16 @@ All exported text surfaces a versioned contract:
 ```bash
 pragmagraph export .pragmagraph/snapshot.json --format dot
 pragmagraph export .pragmagraph/snapshot.json --format mermaid
+pragmagraph export .pragmagraph/snapshot.json --format dot --profile portable
+pragmagraph export .pragmagraph/snapshot.json --format mermaid --profile no_identities
 ```
 
 The CLI writes graph text to stdout. It does not invoke Graphviz, render HTML, or
 open a browser.
+
+Export profiles are derived views. `full` preserves current behavior;
+`no_content`, `no_identities`, and `portable` remove their named fields without
+mutating the canonical snapshot.
 
 ## Contract
 

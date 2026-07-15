@@ -46,6 +46,9 @@ This directory holds the public package documentation for standalone
 - [`advanced-structural-views.md`](advanced-structural-views.md)
   records symbol/reference interchange, topology, document-graph, query-plan,
   git-lineage, parser-support, and certification helper surfaces.
+- [`advanced-ingestion-and-interchange.md`](advanced-ingestion-and-interchange.md)
+  records multi-root composition, artifact indexing, CI delta, precise-fact
+  interchange, query pagination, export redaction, and MCP resources.
 - [`certification-readiness-matrix.md`](certification-readiness-matrix.md)
   records the current standalone and OpenMinion proof targets for the public
   package surface.

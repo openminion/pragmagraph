@@ -161,12 +161,32 @@ def _symbol_metadata(node: GraphNode) -> dict[str, Any]:
     }
 
 
+from pragmagraph.interchange.compiler import (  # noqa: E402
+    ObservedReferenceFact,
+    ObservedSymbolFact,
+    snapshot_from_compiler_facts,
+)
+from pragmagraph.interchange.scip import (  # noqa: E402
+    SCIP_DEFINITION_ROLE,
+    SCIP_JSON_SUBSET_FORMAT,
+    snapshot_from_scip_json,
+    snapshot_to_scip_json,
+)
+
+
 __all__ = [
     "INTERCHANGE_FORMAT",
     "InterchangeBundle",
+    "ObservedReferenceFact",
+    "ObservedSymbolFact",
     "REFERENCE_EDGE_KINDS",
     "ReferenceRecord",
     "SYMBOL_NODE_SUFFIXES",
     "SymbolRecord",
+    "SCIP_DEFINITION_ROLE",
+    "SCIP_JSON_SUBSET_FORMAT",
     "build_symbol_reference_bundle",
+    "snapshot_from_compiler_facts",
+    "snapshot_from_scip_json",
+    "snapshot_to_scip_json",
 ]

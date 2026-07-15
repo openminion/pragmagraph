@@ -47,6 +47,7 @@ def test_workspace_init_persists_expected_files_and_status(tmp_path: Path) -> No
     assert Path(result.workspace.paths.snapshot_path).is_file()
     assert Path(result.workspace.paths.manifest_path).is_file()
     assert Path(result.workspace.paths.status_path).is_file()
+    assert Path(result.workspace.paths.cache_path).is_file()
     assert result.operation.status.status == "fresh"
 
     status = load_workspace_status(workspace)
@@ -55,6 +56,7 @@ def test_workspace_init_persists_expected_files_and_status(tmp_path: Path) -> No
     assert status.snapshot_present is True
     assert status.manifest_present is True
     assert status.profile_present is True
+    assert status.cache_present is True
     assert status.refresh_status is not None
     assert status.refresh_status.status == "fresh"
 
@@ -187,3 +189,4 @@ def test_cli_workspace_commands_and_workspace_service(tmp_path: Path) -> None:
     )
     refreshed_payload = json.loads(refreshed.stdout)
     assert "src/ops.py" in refreshed_payload["operation"]["changed_paths"]
+    assert refreshed_payload["operation"]["work"]["parsed_path_count"] == 1

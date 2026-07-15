@@ -302,11 +302,16 @@ class QueryRequest:
     node_ids: tuple[str, ...] = ()
     max_results: int = 10
     include_edges: bool = True
+    cursor: str = ""
+    max_examined: int | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "query", str(self.query or ""))
         object.__setattr__(self, "node_ids", tuple_str(self.node_ids))
         object.__setattr__(self, "max_results", max(1, int(self.max_results or 1)))
+        object.__setattr__(self, "cursor", str(self.cursor or ""))
+        if self.max_examined is not None:
+            object.__setattr__(self, "max_examined", max(1, int(self.max_examined)))
 
 
 @dataclass(frozen=True)
@@ -374,11 +379,13 @@ class QueryResult:
     hits: tuple[QueryHit, ...] = ()
     omitted: tuple[OmittedDiagnostic, ...] = ()
     diagnostics: Mapping[str, Any] = field(default_factory=dict)
+    next_cursor: str = ""
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "hits", tuple(self.hits))
         object.__setattr__(self, "omitted", tuple(self.omitted))
         object.__setattr__(self, "diagnostics", frozen_mapping(self.diagnostics))
+        object.__setattr__(self, "next_cursor", str(self.next_cursor or ""))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -386,6 +393,7 @@ class QueryResult:
             "hits": [hit.to_dict() for hit in self.hits],
             "omitted": [item.to_dict() for item in self.omitted],
             "diagnostics": dict(self.diagnostics),
+            "next_cursor": self.next_cursor,
         }
 
 
@@ -398,6 +406,13 @@ class PathResult:
     nodes: tuple[GraphNode, ...] = ()
     edges: tuple[GraphEdge, ...] = ()
     omitted: tuple[OmittedDiagnostic, ...] = ()
+    diagnostics: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "nodes", tuple(self.nodes))
+        object.__setattr__(self, "edges", tuple(self.edges))
+        object.__setattr__(self, "omitted", tuple(self.omitted))
+        object.__setattr__(self, "diagnostics", frozen_mapping(self.diagnostics))
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -406,6 +421,7 @@ class PathResult:
             "nodes": [node.to_dict() for node in self.nodes],
             "edges": [edge.to_dict() for edge in self.edges],
             "omitted": [item.to_dict() for item in self.omitted],
+            "diagnostics": dict(self.diagnostics),
         }
 
 
@@ -591,6 +607,56 @@ class SnapshotStructuralDelta:
 
 
 @dataclass(frozen=True)
+class IdentityTransition:
+    """High-confidence continuity between previous and current graph IDs."""
+
+    previous_id: str
+    current_id: str
+    kind: str
+    previous_path: str
+    current_path: str
+    reason: str = "git_rename"
+    confidence: str = "high_confidence"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "previous_id": self.previous_id,
+            "current_id": self.current_id,
+            "kind": self.kind,
+            "previous_path": self.previous_path,
+            "current_path": self.current_path,
+            "reason": self.reason,
+            "confidence": self.confidence,
+        }
+
+
+@dataclass(frozen=True)
+class RefreshWorkStats:
+    """Deterministic work counts for one full or incremental refresh."""
+
+    strategy: str = "full"
+    paths_walked: int = 0
+    source_bytes_hashed: int = 0
+    parsed_path_count: int = 0
+    reused_path_count: int = 0
+    resolution_overlay_rebuilt: bool = True
+    git_overlay_rebuilt: bool = True
+    cache_fallback_reason: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "strategy": self.strategy,
+            "paths_walked": self.paths_walked,
+            "source_bytes_hashed": self.source_bytes_hashed,
+            "parsed_path_count": self.parsed_path_count,
+            "reused_path_count": self.reused_path_count,
+            "resolution_overlay_rebuilt": self.resolution_overlay_rebuilt,
+            "git_overlay_rebuilt": self.git_overlay_rebuilt,
+            "cache_fallback_reason": self.cache_fallback_reason,
+        }
+
+
+@dataclass(frozen=True)
 class RefreshResult:
     """Result of refreshing a graph snapshot."""
 
@@ -603,12 +669,17 @@ class RefreshResult:
     snapshot_delta: SnapshotStructuralDelta = field(
         default_factory=SnapshotStructuralDelta
     )
+    identity_transitions: tuple[IdentityTransition, ...] = ()
+    work: RefreshWorkStats = field(default_factory=RefreshWorkStats)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "changed_paths", tuple_str(self.changed_paths))
         object.__setattr__(self, "unchanged_paths", tuple_str(self.unchanged_paths))
         object.__setattr__(self, "removed_paths", tuple_str(self.removed_paths))
         object.__setattr__(self, "path_changes", tuple(self.path_changes))
+        object.__setattr__(
+            self, "identity_transitions", tuple(self.identity_transitions)
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -619,6 +690,10 @@ class RefreshResult:
             "removed_paths": list(self.removed_paths),
             "path_changes": [item.to_dict() for item in self.path_changes],
             "snapshot_delta": self.snapshot_delta.to_dict(),
+            "identity_transitions": [
+                item.to_dict() for item in self.identity_transitions
+            ],
+            "work": self.work.to_dict(),
         }
 
 
@@ -795,6 +870,7 @@ __all__ = [
     "GraphNode",
     "GraphSnapshot",
     "HealthSummary",
+    "IdentityTransition",
     "MemoryEvidenceBundle",
     "MemoryEvidenceRef",
     "OmittedDiagnostic",
@@ -810,6 +886,7 @@ __all__ = [
     "RefreshManifestEntry",
     "RefreshPathChange",
     "RefreshResult",
+    "RefreshWorkStats",
     "SnapshotStructuralDelta",
     "SourceRef",
 ]

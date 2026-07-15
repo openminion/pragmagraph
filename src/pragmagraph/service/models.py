@@ -126,6 +126,8 @@ class ServiceCapabilities:
     parser_set: tuple[str, ...] = ()
     parser_versions: tuple[str, ...] = ()
     export_formats: tuple[str, ...] = ()
+    export_profiles: tuple[str, ...] = ()
+    query_pagination_supported: bool = True
     report_formats: tuple[str, ...] = ()
     snapshot_id: str = ""
     root_path: str = ""
@@ -156,6 +158,9 @@ class ServiceCapabilities:
             self, "export_formats", tuple(sorted(tuple_str(self.export_formats)))
         )
         object.__setattr__(
+            self, "export_profiles", tuple(sorted(tuple_str(self.export_profiles)))
+        )
+        object.__setattr__(
             self, "report_formats", tuple(sorted(tuple_str(self.report_formats)))
         )
 
@@ -176,6 +181,8 @@ class ServiceCapabilities:
             "parser_set": list(self.parser_set),
             "parser_versions": list(self.parser_versions),
             "export_formats": list(self.export_formats),
+            "export_profiles": list(self.export_profiles),
+            "query_pagination_supported": self.query_pagination_supported,
             "report_formats": list(self.report_formats),
             "snapshot_id": self.snapshot_id,
             "root_path": self.root_path,

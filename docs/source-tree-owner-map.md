@@ -24,23 +24,27 @@ and `pragmagraph.ui`.
 1. `contracts/` owns schema/version constants and typed package errors.
 2. `models/` owns immutable DTOs.
 3. `adapters/` owns local indexing from source roots into snapshots, including
-   git-history overlays.
+   git-history overlays and bounded artifact-specific fact extraction.
 4. `query/` owns deterministic search, explain, neighborhood, path, health,
    and git-aware lookup helpers.
 5. `storage/` owns snapshot load/save and stable JSON encoding.
 6. `report/`, `export/`, and `graphify/` own derived structural views over
-   snapshots, including structural git-overlay summaries.
-7. `refresh/` owns content-hash manifest and refresh behavior.
+   snapshots, including structural git-overlay summaries and non-mutating
+   export redaction profiles.
+7. `refresh/` owns content-hash manifest, refresh behavior, and CI-facing
+   canonical snapshot deltas.
 8. `operations.py` owns explicit refresh planning, saved invocation profiles,
    persisted status ledgers, and repeatable local ingest runs.
 9. `navigation/` owns compact repo-map and handoff views over observed
    snapshots.
 10. `interchange/`, `topology/`, `docgraph/`, `planner/`,
    `certification/`, `lineage/`, and `parser_support/` own advanced
-   structural views over observed snapshots.
-11. `workspace/` owns the persistent local workspace directory contract and
-   explicit workspace lifecycle helpers.
-12. `service/` owns the local repeated-query service boundary.
+   structural views over observed snapshots. `interchange/` also owns the SCIP
+   JSON subset and caller-fed exact compiler/LSP fact bridge.
+11. `workspace/` owns the persistent local workspace directory contract,
+   explicit workspace lifecycle helpers, and deterministic multi-root overlays.
+12. `service/` owns the local repeated-query service boundary. `server/` owns
+   the bounded MCP transport, tool registry, and read-only resource registry.
 13. `ui/` owns typed UI contracts, the PragmaGraph-to-GraphFakos adapter, and
    package CLI preview wiring. `ui/__init__.py` remains the stable UI import
    seam, `ui/contracts.py` owns typed route and transport-boundary contracts,
@@ -59,3 +63,6 @@ and `pragmagraph.ui`.
    and provider validation.
 3. `examples/` are usage demos, not additional stability guarantees beyond the
    documented public surface.
+4. `scripts/validate_quality_patterns.py` and `scripts/baselines/` own the
+   package-local structural quality ratchets used by `make validate-patterns`
+   and `make check`.

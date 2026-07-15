@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from dataclasses import replace
+from pathlib import Path
 
 from pragmagraph import PACKAGE_STATUS, STABLE_IMPORT_ROOTS, __version__
 from pragmagraph.adapters import (
@@ -15,14 +17,15 @@ from pragmagraph.adapters import (
 from pragmagraph.bench import benchmark_root, render_markdown_benchmark
 from pragmagraph.certification import build_certification_pack
 from pragmagraph.docgraph import build_doc_graph_summary, render_markdown_doc_graph
-from pragmagraph.export import render_graph_export
+from pragmagraph.export import EXPORT_PROFILES, project_snapshot, render_graph_export
 from pragmagraph.graphify import (
     snapshot_from_graphify_payload,
     to_graphify_payload,
 )
 from pragmagraph.interchange import build_symbol_reference_bundle
+from pragmagraph.incremental import load_extraction_cache, save_extraction_cache
 from pragmagraph.lineage import build_git_lineage
-from pragmagraph.models import QueryRequest
+from pragmagraph.models import PragmaGraphError, QueryRequest
 from pragmagraph.navigation import (
     build_repo_map,
     render_compact_handoff,
@@ -48,26 +51,25 @@ from pragmagraph.query import (
     recent_commits_for_path,
 )
 from pragmagraph.report import build_report, render_markdown_report
-from pragmagraph.refresh import load_manifest, refresh_snapshot, save_manifest
+from pragmagraph.refresh import (
+    build_ci_delta,
+    load_manifest,
+    refresh_snapshot,
+    refresh_snapshot_incremental,
+    save_manifest,
+)
 from pragmagraph.service import LocalQueryService, run_stdio_service
 from pragmagraph.storage import SQLiteGraphStore, load_snapshot, save_snapshot
 from pragmagraph.topology import build_topology_summary, render_markdown_topology
-from pragmagraph.viewer import (
-    VIEWER_FIXTURE_SCENARIOS,
-    build_viewer_envelope,
-    build_viewer_fixture_envelope,
-    explain_omitted,
-    load_viewer_envelope,
-    viewer_cluster,
-    viewer_cluster_nodes,
-    viewer_content,
-    viewer_delta,
-    viewer_envelope_neighborhood,
-    viewer_envelope_path,
-    write_viewer_envelope,
+from pragmagraph.viewer.cli import (
+    VIEWER_COMMANDS,
+    register_viewer_commands,
+    run_viewer_command,
 )
 from pragmagraph.workspace import (
+    WorkspaceRoot,
     initialize_workspace,
+    index_multi_root,
     load_workspace_status,
     refresh_workspace,
 )
@@ -129,6 +131,7 @@ def _service_from_args(args: argparse.Namespace) -> LocalQueryService:
         snapshot_out_path=args.snapshot_out,
         manifest_out_path=args.manifest_out,
         state_out_path=args.state_out,
+        cache_path=args.cache,
         git_identity_mode=args.git_identity_mode,
     )
 
@@ -149,7 +152,27 @@ def main(argv: list[str] | None = None) -> int:
     query_parser.add_argument("snapshot")
     query_parser.add_argument("query")
     query_parser.add_argument("--max-results", type=int, default=10)
+    query_parser.add_argument("--cursor", default="")
+    query_parser.add_argument("--max-examined", type=int)
     _add_json_flag(query_parser)
+
+    multi_root_parser = subparsers.add_parser(
+        "multi-root-index",
+        help="index explicitly named roots into one overlay",
+    )
+    multi_root_parser.add_argument("--root", action="append", required=True)
+    multi_root_parser.add_argument("--namespace", default="workspace")
+    multi_root_parser.add_argument("--out", required=True)
+    _add_json_flag(multi_root_parser)
+
+    ci_delta_parser = subparsers.add_parser(
+        "ci-delta",
+        help="compare two canonical snapshots for CI",
+    )
+    ci_delta_parser.add_argument("before")
+    ci_delta_parser.add_argument("after")
+    ci_delta_parser.add_argument("--fail-on-changes", action="store_true")
+    _add_json_flag(ci_delta_parser)
 
     explain_parser = subparsers.add_parser(
         "explain", help="query with score explanations"
@@ -157,6 +180,8 @@ def main(argv: list[str] | None = None) -> int:
     explain_parser.add_argument("snapshot")
     explain_parser.add_argument("query")
     explain_parser.add_argument("--max-results", type=int, default=10)
+    explain_parser.add_argument("--cursor", default="")
+    explain_parser.add_argument("--max-examined", type=int)
     _add_json_flag(explain_parser)
 
     git_path_parser = subparsers.add_parser(
@@ -259,6 +284,9 @@ def main(argv: list[str] | None = None) -> int:
         default="dot",
         help="graph text format",
     )
+    export_parser.add_argument(
+        "--profile", choices=tuple(sorted(EXPORT_PROFILES)), default="full"
+    )
 
     graphify_export_parser = subparsers.add_parser(
         "graphify-export", help="export a snapshot as Graphify-shaped JSON"
@@ -308,6 +336,8 @@ def main(argv: list[str] | None = None) -> int:
     store_query_parser.add_argument("store")
     store_query_parser.add_argument("query")
     store_query_parser.add_argument("--max-results", type=int, default=10)
+    store_query_parser.add_argument("--cursor", default="")
+    store_query_parser.add_argument("--max-examined", type=int)
     _add_json_flag(store_query_parser)
 
     store_neighborhood_parser = subparsers.add_parser(
@@ -318,6 +348,8 @@ def main(argv: list[str] | None = None) -> int:
     store_neighborhood_parser.add_argument("node_id")
     store_neighborhood_parser.add_argument("--depth", type=int, default=1)
     store_neighborhood_parser.add_argument("--max-results", type=int, default=10)
+    store_neighborhood_parser.add_argument("--edge-kind", action="append", default=[])
+    store_neighborhood_parser.add_argument("--node-kind", action="append", default=[])
     _add_json_flag(store_neighborhood_parser)
 
     store_path_parser = subparsers.add_parser(
@@ -328,7 +360,22 @@ def main(argv: list[str] | None = None) -> int:
     store_path_parser.add_argument("source_id")
     store_path_parser.add_argument("target_id")
     store_path_parser.add_argument("--max-hops", type=int, default=4)
+    store_path_parser.add_argument("--edge-kind", action="append", default=[])
+    store_path_parser.add_argument("--node-kind", action="append", default=[])
     _add_json_flag(store_path_parser)
+
+    store_migrate_parser = subparsers.add_parser(
+        "store-migrate", help="explicitly migrate a SQLite graph store"
+    )
+    store_migrate_parser.add_argument("store")
+    _add_json_flag(store_migrate_parser)
+
+    store_update_parser = subparsers.add_parser(
+        "store-update", help="atomically apply a canonical snapshot delta"
+    )
+    store_update_parser.add_argument("store")
+    store_update_parser.add_argument("snapshot")
+    _add_json_flag(store_update_parser)
 
     benchmark_parser = subparsers.add_parser(
         "benchmark", help="benchmark package operations against a local root"
@@ -346,6 +393,8 @@ def main(argv: list[str] | None = None) -> int:
     refresh_parser.add_argument("--out", required=True)
     refresh_parser.add_argument("--manifest-in")
     refresh_parser.add_argument("--manifest-out", required=True)
+    refresh_parser.add_argument("--cache-in")
+    refresh_parser.add_argument("--cache-out")
     refresh_parser.add_argument("--namespace", default="default")
     _add_git_identity_mode_argument(refresh_parser)
     _add_json_flag(refresh_parser)
@@ -375,6 +424,7 @@ def main(argv: list[str] | None = None) -> int:
     profile_init_parser.add_argument("--snapshot-out", required=True)
     profile_init_parser.add_argument("--manifest-out", required=True)
     profile_init_parser.add_argument("--state-out", required=True)
+    profile_init_parser.add_argument("--cache-out")
     _add_git_identity_mode_argument(profile_init_parser)
     _add_json_flag(profile_init_parser)
 
@@ -417,6 +467,7 @@ def main(argv: list[str] | None = None) -> int:
     serve_parser.add_argument("--snapshot-out")
     serve_parser.add_argument("--manifest-out")
     serve_parser.add_argument("--state-out")
+    serve_parser.add_argument("--cache")
     _add_git_identity_mode_argument(serve_parser)
 
     workspace_init_parser = subparsers.add_parser(
@@ -476,109 +527,7 @@ def main(argv: list[str] | None = None) -> int:
     ui_parser.add_argument("--port", type=int, default=8766)
     _add_json_flag(ui_parser)
 
-    viewer_export_parser = subparsers.add_parser(
-        "viewer-export",
-        help="export a snapshot as a provider-neutral viewer envelope",
-    )
-    viewer_export_parser.add_argument("snapshot")
-    viewer_export_parser.add_argument(
-        "--lod",
-        choices=("auto", "raw", "sampled", "cluster", "meta"),
-        default="auto",
-    )
-    viewer_export_parser.add_argument("--node-budget", type=int, default=240)
-    viewer_export_parser.add_argument("--edge-budget", type=int, default=480)
-    viewer_export_parser.add_argument("--cluster-size", type=int, default=24)
-    viewer_export_parser.add_argument("--out", default="")
-    _add_json_flag(viewer_export_parser)
-
-    viewer_fixture_parser = subparsers.add_parser(
-        "viewer-fixture",
-        help="generate a deterministic large-scale viewer envelope fixture",
-    )
-    viewer_fixture_parser.add_argument(
-        "--scenario",
-        choices=VIEWER_FIXTURE_SCENARIOS,
-        required=True,
-    )
-    viewer_fixture_parser.add_argument("--out", required=True)
-    viewer_fixture_parser.add_argument("--node-budget", type=int, default=240)
-    viewer_fixture_parser.add_argument("--edge-budget", type=int, default=480)
-    viewer_fixture_parser.add_argument("--seed", type=int, default=20260706)
-    _add_json_flag(viewer_fixture_parser)
-
-    viewer_cluster_parser = subparsers.add_parser(
-        "viewer-cluster",
-        help="show bounded cluster detail from a viewer envelope",
-    )
-    viewer_cluster_parser.add_argument("envelope")
-    viewer_cluster_parser.add_argument("cluster_id")
-    viewer_cluster_parser.add_argument("--budget", type=int, default=100)
-    _add_json_flag(viewer_cluster_parser)
-
-    viewer_content_parser = subparsers.add_parser(
-        "viewer-content",
-        help="show provider-owned node content from a viewer envelope",
-    )
-    viewer_content_parser.add_argument("envelope")
-    viewer_content_parser.add_argument("node_id")
-    viewer_content_parser.add_argument(
-        "--mode",
-        choices=("preview", "full"),
-        default="preview",
-    )
-    _add_json_flag(viewer_content_parser)
-
-    viewer_neighborhood_parser = subparsers.add_parser(
-        "viewer-neighborhood",
-        help="show bounded visible-node neighborhood from a viewer envelope",
-    )
-    viewer_neighborhood_parser.add_argument("envelope")
-    viewer_neighborhood_parser.add_argument("node_id")
-    viewer_neighborhood_parser.add_argument("--depth", type=int, default=1)
-    viewer_neighborhood_parser.add_argument("--budget", type=int, default=100)
-    _add_json_flag(viewer_neighborhood_parser)
-
-    viewer_path_parser = subparsers.add_parser(
-        "viewer-path",
-        help="show a bounded visible path from a viewer envelope",
-    )
-    viewer_path_parser.add_argument("envelope")
-    viewer_path_parser.add_argument("source_id")
-    viewer_path_parser.add_argument("target_id")
-    viewer_path_parser.add_argument("--budget", type=int, default=100)
-    _add_json_flag(viewer_path_parser)
-
-    viewer_cluster_nodes_parser = subparsers.add_parser(
-        "viewer-cluster-nodes",
-        help="show bounded hub or bridge node IDs for a viewer cluster",
-    )
-    viewer_cluster_nodes_parser.add_argument("envelope")
-    viewer_cluster_nodes_parser.add_argument("cluster_id")
-    viewer_cluster_nodes_parser.add_argument(
-        "--role",
-        choices=("hub", "bridge"),
-        required=True,
-    )
-    viewer_cluster_nodes_parser.add_argument("--budget", type=int, default=100)
-    _add_json_flag(viewer_cluster_nodes_parser)
-
-    viewer_omitted_parser = subparsers.add_parser(
-        "viewer-omitted",
-        help="explain omitted counts from a viewer envelope",
-    )
-    viewer_omitted_parser.add_argument("envelope")
-    viewer_omitted_parser.add_argument("--reason", default="")
-    _add_json_flag(viewer_omitted_parser)
-
-    viewer_delta_parser = subparsers.add_parser(
-        "viewer-delta",
-        help="show viewer-safe structural delta between two snapshots",
-    )
-    viewer_delta_parser.add_argument("before_snapshot")
-    viewer_delta_parser.add_argument("after_snapshot")
-    viewer_delta_parser.add_argument("--budget", type=int, default=100)
-    _add_json_flag(viewer_delta_parser)
+    register_viewer_commands(subparsers)
 
     args = parser.parse_args(argv)
 
@@ -595,15 +544,43 @@ def main(argv: list[str] | None = None) -> int:
         _print_payload(
             query(
                 snapshot,
-                QueryRequest(query=args.query, max_results=args.max_results),
+                QueryRequest(
+                    query=args.query,
+                    max_results=args.max_results,
+                    cursor=args.cursor,
+                    max_examined=args.max_examined,
+                ),
             ).to_dict(),
             as_json=True,
         )
+    elif args.command == "multi-root-index":
+        roots = []
+        for value in args.root:
+            name, separator, path_value = value.partition("=")
+            if not separator or not name.strip() or not path_value.strip():
+                parser.error("--root must use NAME=PATH")
+            roots.append(WorkspaceRoot(name=name, path=path_value))
+        snapshot = index_multi_root(roots, namespace=args.namespace)
+        save_snapshot(snapshot, args.out)
+        _print_payload(snapshot.to_dict(), as_json=args.json)
+    elif args.command == "ci-delta":
+        report = build_ci_delta(
+            load_snapshot(args.before),
+            load_snapshot(args.after),
+            fail_on_changes=args.fail_on_changes,
+        )
+        _print_payload(report.to_dict(), as_json=True)
+        return report.exit_code
     elif args.command == "explain":
         snapshot = load_snapshot(args.snapshot)
         result = query(
             snapshot,
-            QueryRequest(query=args.query, max_results=args.max_results),
+            QueryRequest(
+                query=args.query,
+                max_results=args.max_results,
+                cursor=args.cursor,
+                max_examined=args.max_examined,
+            ),
         )
         _print_payload(result.to_dict(), as_json=True)
     elif args.command == "git-commits-for-path":
@@ -674,7 +651,10 @@ def main(argv: list[str] | None = None) -> int:
         _print_payload(
             explain_query_plan(
                 snapshot,
-                QueryRequest(query=args.query, max_results=args.max_results),
+                QueryRequest(
+                    query=args.query,
+                    max_results=args.max_results,
+                ),
             ),
             as_json=True,
         )
@@ -697,7 +677,8 @@ def main(argv: list[str] | None = None) -> int:
         )
     elif args.command == "export":
         snapshot = load_snapshot(args.snapshot)
-        print(render_graph_export(snapshot, format=args.format), end="")
+        projection = project_snapshot(snapshot, profile=args.profile)
+        print(render_graph_export(projection.snapshot, format=args.format), end="")
     elif args.command == "graphify-export":
         snapshot = load_snapshot(args.snapshot)
         _print_payload(to_graphify_payload(snapshot), as_json=True)
@@ -743,6 +724,8 @@ def main(argv: list[str] | None = None) -> int:
                 args.node_id,
                 depth=args.depth,
                 max_results=args.max_results,
+                edge_kinds=tuple(args.edge_kind),
+                node_kinds=tuple(args.node_kind),
             ).to_dict(),
             as_json=True,
         )
@@ -753,9 +736,18 @@ def main(argv: list[str] | None = None) -> int:
                 args.source_id,
                 args.target_id,
                 max_hops=args.max_hops,
+                edge_kinds=tuple(args.edge_kind),
+                node_kinds=tuple(args.node_kind),
             ).to_dict(),
             as_json=True,
         )
+    elif args.command == "store-migrate":
+        store = SQLiteGraphStore(args.store)
+        _print_payload(store.migrate().to_dict(), as_json=True)
+    elif args.command == "store-update":
+        store = SQLiteGraphStore(args.store)
+        report = store.apply_snapshot_delta(load_snapshot(args.snapshot))
+        _print_payload(report.to_dict(), as_json=True)
     elif args.command == "benchmark":
         report = benchmark_root(
             args.root,
@@ -773,14 +765,40 @@ def main(argv: list[str] | None = None) -> int:
         previous_manifest = (
             load_manifest(args.manifest_in) if args.manifest_in else None
         )
-        result = refresh_snapshot(
-            args.root,
-            namespace=args.namespace,
-            previous_manifest=previous_manifest,
-            git_identity_mode=args.git_identity_mode,
-        )
+        previous_snapshot = load_snapshot(args.out) if Path(args.out).exists() else None
+        if args.cache_in or args.cache_out:
+            previous_cache = None
+            fallback_reason = ""
+            if args.cache_in and Path(args.cache_in).exists():
+                try:
+                    previous_cache = load_extraction_cache(args.cache_in)
+                except PragmaGraphError as exc:
+                    fallback_reason = exc.code.lower()
+            result, next_cache = refresh_snapshot_incremental(
+                args.root,
+                namespace=args.namespace,
+                previous_manifest=previous_manifest,
+                previous_snapshot=previous_snapshot,
+                previous_cache=previous_cache,
+                git_identity_mode=args.git_identity_mode,
+            )
+            if fallback_reason:
+                result = replace(
+                    result,
+                    work=replace(result.work, cache_fallback_reason=fallback_reason),
+                )
+        else:
+            result = refresh_snapshot(
+                args.root,
+                namespace=args.namespace,
+                previous_manifest=previous_manifest,
+                previous_snapshot=previous_snapshot,
+                git_identity_mode=args.git_identity_mode,
+            )
         save_snapshot(result.snapshot, args.out)
         save_manifest(result.manifest, args.manifest_out)
+        if args.cache_out:
+            save_extraction_cache(next_cache, args.cache_out)
         _print_payload(
             {
                 "changed_paths": list(result.changed_paths),
@@ -788,6 +806,10 @@ def main(argv: list[str] | None = None) -> int:
                 "removed_paths": list(result.removed_paths),
                 "path_changes": [item.to_dict() for item in result.path_changes],
                 "snapshot_delta": result.snapshot_delta.to_dict(),
+                "identity_transitions": [
+                    item.to_dict() for item in result.identity_transitions
+                ],
+                "work": result.work.to_dict(),
                 "health": health(result.snapshot).to_dict(),
             },
             as_json=args.json,
@@ -827,6 +849,7 @@ def main(argv: list[str] | None = None) -> int:
             snapshot_path=args.snapshot_out,
             manifest_path=args.manifest_out,
             state_path=args.state_out,
+            cache_path=args.cache_out or "",
             namespace=args.namespace,
             git_identity_mode=args.git_identity_mode,
         )
@@ -892,79 +915,8 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         result = write_ui_preview(request)
         _print_payload(result.to_dict(), as_json=args.json)
-    elif args.command == "viewer-export":
-        snapshot = load_snapshot(args.snapshot)
-        envelope = build_viewer_envelope(
-            snapshot,
-            level_of_detail=args.lod,
-            node_budget=args.node_budget,
-            edge_budget=args.edge_budget,
-            cluster_size=args.cluster_size,
-        )
-        if args.out:
-            _print_payload(write_viewer_envelope(envelope, args.out), as_json=True)
-        else:
-            _print_payload(envelope.to_dict(), as_json=True)
-    elif args.command == "viewer-fixture":
-        envelope = build_viewer_fixture_envelope(
-            args.scenario,
-            node_budget=args.node_budget,
-            edge_budget=args.edge_budget,
-            seed=args.seed,
-        )
-        _print_payload(write_viewer_envelope(envelope, args.out), as_json=True)
-    elif args.command == "viewer-cluster":
-        envelope = load_viewer_envelope(args.envelope)
-        _print_payload(
-            viewer_cluster(envelope, args.cluster_id, budget=args.budget),
-            as_json=True,
-        )
-    elif args.command == "viewer-content":
-        envelope = load_viewer_envelope(args.envelope)
-        _print_payload(
-            viewer_content(envelope, args.node_id, mode=args.mode),
-            as_json=True,
-        )
-    elif args.command == "viewer-neighborhood":
-        envelope = load_viewer_envelope(args.envelope)
-        _print_payload(
-            viewer_envelope_neighborhood(
-                envelope,
-                args.node_id,
-                depth=args.depth,
-                budget=args.budget,
-            ),
-            as_json=True,
-        )
-    elif args.command == "viewer-path":
-        envelope = load_viewer_envelope(args.envelope)
-        _print_payload(
-            viewer_envelope_path(
-                envelope,
-                args.source_id,
-                args.target_id,
-                budget=args.budget,
-            ),
-            as_json=True,
-        )
-    elif args.command == "viewer-cluster-nodes":
-        envelope = load_viewer_envelope(args.envelope)
-        _print_payload(
-            viewer_cluster_nodes(
-                envelope,
-                args.cluster_id,
-                role=args.role,
-                budget=args.budget,
-            ),
-            as_json=True,
-        )
-    elif args.command == "viewer-omitted":
-        envelope = load_viewer_envelope(args.envelope)
-        _print_payload(explain_omitted(envelope, reason=args.reason), as_json=True)
-    elif args.command == "viewer-delta":
-        before = load_snapshot(args.before_snapshot)
-        after = load_snapshot(args.after_snapshot)
-        _print_payload(viewer_delta(before, after, budget=args.budget), as_json=True)
+    elif args.command in VIEWER_COMMANDS:
+        _print_payload(run_viewer_command(args), as_json=True)
     elif args.json:
         print(json.dumps(smoke_payload(), sort_keys=True))
     else:

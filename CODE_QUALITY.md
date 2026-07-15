@@ -75,6 +75,11 @@ Before closing work, run the package gates from `pragmagraph/`:
 make check
 ```
 
+`make check` runs formatting, Ruff, structural quality ratchets, and the
+package tests. The ratchets guard current debt for file/function size,
+duplicate private helpers, path and filename drift, broad exception handlers,
+bare `# type: ignore`, and hidden sibling-package imports.
+
 If your change affects packaging or public release shape, also run:
 
 ```bash

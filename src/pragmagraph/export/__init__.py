@@ -116,8 +116,26 @@ def render_graph_export(snapshot: GraphSnapshot, *, format: str) -> str:
     )
 
 
+from pragmagraph.export.redaction import (  # noqa: E402
+    EXPORT_PROFILES,
+    EXPORT_PROFILE_FULL,
+    EXPORT_PROFILE_NO_CONTENT,
+    EXPORT_PROFILE_NO_IDENTITIES,
+    EXPORT_PROFILE_PORTABLE,
+    ExportProjection,
+    project_snapshot,
+)
+
+
 __all__ = [
+    "EXPORT_PROFILES",
+    "EXPORT_PROFILE_FULL",
+    "EXPORT_PROFILE_NO_CONTENT",
+    "EXPORT_PROFILE_NO_IDENTITIES",
+    "EXPORT_PROFILE_PORTABLE",
     "EXPORT_SCHEMA_VERSION",
+    "ExportProjection",
+    "project_snapshot",
     "render_dot",
     "render_graph_export",
     "render_mermaid",

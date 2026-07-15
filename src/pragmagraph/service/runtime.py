@@ -3,14 +3,21 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Mapping
 
 from pragmagraph.adapters.git_history import DEFAULT_GIT_IDENTITY_MODE
 from pragmagraph.contracts import INDEXER_VERSION, SCHEMA_VERSION
-from pragmagraph.export import EXPORT_SCHEMA_VERSION, render_graph_export
+from pragmagraph.export import (
+    EXPORT_PROFILES,
+    EXPORT_SCHEMA_VERSION,
+    project_snapshot,
+    render_graph_export,
+)
 from pragmagraph.graphify import GRAPHIFY_INTEROP_FORMAT, to_graphify_payload
+from pragmagraph.incremental import load_extraction_cache, save_extraction_cache
+from pragmagraph.incremental.models import ExtractionCacheBundle
 from pragmagraph.models import (
     GraphSnapshot,
     PragmaGraphError,
@@ -24,7 +31,12 @@ from pragmagraph.operations import (
     save_refresh_status,
 )
 from pragmagraph.query import health, neighborhood, path, query
-from pragmagraph.refresh import load_manifest, refresh_snapshot, save_manifest
+from pragmagraph.refresh import (
+    load_manifest,
+    refresh_snapshot,
+    refresh_snapshot_incremental,
+    save_manifest,
+)
 from pragmagraph.report import build_report, render_markdown_report
 from pragmagraph.service.constants import (
     ERROR_INTERNAL,
@@ -68,6 +80,17 @@ from pragmagraph.workspace import (
     refresh_workspace,
 )
 
+_CacheLoad = tuple[ExtractionCacheBundle | None, str]
+
+
+def _load_cache(path: str | Path | None) -> _CacheLoad:
+    if not path or not Path(path).exists():
+        return None, ""
+    try:
+        return load_extraction_cache(path), ""
+    except PragmaGraphError as exc:
+        return None, exc.code.lower()
+
 
 @dataclass(frozen=True)
 class ServiceStartup:
@@ -84,6 +107,7 @@ class ServiceStartup:
     workspace_path: str = ""
     store_path: str = ""
     profile_label: str = "service-root"
+    cache_path: str = ""
 
 
 class LocalQueryService:
@@ -140,17 +164,41 @@ class LocalQueryService:
         snapshot_out_path: str | Path | None = None,
         manifest_out_path: str | Path | None = None,
         state_out_path: str | Path | None = None,
+        cache_path: str | Path | None = None,
         git_identity_mode: str = DEFAULT_GIT_IDENTITY_MODE,
     ) -> "LocalQueryService":
         loaded_manifest = None
         if manifest_path and Path(manifest_path).exists():
             loaded_manifest = load_manifest(manifest_path)
-        refresh = refresh_snapshot(
-            root_path,
-            namespace=namespace,
-            previous_manifest=loaded_manifest,
-            git_identity_mode=git_identity_mode,
-        )
+        previous_snapshot = None
+        if snapshot_out_path and Path(snapshot_out_path).exists():
+            previous_snapshot = load_snapshot(snapshot_out_path)
+        previous_cache, cache_fallback_reason = _load_cache(cache_path)
+        if cache_path:
+            refresh, next_cache = refresh_snapshot_incremental(
+                root_path,
+                namespace=namespace,
+                previous_manifest=loaded_manifest,
+                previous_snapshot=previous_snapshot,
+                previous_cache=previous_cache,
+                git_identity_mode=git_identity_mode,
+            )
+            if cache_fallback_reason:
+                refresh = replace(
+                    refresh,
+                    work=replace(
+                        refresh.work,
+                        cache_fallback_reason=cache_fallback_reason,
+                    ),
+                )
+        else:
+            refresh = refresh_snapshot(
+                root_path,
+                namespace=namespace,
+                previous_manifest=loaded_manifest,
+                previous_snapshot=previous_snapshot,
+                git_identity_mode=git_identity_mode,
+            )
         startup = ServiceStartup(
             mode=STARTUP_MODE_ROOT,
             namespace=namespace,
@@ -160,6 +208,7 @@ class LocalQueryService:
             manifest_out_path=str(manifest_out_path or ""),
             state_out_path=str(state_out_path or ""),
             profile_label="service-root",
+            cache_path=str(cache_path or ""),
         )
         refresh_status = refresh_status_from_result(
             profile=RefreshProfile(
@@ -180,6 +229,8 @@ class LocalQueryService:
             refresh_status=refresh_status,
         )
         service._persist_state()
+        if cache_path:
+            save_extraction_cache(next_cache, cache_path)
         return service
 
     @classmethod
@@ -203,6 +254,7 @@ class LocalQueryService:
                 state_out_path=metadata.paths.status_path,
                 workspace_path=metadata.paths.workspace_path,
                 profile_label=metadata.label,
+                cache_path=metadata.paths.cache_path,
             ),
             manifest=manifest,
             refresh_status=refresh_status,
@@ -265,6 +317,7 @@ class LocalQueryService:
             parser_set=parser_set,
             parser_versions=parser_versions,
             export_formats=("dot", "mermaid"),
+            export_profiles=tuple(EXPORT_PROFILES),
             report_formats=("json", "markdown"),
             snapshot_id=_snapshot_id(self._snapshot),
             root_path=self._startup.root_path or self._snapshot.root_path,
@@ -334,7 +387,9 @@ class LocalQueryService:
                 "snapshot_id": _snapshot_id(self._snapshot),
                 "workspace_path": self._startup.workspace_path,
                 "store_path": self._startup.store_path,
-                "manifest_schema_version": self._manifest_schema_version(),
+                "manifest_schema_version": (
+                    self._manifest.schema_version if self._manifest is not None else ""
+                ),
                 "parser_set": capabilities.parser_set,
                 "parser_versions": capabilities.parser_versions,
                 "diagnostic_counts": _diagnostic_counts(self._snapshot),
@@ -359,6 +414,8 @@ class LocalQueryService:
                 node_id,
                 depth=depth,
                 max_results=max_results,
+                edge_kinds=self._str_tuple_param(request.params, "edge_kinds"),
+                node_kinds=self._str_tuple_param(request.params, "node_kinds"),
             ).to_dict()
         if method == METHOD_PATH:
             source_id = self._required_str(request.params, "source_id")
@@ -375,30 +432,13 @@ class LocalQueryService:
                 source_id,
                 target_id,
                 max_hops=max_hops,
+                edge_kinds=self._str_tuple_param(request.params, "edge_kinds"),
+                node_kinds=self._str_tuple_param(request.params, "node_kinds"),
             ).to_dict()
         if method == METHOD_REPORT:
-            report = build_report(
-                self._snapshot,
-                top_n=self._int_param(request.params, "top_n", default=10, minimum=1),
-            )
-            format_name = self._str_param(request.params, "format", default="json")
-            if format_name == "markdown":
-                return {"format": "markdown", "text": render_markdown_report(report)}
-            if format_name != "json":
-                raise self._error(
-                    ERROR_INVALID_PARAMS,
-                    "report format must be 'json' or 'markdown'",
-                    {"format": format_name},
-                )
-            return {"format": "json", "report": report.to_dict()}
+            return self._report_result(request.params)
         if method == METHOD_EXPORT:
-            format_name = self._str_param(request.params, "format", default="dot")
-            return {
-                "format": format_name,
-                "export_schema_version": EXPORT_SCHEMA_VERSION,
-                "snapshot_schema_version": self._snapshot.schema_version,
-                "text": render_graph_export(self._snapshot, format=format_name),
-            }
+            return self._export_result(request.params)
         if method == METHOD_GRAPHIFY_EXPORT:
             return to_graphify_payload(self._snapshot)
         if method == METHOD_REFRESH:
@@ -411,12 +451,54 @@ class LocalQueryService:
             {"method": method},
         )
 
+    def _report_result(self, params: Mapping[str, Any]) -> dict[str, Any]:
+        report = build_report(
+            self._snapshot,
+            top_n=self._int_param(params, "top_n", default=10, minimum=1),
+        )
+        format_name = self._str_param(params, "format", default="json")
+        if format_name == "markdown":
+            return {"format": "markdown", "text": render_markdown_report(report)}
+        if format_name != "json":
+            raise self._error(
+                ERROR_INVALID_PARAMS,
+                "report format must be 'json' or 'markdown'",
+                {"format": format_name},
+            )
+        return {"format": "json", "report": report.to_dict()}
+
+    def _export_result(self, params: Mapping[str, Any]) -> dict[str, Any]:
+        format_name = self._str_param(params, "format", default="dot")
+        profile = self._str_param(params, "profile", default="full")
+        try:
+            projection = project_snapshot(self._snapshot, profile=profile)
+        except ValueError as exc:
+            raise self._error(
+                ERROR_INVALID_PARAMS,
+                str(exc),
+                {"profile": profile},
+            ) from exc
+        return {
+            "format": format_name,
+            "profile": profile,
+            "redacted_fields": list(projection.redacted_fields),
+            "export_schema_version": EXPORT_SCHEMA_VERSION,
+            "snapshot_schema_version": self._snapshot.schema_version,
+            "text": render_graph_export(projection.snapshot, format=format_name),
+        }
+
     def _query_result(self, params: Mapping[str, Any]) -> Any:
         request = QueryRequest(
             query=self._str_param(params, "text", default=""),
             node_ids=self._str_tuple_param(params, "node_ids"),
             max_results=self._int_param(params, "max_results", default=10, minimum=1),
             include_edges=self._bool_param(params, "include_edges", default=True),
+            cursor=self._str_param(params, "cursor", default=""),
+            max_examined=self._optional_int_param(
+                params,
+                "max_examined",
+                minimum=1,
+            ),
         )
         if self._store is not None:
             return self._store.query(request)
@@ -433,18 +515,24 @@ class LocalQueryService:
         *,
         depth: int,
         max_results: int,
+        edge_kinds: tuple[str, ...],
+        node_kinds: tuple[str, ...],
     ) -> Any:
         if self._store is not None:
             return self._store.neighborhood(
                 node_id,
                 depth=depth,
                 max_results=max_results,
+                edge_kinds=edge_kinds,
+                node_kinds=node_kinds,
             )
         return neighborhood(
             self._snapshot,
             node_id,
             depth=depth,
             max_results=max_results,
+            edge_kinds=edge_kinds,
+            node_kinds=node_kinds,
         )
 
     def _store_path(
@@ -453,10 +541,25 @@ class LocalQueryService:
         target_id: str,
         *,
         max_hops: int,
+        edge_kinds: tuple[str, ...],
+        node_kinds: tuple[str, ...],
     ) -> Any:
         if self._store is not None:
-            return self._store.path(source_id, target_id, max_hops=max_hops)
-        return path(self._snapshot, source_id, target_id, max_hops=max_hops)
+            return self._store.path(
+                source_id,
+                target_id,
+                max_hops=max_hops,
+                edge_kinds=edge_kinds,
+                node_kinds=node_kinds,
+            )
+        return path(
+            self._snapshot,
+            source_id,
+            target_id,
+            max_hops=max_hops,
+            edge_kinds=edge_kinds,
+            node_kinds=node_kinds,
+        )
 
     def _require_snapshot_node(self, node_id: str, *, detail_key: str) -> None:
         if node_id in self._snapshot.node_map():
@@ -484,12 +587,34 @@ class LocalQueryService:
             self._manifest = refresh.manifest
             self._refresh_status = workspace_result.operation.status
         else:
-            refresh = refresh_snapshot(
-                self._startup.root_path,
-                namespace=self._startup.namespace,
-                previous_manifest=self._manifest,
-                git_identity_mode=self._git_identity_mode(),
-            )
+            if self._startup.cache_path:
+                previous_cache, cache_fallback_reason = _load_cache(
+                    self._startup.cache_path
+                )
+                refresh, next_cache = refresh_snapshot_incremental(
+                    self._startup.root_path,
+                    namespace=self._startup.namespace,
+                    previous_manifest=self._manifest,
+                    previous_snapshot=self._snapshot,
+                    previous_cache=previous_cache,
+                    git_identity_mode=self._git_identity_mode(),
+                )
+                if cache_fallback_reason:
+                    refresh = replace(
+                        refresh,
+                        work=replace(
+                            refresh.work,
+                            cache_fallback_reason=cache_fallback_reason,
+                        ),
+                    )
+            else:
+                refresh = refresh_snapshot(
+                    self._startup.root_path,
+                    namespace=self._startup.namespace,
+                    previous_manifest=self._manifest,
+                    previous_snapshot=self._snapshot,
+                    git_identity_mode=self._git_identity_mode(),
+                )
             self._snapshot = refresh.snapshot
             self._manifest = refresh.manifest
             self._refresh_status = refresh_status_from_result(
@@ -507,12 +632,18 @@ class LocalQueryService:
                 result=refresh,
             )
             self._persist_state()
+            if self._startup.cache_path:
+                save_extraction_cache(next_cache, self._startup.cache_path)
         return {
             "changed_paths": list(refresh.changed_paths),
             "unchanged_paths": list(refresh.unchanged_paths),
             "removed_paths": list(refresh.removed_paths),
             "path_changes": [item.to_dict() for item in refresh.path_changes],
             "snapshot_delta": refresh.snapshot_delta.to_dict(),
+            "identity_transitions": [
+                item.to_dict() for item in refresh.identity_transitions
+            ],
+            "work": refresh.work.to_dict(),
             "health": health(refresh.snapshot).to_dict(),
             "refresh_state": self._refresh_state_payload(),
         }
@@ -569,6 +700,17 @@ class LocalQueryService:
             )
         return value
 
+    def _optional_int_param(
+        self,
+        params: Mapping[str, Any],
+        key: str,
+        *,
+        minimum: int,
+    ) -> int | None:
+        if key not in params or params[key] is None:
+            return None
+        return self._int_param(params, key, default=minimum, minimum=minimum)
+
     def _bool_param(
         self,
         params: Mapping[str, Any],
@@ -606,9 +748,6 @@ class LocalQueryService:
         details: Mapping[str, Any] | None = None,
     ) -> PragmaGraphError:
         return PragmaGraphError(message, code=code, details=details or {})
-
-    def _manifest_schema_version(self) -> str:
-        return self._manifest.schema_version if self._manifest is not None else ""
 
     def _refresh_state_payload(self) -> dict[str, Any] | None:
         return (

@@ -20,6 +20,7 @@ schedulers, git hooks, or background daemons.
 - persistent refresh state ledgers via `RefreshStatus`,
   `save_refresh_status(...)`, and `load_refresh_status(...)`
 - one-command explicit runs via `run_refresh_profile(...)`
+- opt-in changed-only extraction through a deterministic local cache bundle
 - root-backed service refresh-state reporting through
   `LocalQueryService.current_refresh_status()` and `health`
 
@@ -29,6 +30,29 @@ schedulers, git hooks, or background daemons.
 - `pragmagraph profile-init <root> --out <profile.json> --snapshot-out <snapshot.json> --manifest-out <manifest.json> --state-out <status.json> --json`
 - `pragmagraph profile-run <profile.json> --json`
 - `pragmagraph refresh-status <status.json> --json`
+
+Direct refresh keeps full mode as the default. To opt in, name cache input and
+output explicitly:
+
+```bash
+pragmagraph refresh . \
+  --out .pragmagraph/snapshot.json \
+  --manifest-out .pragmagraph/manifest.json \
+  --cache-in .pragmagraph/extraction-cache.json \
+  --cache-out .pragmagraph/extraction-cache.json \
+  --json
+```
+
+Workspace mode owns `cache/extraction-cache.json` under the workspace root.
+It never writes cache state into the indexed source root. A corrupt or
+incompatible cache triggers a full extraction rebuild, reports a typed
+`cache_fallback_reason`, and is replaced only after snapshot, manifest, and
+status persistence succeeds.
+
+Refresh results expose `work` counts for walked and parsed paths, source bytes
+hashed, fragment reuse, resolution/git overlay rebuilds, and cache fallback.
+Git-proven, unambiguous renames may also appear as non-canonical
+`identity_transitions`; canonical snapshots continue to use current paths.
 
 ## Boundary
 

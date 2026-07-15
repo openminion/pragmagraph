@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import hashlib
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from time import perf_counter_ns
@@ -12,9 +13,15 @@ from pragmagraph._immutables import frozen_mapping
 from pragmagraph.adapters import DEFAULT_GIT_IDENTITY_MODE, index_path
 from pragmagraph.export import render_dot, render_mermaid
 from pragmagraph.graphify import to_graphify_payload
-from pragmagraph.models import QueryRequest
+from pragmagraph.models import (
+    GraphEdge,
+    GraphNode,
+    GraphSnapshot,
+    QueryRequest,
+    SourceRef,
+)
 from pragmagraph.query import query
-from pragmagraph.refresh import refresh_snapshot
+from pragmagraph.refresh import refresh_snapshot_incremental
 from pragmagraph.report import build_report
 from pragmagraph.storage import SQLiteGraphStore, stable_dumps
 
@@ -73,6 +80,36 @@ class BenchmarkReport:
         }
 
 
+@dataclass(frozen=True)
+class GeneratedScaleEvidence:
+    """Deterministic non-timing evidence for one generated scale profile."""
+
+    node_count: int
+    edge_count: int
+    canonical_hash: str
+    snapshot_bytes: int
+    query_strategy: str
+    query_rows_examined: int
+    traversal_rows_examined: int
+    snapshot_deserialized: bool
+    normalized_rows_written: int
+    snapshot_payload_bytes_written: int
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "node_count": self.node_count,
+            "edge_count": self.edge_count,
+            "canonical_hash": self.canonical_hash,
+            "snapshot_bytes": self.snapshot_bytes,
+            "query_strategy": self.query_strategy,
+            "query_rows_examined": self.query_rows_examined,
+            "traversal_rows_examined": self.traversal_rows_examined,
+            "snapshot_deserialized": self.snapshot_deserialized,
+            "normalized_rows_written": self.normalized_rows_written,
+            "snapshot_payload_bytes_written": self.snapshot_payload_bytes_written,
+        }
+
+
 def _measure(
     name: str,
     fn: Callable[[], _T],
@@ -115,12 +152,13 @@ def benchmark_root(
             "omitted_count": len(value.omitted),
         },
     )
+
     snapshot_json, snapshot_measurement = _measure(
         "snapshot_serialize",
         lambda: stable_dumps(snapshot),
         detail_builder=lambda value: {"bytes": len(value.encode("utf-8"))},
     )
-    query_result, query_measurement = _measure(
+    _, query_measurement = _measure(
         "json_query",
         lambda: query(
             snapshot,
@@ -131,7 +169,7 @@ def benchmark_root(
             "candidate_count": int(value.diagnostics.get("candidate_count", 0)),
         },
     )
-    report_result, report_measurement = _measure(
+    _, report_measurement = _measure(
         "report",
         lambda: build_report(snapshot, top_n=top_n),
         detail_builder=lambda value: {
@@ -140,17 +178,17 @@ def benchmark_root(
             "unresolved_count": len(value.unresolved_items),
         },
     )
-    dot_text, dot_measurement = _measure(
+    _, dot_measurement = _measure(
         "export_dot",
         lambda: render_dot(snapshot),
         detail_builder=lambda value: {"bytes": len(value.encode("utf-8"))},
     )
-    mermaid_text, mermaid_measurement = _measure(
+    _, mermaid_measurement = _measure(
         "export_mermaid",
         lambda: render_mermaid(snapshot),
         detail_builder=lambda value: {"bytes": len(value.encode("utf-8"))},
     )
-    graphify_payload, graphify_measurement = _measure(
+    _, graphify_measurement = _measure(
         "graphify_export",
         lambda: to_graphify_payload(snapshot),
         detail_builder=lambda value: {
@@ -165,7 +203,7 @@ def benchmark_root(
             lambda: SQLiteGraphStore.from_snapshot(snapshot, store_path),
             detail_builder=lambda value: value.manifest().to_dict(),
         )
-        sqlite_query_result, sqlite_query_measurement = _measure(
+        _, sqlite_query_measurement = _measure(
             "sqlite_query",
             lambda: sqlite_store.query(
                 QueryRequest(query=query_text, max_results=max_results),
@@ -174,26 +212,33 @@ def benchmark_root(
                 "hit_count": len(value.hits),
                 "candidate_count": int(value.diagnostics.get("candidate_count", 0)),
                 "fts_available": bool(value.diagnostics.get("fts_available", False)),
+                "strategy": str(value.diagnostics.get("strategy", "")),
+                "rows_examined": int(value.diagnostics.get("rows_examined", 0)),
+                "snapshot_deserialized": bool(
+                    value.diagnostics.get("snapshot_deserialized", True)
+                ),
             },
         )
-    _ = query_result, dot_text, mermaid_text, graphify_payload, sqlite_query_result
+    initial_refresh, initial_cache = refresh_snapshot_incremental(
+        root,
+        namespace=namespace,
+        git_identity_mode=git_identity_mode,
+    )
     refresh_result, refresh_measurement = _measure(
         "refresh_unchanged",
-        lambda: refresh_snapshot(
+        lambda: refresh_snapshot_incremental(
             root,
             namespace=namespace,
-            previous_manifest=refresh_snapshot(
-                root,
-                namespace=namespace,
-                git_identity_mode=git_identity_mode,
-            ).manifest,
-            previous_snapshot=snapshot,
+            previous_manifest=initial_refresh.manifest,
+            previous_snapshot=initial_refresh.snapshot,
+            previous_cache=initial_cache,
             git_identity_mode=git_identity_mode,
-        ),
+        )[0],
         detail_builder=lambda value: {
             "changed_paths": len(value.changed_paths),
             "unchanged_paths": len(value.unchanged_paths),
             "removed_paths": len(value.removed_paths),
+            **value.work.to_dict(),
         },
     )
 
@@ -222,6 +267,70 @@ def benchmark_root(
             mermaid_measurement,
             graphify_measurement,
         ),
+    )
+
+
+def build_generated_scale_snapshot(node_count: int) -> GraphSnapshot:
+    """Build a compact deterministic chain fixture without checked-in payloads."""
+    if node_count < 1:
+        raise ValueError("node_count must be positive")
+    nodes = tuple(
+        GraphNode(
+            id=f"pragma://scale/node/{index:06d}",
+            kind="symbol",
+            label=f"node-{index:06d}",
+            source_ref=SourceRef(path=f"src/file-{index // 100:06d}.py"),
+            text=f"generated scale node {index:06d}",
+            metadata={"ordinal": index, "fixture": "generated"},
+        )
+        for index in range(node_count)
+    )
+    edges = tuple(
+        GraphEdge(
+            id=f"pragma://scale/edge/{index:06d}",
+            kind="references",
+            source_id=nodes[index].id,
+            target_id=nodes[index + 1].id,
+        )
+        for index in range(node_count - 1)
+    )
+    return GraphSnapshot(
+        namespace="scale",
+        root_path="generated://scale",
+        nodes=nodes,
+        edges=edges,
+        stats={"fixture": "generated", "node_count": node_count},
+    )
+
+
+def benchmark_generated_scale(node_count: int) -> GeneratedScaleEvidence:
+    """Prove store work counts on a generated profile; timings remain advisory."""
+    snapshot = build_generated_scale_snapshot(node_count)
+    payload = stable_dumps(snapshot).encode("utf-8")
+    with TemporaryDirectory(prefix="pragmagraph-scale-") as temp_dir:
+        store = SQLiteGraphStore.from_snapshot(
+            snapshot, Path(temp_dir) / "scale.sqlite"
+        )
+        query_result = store.query(f"node-{node_count - 1:06d}")
+        traversal = store.neighborhood(
+            snapshot.nodes[0].id,
+            depth=2,
+            max_results=10,
+        )
+        update = store.apply_snapshot_delta(snapshot)
+    return GeneratedScaleEvidence(
+        node_count=len(snapshot.nodes),
+        edge_count=len(snapshot.edges),
+        canonical_hash=hashlib.sha256(payload).hexdigest(),
+        snapshot_bytes=len(payload),
+        query_strategy=str(query_result.diagnostics.get("strategy", "")),
+        query_rows_examined=int(query_result.diagnostics.get("rows_examined", 0)),
+        traversal_rows_examined=int(traversal.diagnostics.get("rows_examined", 0)),
+        snapshot_deserialized=bool(
+            query_result.diagnostics.get("snapshot_deserialized", True)
+        ),
+        normalized_rows_written=update.normalized_rows_written,
+        snapshot_payload_bytes_written=update.snapshot_payload_bytes_written,
     )
 
 
@@ -264,6 +373,9 @@ def _fixture_profile(node_count: int) -> str:
 __all__ = [
     "BenchmarkMeasurement",
     "BenchmarkReport",
+    "GeneratedScaleEvidence",
     "benchmark_root",
+    "benchmark_generated_scale",
+    "build_generated_scale_snapshot",
     "render_markdown_benchmark",
 ]

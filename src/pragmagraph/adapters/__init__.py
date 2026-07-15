@@ -14,6 +14,7 @@ from pragmagraph.adapters.git_history import (
     collect_git_overlay,
     validate_git_identity_mode,
 )
+from pragmagraph.adapters.artifacts import parse_artifact
 from pragmagraph.contracts import (
     EDGE_CONTAINS,
     EDGE_DEFINES,
@@ -22,10 +23,13 @@ from pragmagraph.contracts import (
     EDGE_IMPORTS,
     EDGE_REFERENCES_DOC,
     EDGE_REFERENCES_SECTION,
+    EDGE_RESOLVES_TO,
     INDEXER_VERSION,
     NODE_CONFIG,
     NODE_CONFIG_KEY,
     NODE_DIRECTORY,
+    NODE_DEPENDENCY_DECLARATION,
+    NODE_DEPENDENCY_RESOLUTION,
     NODE_DOC_SECTION,
     NODE_FILE,
     NODE_IMPORT,
@@ -39,6 +43,7 @@ from pragmagraph.models import (
     OmittedDiagnostic,
     SourceRef,
 )
+from pragmagraph.incremental.models import FileIndexFragment
 from pragmagraph.parsers import ParserRegistry, get_default_registry
 from pragmagraph.portability import edge_id, node_id, normalize_relative_path
 from pragmagraph.security import (
@@ -140,39 +145,177 @@ def _iter_paths(
             yield path, None
 
 
-def index_path(
+def collect_index_entries(
     root_path: str | Path,
     *,
-    namespace: str = "default",
-    ignore_names: frozenset[str] = DEFAULT_IGNORES,
-    created_at: str = "",
-    policy: ScopePolicy | None = None,
-    parser_registry: ParserRegistry | None = None,
-    git_identity_mode: str = DEFAULT_GIT_IDENTITY_MODE,
-) -> GraphSnapshot:
-    """Index a local code/docs root into a deterministic snapshot."""
-    root = Path(root_path).resolve()
-    scope = policy or ScopePolicy(ignore_names=ignore_names)
-    registry = parser_registry or get_default_registry()
-    identity_mode = validate_git_identity_mode(git_identity_mode)
-    nodes: dict[str, GraphNode] = {}
-    edges: dict[str, GraphEdge] = {}
-    omitted: list[OmittedDiagnostic] = []
+    policy: ScopePolicy,
+) -> tuple[tuple[Path, OmittedDiagnostic | None], ...]:
+    """Collect the ordered path/diagnostic stream used by full and cached indexing."""
+    return tuple(_iter_paths(Path(root_path).resolve(), policy))
 
+
+def extract_file_fragment(
+    root_path: str | Path,
+    path: str | Path,
+    *,
+    namespace: str,
+    parser_registry: ParserRegistry,
+) -> FileIndexFragment:
+    """Extract deterministic file-owned facts before graph-wide resolution."""
+    root = Path(root_path).resolve()
+    source_path = Path(path)
+    rel = _rel(source_path, root)
+    parent_rel = normalize_relative_path(Path(rel).parent)
+    parent_id = (
+        node_id(namespace, NODE_DIRECTORY, parent_rel)
+        if parent_rel
+        else node_id(namespace, NODE_PROJECT, ".")
+    )
+    file_id = node_id(namespace, NODE_FILE, rel)
+    text = (
+        _read_text(source_path) if source_path.suffix.lower() in TEXT_SUFFIXES else ""
+    )
+    nodes: dict[str, GraphNode] = {
+        file_id: GraphNode(
+            id=file_id,
+            kind=NODE_FILE,
+            label=escape_label(source_path.name),
+            source_ref=SourceRef(path=rel),
+            text=_snippet(text),
+            metadata={
+                "content_hash": _content_hash(source_path),
+                "suffix": source_path.suffix.lower(),
+            },
+        )
+    }
+    contains = GraphEdge(
+        id=edge_id(namespace, parent_id, EDGE_CONTAINS, file_id),
+        kind=EDGE_CONTAINS,
+        source_id=parent_id,
+        target_id=file_id,
+        source_ref=SourceRef(path=rel),
+    )
+    edges: dict[str, GraphEdge] = {contains.id: contains}
+    omitted: list[OmittedDiagnostic] = []
+    _index_file(
+        namespace=namespace,
+        rel=rel,
+        path=source_path,
+        file_id=file_id,
+        text=text,
+        registry=parser_registry,
+        nodes=nodes,
+        edges=edges,
+        omitted=omitted,
+    )
+    selection = parser_registry.select_parser(source_path, rel=rel)
+    parser = selection.parser
+    return FileIndexFragment(
+        path=rel,
+        content_hash=str(nodes[file_id].metadata.get("content_hash", "")),
+        parser=parser.name if parser is not None else "raw_file",
+        parser_version=parser.version
+        if parser is not None
+        else "pragmagraph.raw_file.v1alpha1",
+        nodes=tuple(sorted(nodes.values(), key=lambda item: item.id)),
+        edges=tuple(sorted(edges.values(), key=lambda item: item.id)),
+        omitted=tuple(omitted),
+    )
+
+
+def assemble_snapshot(
+    root_path: str | Path,
+    *,
+    namespace: str,
+    entries: tuple[tuple[Path, OmittedDiagnostic | None], ...],
+    fragments: Mapping[str, FileIndexFragment],
+    created_at: str,
+    parser_registry: ParserRegistry,
+    git_identity_mode: str,
+    scope_policy: ScopePolicy,
+    cached_git_overlay: tuple[
+        tuple[GraphNode, ...],
+        tuple[GraphEdge, ...],
+        tuple[OmittedDiagnostic, ...],
+        Mapping[str, Any],
+    ]
+    | None = None,
+) -> GraphSnapshot:
+    """Assemble canonical graph truth from regenerated and cached fact owners."""
+    root = Path(root_path).resolve()
     project_id = node_id(namespace, NODE_PROJECT, ".")
-    _add_node(
-        nodes,
-        GraphNode(
+    nodes: dict[str, GraphNode] = {
+        project_id: GraphNode(
             id=project_id,
             kind=NODE_PROJECT,
             label=root.name or namespace,
             source_ref=SourceRef(path="."),
             metadata={"namespace": namespace},
-        ),
+        )
+    }
+    edges: dict[str, GraphEdge] = {}
+    omitted: list[OmittedDiagnostic] = []
+    _add_entry_facts(
+        root,
+        namespace=namespace,
+        project_id=project_id,
+        entries=entries,
+        fragments=fragments,
+        nodes=nodes,
+        edges=edges,
+        omitted=omitted,
+    )
+    _resolve_local_imports(namespace, nodes, edges, omitted)
+    _resolve_dependency_facts(namespace, nodes, edges, omitted)
+    git_stats = _add_git_facts(
+        root,
+        namespace=namespace,
+        nodes=nodes,
+        edges=edges,
+        omitted=omitted,
+        git_identity_mode=git_identity_mode,
+        cached_git_overlay=cached_git_overlay,
+    )
+    parser_set, parser_versions = _parser_provenance(nodes)
+    stats = _snapshot_stats(
+        root,
+        nodes=nodes,
+        edges=edges,
+        omitted=omitted,
+        parser_set=parser_set,
+        parser_versions=parser_versions,
+        parser_count=len(parser_registry.parsers),
+        scope_max_file_bytes=scope_policy.max_file_bytes,
+        git_identity_mode=git_identity_mode,
+        git_stats=git_stats,
+    )
+    return GraphSnapshot(
+        namespace=namespace,
+        root_path=str(root),
+        nodes=tuple(sorted(nodes.values(), key=lambda item: item.id)),
+        edges=tuple(sorted(edges.values(), key=lambda item: item.id)),
+        omitted=tuple(omitted),
+        stats=stats,
+        schema_version=SCHEMA_VERSION,
+        indexer_version=INDEXER_VERSION,
+        created_at=created_at,
     )
 
+
+def _add_entry_facts(
+    root: Path,
+    *,
+    namespace: str,
+    project_id: str,
+    entries: tuple[tuple[Path, OmittedDiagnostic | None], ...],
+    fragments: Mapping[str, FileIndexFragment],
+    nodes: dict[str, GraphNode],
+    edges: dict[str, GraphEdge],
+    omitted: list[OmittedDiagnostic],
+) -> None:
+    """Merge directory and file-owned facts into one assembly."""
     parent_by_path: dict[str, str] = {"": project_id}
-    for path, diagnostic in _iter_paths(root, scope):
+    for path, diagnostic in entries:
         if diagnostic is not None:
             omitted.append(diagnostic)
             continue
@@ -204,62 +347,66 @@ def index_path(
             continue
         if not path.is_file():
             continue
-        file_id = node_id(namespace, NODE_FILE, rel)
-        text = _read_text(path) if path.suffix.lower() in TEXT_SUFFIXES else ""
-        _add_node(
-            nodes,
-            GraphNode(
-                id=file_id,
-                kind=NODE_FILE,
-                label=escape_label(path.name),
-                source_ref=SourceRef(path=rel),
-                text=_snippet(text),
-                metadata={
-                    "content_hash": _content_hash(path),
-                    "suffix": path.suffix.lower(),
-                },
-            ),
-        )
-        _add_edge(
-            edges,
-            GraphEdge(
-                id=edge_id(namespace, parent_id, EDGE_CONTAINS, file_id),
-                kind=EDGE_CONTAINS,
-                source_id=parent_id,
-                target_id=file_id,
-                source_ref=SourceRef(path=rel),
-            ),
-        )
-        _index_file(
-            namespace=namespace,
-            rel=rel,
-            path=path,
-            file_id=file_id,
-            text=text,
-            registry=registry,
-            nodes=nodes,
-            edges=edges,
-            omitted=omitted,
-        )
+        fragment = fragments[rel]
+        for node in fragment.nodes:
+            _add_node(nodes, node)
+        for edge in fragment.edges:
+            _add_edge(edges, edge)
+        omitted.extend(fragment.omitted)
 
-    _resolve_local_imports(namespace, nodes, edges, omitted)
-    git_nodes, git_edges, git_omitted, git_stats = collect_git_overlay(
-        root=root,
-        namespace=namespace,
-        nodes_by_id=nodes,
-        git_identity_mode=identity_mode,
-    )
+
+def _add_git_facts(
+    root: Path,
+    *,
+    namespace: str,
+    nodes: dict[str, GraphNode],
+    edges: dict[str, GraphEdge],
+    omitted: list[OmittedDiagnostic],
+    git_identity_mode: str,
+    cached_git_overlay: tuple[
+        tuple[GraphNode, ...],
+        tuple[GraphEdge, ...],
+        tuple[OmittedDiagnostic, ...],
+        Mapping[str, Any],
+    ]
+    | None,
+) -> Mapping[str, Any]:
+    """Merge a fresh or cached git overlay and return its observed stats."""
+    if cached_git_overlay is None:
+        git_nodes, git_edges, git_omitted, git_stats = collect_git_overlay(
+            root=root,
+            namespace=namespace,
+            nodes_by_id=nodes,
+            git_identity_mode=git_identity_mode,
+        )
+    else:
+        git_nodes, git_edges, git_omitted, git_stats = cached_git_overlay
     for node in git_nodes:
         _add_node(nodes, node)
     for edge in git_edges:
         _add_edge(edges, edge)
     omitted.extend(git_omitted)
-    parser_set, parser_versions = _parser_provenance(nodes)
-    stats = {
+    return git_stats
+
+
+def _snapshot_stats(
+    root: Path,
+    *,
+    nodes: Mapping[str, GraphNode],
+    edges: Mapping[str, GraphEdge],
+    omitted: list[OmittedDiagnostic],
+    parser_set: tuple[str, ...],
+    parser_versions: tuple[str, ...],
+    parser_count: int,
+    scope_max_file_bytes: int,
+    git_identity_mode: str,
+    git_stats: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
         "edge_count": len(edges),
         "git_changed_path_count": int(git_stats.get("git_changed_path_count", 0)),
         "git_commit_count": int(git_stats.get("git_commit_count", 0)),
-        "git_identity_mode": str(git_stats.get("git_identity_mode", identity_mode)),
+        "git_identity_mode": str(git_stats.get("git_identity_mode", git_identity_mode)),
         "git_overlay_enabled": bool(git_stats.get("git_overlay_enabled", False)),
         "git_rename_count": int(git_stats.get("git_rename_count", 0)),
         "git_repo_root": str(git_stats.get("git_repo_root", "")),
@@ -270,19 +417,46 @@ def index_path(
         "parser_set": parser_set,
         "parser_versions": parser_versions,
         "root_exists": root.exists(),
-        "parser_count": len(registry.parsers),
-        "scope_max_file_bytes": scope.max_file_bytes,
+        "parser_count": parser_count,
+        "scope_max_file_bytes": scope_max_file_bytes,
     }
-    return GraphSnapshot(
+
+
+def index_path(
+    root_path: str | Path,
+    *,
+    namespace: str = "default",
+    ignore_names: frozenset[str] = DEFAULT_IGNORES,
+    created_at: str = "",
+    policy: ScopePolicy | None = None,
+    parser_registry: ParserRegistry | None = None,
+    git_identity_mode: str = DEFAULT_GIT_IDENTITY_MODE,
+) -> GraphSnapshot:
+    """Index a local code/docs root into a deterministic snapshot."""
+    root = Path(root_path).resolve()
+    scope = policy or ScopePolicy(ignore_names=ignore_names)
+    registry = parser_registry or get_default_registry()
+    identity_mode = validate_git_identity_mode(git_identity_mode)
+    entries = collect_index_entries(root, policy=scope)
+    fragments = {
+        _rel(path, root): extract_file_fragment(
+            root,
+            path,
+            namespace=namespace,
+            parser_registry=registry,
+        )
+        for path, diagnostic in entries
+        if diagnostic is None and path.is_file()
+    }
+    return assemble_snapshot(
+        root,
         namespace=namespace,
-        root_path=str(root),
-        nodes=tuple(sorted(nodes.values(), key=lambda node: node.id)),
-        edges=tuple(sorted(edges.values(), key=lambda edge: edge.id)),
-        omitted=tuple(omitted),
-        stats=stats,
-        schema_version=SCHEMA_VERSION,
-        indexer_version=INDEXER_VERSION,
+        entries=entries,
+        fragments=fragments,
         created_at=created_at,
+        parser_registry=registry,
+        git_identity_mode=identity_mode,
+        scope_policy=scope,
     )
 
 
@@ -353,6 +527,25 @@ def _index_file(
         _index_markdown(namespace, rel, file_id, text, nodes, edges, omitted)
     if path.name in CONFIG_NAMES or path.suffix.lower() in CONFIG_SUFFIXES:
         _index_config(namespace, rel, file_id, text, nodes, edges, omitted)
+    artifact_result = parse_artifact(
+        namespace=namespace,
+        rel=rel,
+        file_id=file_id,
+        path=path,
+        text=text,
+    )
+    for node in artifact_result.nodes:
+        _add_node(nodes, node)
+    for edge in artifact_result.edges:
+        _add_edge(edges, edge)
+    for diagnostic in artifact_result.diagnostics:
+        omitted.append(
+            _omitted(
+                reason=diagnostic.code,
+                item_id=diagnostic.path or rel,
+                details=diagnostic.to_dict(),
+            )
+        )
     selection = registry.select_parser(path, rel=rel)
     parser = selection.parser
     for diagnostic in selection.diagnostics:
@@ -402,6 +595,52 @@ def _resolve_relative_module_id(
         if trimmed and trimmed in modules_by_path:
             return modules_by_path[trimmed]
     return None
+
+
+def _resolve_dependency_facts(
+    namespace: str,
+    nodes: Mapping[str, GraphNode],
+    edges: dict[str, GraphEdge],
+    omitted: list[OmittedDiagnostic],
+) -> None:
+    resolutions: dict[tuple[str, str], list[GraphNode]] = {}
+    declarations: list[GraphNode] = []
+    for node in nodes.values():
+        if node.kind == NODE_DEPENDENCY_RESOLUTION:
+            key = (
+                str(node.metadata.get("ecosystem", "")).lower(),
+                str(node.metadata.get("package", "")).lower(),
+            )
+            resolutions.setdefault(key, []).append(node)
+        elif node.kind == NODE_DEPENDENCY_DECLARATION:
+            declarations.append(node)
+    for declaration in declarations:
+        key = (
+            str(declaration.metadata.get("ecosystem", "")).lower(),
+            str(declaration.metadata.get("package", "")).lower(),
+        )
+        targets = sorted(resolutions.get(key, ()), key=lambda item: item.id)
+        if not targets:
+            omitted.append(
+                _omitted(
+                    reason="dependency_unresolved",
+                    item_id=declaration.id,
+                    details={"ecosystem": key[0], "package": key[1]},
+                )
+            )
+            continue
+        for target in targets:
+            _add_edge(
+                edges,
+                GraphEdge(
+                    id=edge_id(namespace, declaration.id, EDGE_RESOLVES_TO, target.id),
+                    kind=EDGE_RESOLVES_TO,
+                    source_id=declaration.id,
+                    target_id=target.id,
+                    source_ref=declaration.source_ref,
+                    metadata={"resolution_kind": "exact_observed_name"},
+                ),
+            )
 
 
 def _index_markdown(
@@ -744,6 +983,9 @@ __all__ = [
     "DEFAULT_GIT_IDENTITY_MODE",
     "SUPPORTED_GIT_IDENTITY_MODES",
     "TEXT_SUFFIXES",
+    "assemble_snapshot",
+    "collect_index_entries",
+    "extract_file_fragment",
     "index_path",
     "validate_git_identity_mode",
 ]

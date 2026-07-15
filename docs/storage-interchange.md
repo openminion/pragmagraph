@@ -34,6 +34,12 @@ print(sqlite_store.query("RuntimeGraph").to_dict())
 print(sqlite_store.capabilities().to_dict())
 ```
 
+SQLite v2 supports an atomic normalized-row delta while deliberately rewriting
+the complete canonical snapshot payload. The update report separates bounded
+`normalized_rows_written` from whole-snapshot
+`snapshot_payload_bytes_written` so callers do not mistake partial row work for
+a fully incremental store write.
+
 ## CLI
 
 Build a canonical snapshot first:
@@ -61,6 +67,15 @@ pragmagraph store-export .pragmagraph/graph.sqlite \
   --out .pragmagraph/exported-snapshot.json
 ```
 
+Older v1 stores remain readable without mutation. Migrate explicitly before
+delta application:
+
+```bash
+pragmagraph store-migrate .pragmagraph/graph.sqlite --json
+pragmagraph store-update .pragmagraph/graph.sqlite \
+  .pragmagraph/snapshot.json --json
+```
+
 Run the local service against the store:
 
 ```bash
@@ -75,10 +90,13 @@ pragmagraph serve --store .pragmagraph/graph.sqlite
    support and unsupported modes.
 3. Missing optional search support must be visible as typed diagnostics; it must
    not silently change query semantics.
-4. SQLite FTS5 is used when available. When unavailable, `SQLiteGraphStore`
-   keeps query parity by falling back to deterministic SQL scan plus snapshot
-   query ranking.
+4. Migrated SQLite stores select `direct_exact`, `indexed_trigram`, or
+   `sql_canonical_scan`, then apply the same canonical scorer used by JSON.
+   Candidate sets are never truncated before scoring.
 5. `store-export` must round-trip back to a deterministic JSON snapshot.
+6. Migrated-store query and traversal use normalized SQL rows and report
+   `snapshot_deserialized=false`; readable v1 stores report an explicit
+   `snapshot_fallback` with `migration_required`.
 
 ## Boundary
 

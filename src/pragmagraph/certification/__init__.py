@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
+import hashlib
 from dataclasses import dataclass, field
 from pathlib import PurePosixPath
 from typing import Any, Mapping
@@ -10,6 +11,7 @@ from typing import Any, Mapping
 from pragmagraph._immutables import frozen_mapping
 from pragmagraph.models import GraphSnapshot
 from pragmagraph.topology import TopologySummary, build_topology_summary
+from pragmagraph.storage import stable_dumps
 
 
 @dataclass(frozen=True)
@@ -51,6 +53,8 @@ class CertificationPack:
     omitted_reasons: Mapping[str, int] = field(default_factory=dict)
     privacy: PrivacyProfile = field(default_factory=PrivacyProfile)
     topology: TopologySummary | None = None
+    canonical_snapshot_hash: str = ""
+    canonical_snapshot_bytes: int = 0
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "parser_set", tuple(self.parser_set))
@@ -72,6 +76,8 @@ class CertificationPack:
             "omitted_reasons": dict(self.omitted_reasons),
             "privacy": self.privacy.to_dict(),
             "topology": self.topology.to_dict() if self.topology else {},
+            "canonical_snapshot_hash": self.canonical_snapshot_hash,
+            "canonical_snapshot_bytes": self.canonical_snapshot_bytes,
         }
 
 
@@ -108,6 +114,7 @@ def build_certification_pack(
     top_n: int = 10,
 ) -> CertificationPack:
     """Build a deterministic certification pack for package consumers."""
+    payload = stable_dumps(snapshot).encode("utf-8")
     return CertificationPack(
         namespace=snapshot.namespace,
         node_count=len(snapshot.nodes),
@@ -119,6 +126,8 @@ def build_certification_pack(
         omitted_reasons=dict(Counter(item.reason for item in snapshot.omitted)),
         privacy=build_privacy_profile(snapshot),
         topology=build_topology_summary(snapshot, top_n=top_n),
+        canonical_snapshot_hash=hashlib.sha256(payload).hexdigest(),
+        canonical_snapshot_bytes=len(payload),
     )
 
 

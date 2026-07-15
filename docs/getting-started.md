@@ -79,8 +79,7 @@ Example:
 - keep workspace and refresh boundaries clear
 
 Validation
-- `make lint`
-- `make test`
+- `make check`
 
 ## Commit message shape
 

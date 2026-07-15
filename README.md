@@ -33,8 +33,9 @@ indexer can recover without an LLM.
 
 This semantic alpha includes deterministic DTOs, JSON snapshots, local
 code/document indexing, refresh manifests, structural deltas, query helpers,
-local service contracts, reports, exports, Graphify-shaped interop, benchmark
-helpers, and CLI commands for observed-fact graph work.
+local service contracts, MCP tools and read-only resources, reports, exports,
+Graphify-shaped and SCIP-subset interop, benchmark helpers, and CLI commands
+for observed-fact graph work.
 
 ## Trust and Brand Safety
 
@@ -71,25 +72,28 @@ The package currently provides:
   snapshots, queries, diagnostics, and health
 - Indexing: deterministic JSON snapshots and a local indexer for files,
   Markdown structure, Python AST facts, TypeScript/JavaScript structure,
-  selected config metadata, snippets, and git-history overlays
+  selected config metadata, OpenAPI, protobuf, SQL schema, Terraform, CI
+  workflows, manifests/lockfiles, snippets, and git-history overlays
 - Query and refresh: neighborhood/path/explain/impact helpers, reverse-edge
   lookups, content-hash refresh manifests, structural deltas, saved refresh
   profiles, explicit refresh state reporting, compact repo-map handoffs, and
-  query-plan evidence
+  query-plan evidence, plus deterministic query cursors and work budgets
 - Storage interchange: canonical JSON snapshot stores, local SQLite
   materialized stores, typed store manifests, capability reports, import/export
   commands, and store-backed query/service routing
 - Reports, export, and interop: structural reports, DOT/Mermaid export,
-  Graphify-shaped JSON interchange, stable symbol/reference interchange,
+  export-time redaction profiles, Graphify-shaped JSON interchange, stable
+  symbol/reference interchange, a loss-aware SCIP JSON subset, caller-fed
+  compiler/LSP facts,
   topology/doc-graph views, git lineage, parser-support metadata, and
   certification packs
 - Viewer contract: bounded `pragmagraph.viewer` envelopes for GraphFakos and
   other provider-neutral graph viewers, including clusters, LOD, edge bundles,
   omitted counts, content previews, evidence, provenance, and deterministic
   1k/200k/1m fixture generation
-- Local runtime surfaces: stdio query service contracts, persistent workspace
-  helpers, `serve --workspace`, and the package-local visual preview boundary
-  under `pragmagraph.ui`
+- Local runtime surfaces: stdio query service contracts, MCP tools and read-only
+  resources, single- and multi-root workspace helpers, `serve --workspace`,
+  and the package-local visual preview boundary under `pragmagraph.ui`
 - Operational support: benchmark helpers, repo-local regression fixtures,
   gitignore-aware indexing/security rules, CLI commands, install smoke, and
   compatibility/release docs
@@ -135,7 +139,7 @@ This package does **not** currently provide:
 - KuzuDB, Neo4j, hosted, vector, or typed-edge storage
 - Graphify runtime API wrapping or Graphify replacement behavior
 - file watchers, git hooks, daemons, or scheduled refresh
-- MCP, HTTP, WebSocket, or hosted service transports
+- HTTP, WebSocket, or hosted service transports
 - OpenMinion runtime provider wiring
 - prompt context merging
 - the actual hosted operator-facing workbench runtime UI (that belongs to
@@ -202,6 +206,28 @@ Query the snapshot:
 
 ```bash
 pragmagraph query .pragmagraph/snapshot.json "RuntimeGraph" --json
+```
+
+Continue a bounded query page using the returned `next_cursor`:
+
+```bash
+pragmagraph query .pragmagraph/snapshot.json "RuntimeGraph" \
+  --max-results 25 \
+  --cursor '<next_cursor>' \
+  --max-examined 100000 \
+  --json
+```
+
+Compose several named roots or compare two snapshots in CI:
+
+```bash
+pragmagraph multi-root-index \
+  --root api=../api \
+  --root web=../web \
+  --out .pragmagraph/workspace.json \
+  --json
+
+pragmagraph ci-delta before.json after.json --fail-on-changes --json
 ```
 
 Refresh and explain with deterministic metadata:
