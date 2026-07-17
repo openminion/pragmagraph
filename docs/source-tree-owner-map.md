@@ -52,7 +52,7 @@ and `pragmagraph.ui`.
    `ui/local_server.py` remains the stable local-viewer compatibility seam,
    `preview.py` is the stable preview façade,
    `preview_types.py` owns typed request/result contracts, and
-   `preview_support.py` owns preview request parsing plus snapshot-loading and
+   `preview_inputs.py` owns preview request parsing plus snapshot-loading and
    GraphFakos bridge helpers. Shared viewer shell, local server behavior,
    static export, and reusable viewer assertions belong to GraphFakos.
 

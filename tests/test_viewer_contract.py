@@ -51,6 +51,16 @@ def _snapshot() -> GraphSnapshot:
     )
 
 
+def _run_viewer_cli(*args: object) -> dict[str, object]:
+    result = subprocess.run(
+        [sys.executable, "-m", "pragmagraph", *(str(arg) for arg in args), "--json"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return json.loads(result.stdout)
+
+
 def test_viewer_envelope_round_trip_and_omitted_counts() -> None:
     envelope = build_viewer_envelope(
         _snapshot(),
@@ -158,25 +168,15 @@ def test_viewer_delta_marks_snapshot_changes() -> None:
 
 def test_viewer_fixture_cli_writes_provider_envelope(tmp_path) -> None:
     out = tmp_path / "viewer-scale-200k.json"
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pragmagraph",
-            "viewer-fixture",
-            "--scenario",
-            "viewer-scale-200k",
-            "--node-budget",
-            "60",
-            "--out",
-            str(out),
-            "--json",
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
+    payload = _run_viewer_cli(
+        "viewer-fixture",
+        "--scenario",
+        "viewer-scale-200k",
+        "--node-budget",
+        60,
+        "--out",
+        out,
     )
-    payload = json.loads(result.stdout)
     envelope = json.loads(out.read_text(encoding="utf-8"))
 
     assert payload["raw_node_count"] == 200_000
@@ -184,116 +184,62 @@ def test_viewer_fixture_cli_writes_provider_envelope(tmp_path) -> None:
     assert envelope["schema_version"] == VIEWER_ENVELOPE_SCHEMA_VERSION
     assert envelope["graph_stats"]["minimum_raw_nodes_per_cluster"] >= 100
 
-    cluster_result = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pragmagraph",
-            "viewer-cluster",
-            str(out),
-            "scale-001",
-            "--budget",
-            "3",
-            "--json",
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
+    cluster = _run_viewer_cli(
+        "viewer-cluster",
+        out,
+        "scale-001",
+        "--budget",
+        3,
     )
-    content_result = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pragmagraph",
-            "viewer-content",
-            str(out),
-            "scale-001:node:0000",
-            "--mode",
-            "preview",
-            "--json",
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
+    content = _run_viewer_cli(
+        "viewer-content",
+        out,
+        "scale-001:node:0000",
+        "--mode",
+        "preview",
     )
 
-    assert json.loads(cluster_result.stdout)["cluster"]["id"] == "scale-001"
-    assert json.loads(content_result.stdout)["node_id"] == "scale-001:node:0000"
+    assert cluster["cluster"]["id"] == "scale-001"
+    assert content["node_id"] == "scale-001:node:0000"
 
-    neighborhood_result = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pragmagraph",
-            "viewer-neighborhood",
-            str(out),
-            "scale-001:node:0000",
-            "--budget",
-            "2",
-            "--json",
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
+    neighborhood = _run_viewer_cli(
+        "viewer-neighborhood",
+        out,
+        "scale-001:node:0000",
+        "--budget",
+        2,
     )
-    path_result = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pragmagraph",
-            "viewer-path",
-            str(out),
-            "scale-001:node:0000",
-            "scale-001:node:0001",
-            "--budget",
-            "4",
-            "--json",
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
+    graph_path = _run_viewer_cli(
+        "viewer-path",
+        out,
+        "scale-001:node:0000",
+        "scale-001:node:0001",
+        "--budget",
+        4,
     )
-    cluster_nodes_result = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pragmagraph",
-            "viewer-cluster-nodes",
-            str(out),
-            "scale-001",
-            "--role",
-            "hub",
-            "--budget",
-            "2",
-            "--json",
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
+    cluster_nodes = _run_viewer_cli(
+        "viewer-cluster-nodes",
+        out,
+        "scale-001",
+        "--role",
+        "hub",
+        "--budget",
+        2,
     )
-    omitted_result = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pragmagraph",
-            "viewer-omitted",
-            str(out),
-            "--reason",
-            "node_budget",
-            "--json",
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
+    omitted = _run_viewer_cli(
+        "viewer-omitted",
+        out,
+        "--reason",
+        "node_budget",
     )
 
-    assert json.loads(neighborhood_result.stdout)["node_id"] == "scale-001:node:0000"
-    assert json.loads(path_result.stdout)["found"] is True
-    assert json.loads(cluster_nodes_result.stdout)["node_ids"] == [
+    assert neighborhood["node_id"] == "scale-001:node:0000"
+    assert graph_path["found"] is True
+    assert cluster_nodes["node_ids"] == [
         "scale-001:hub:00",
         "scale-001:hub:01",
     ]
-    assert json.loads(omitted_result.stdout)["omitted"][0]["reason"] == "node_budget"
+    assert omitted["omitted"][0]["reason"] == "node_budget"
 
 
 def test_viewer_delta_cli_reports_stable_markers(tmp_path) -> None:
@@ -310,23 +256,13 @@ def test_viewer_delta_cli_reports_stable_markers(tmp_path) -> None:
     save_snapshot(base, before)
     save_snapshot(changed, after)
 
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pragmagraph",
-            "viewer-delta",
-            str(before),
-            str(after),
-            "--budget",
-            "3",
-            "--json",
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
+    payload = _run_viewer_cli(
+        "viewer-delta",
+        before,
+        after,
+        "--budget",
+        3,
     )
-    payload = json.loads(result.stdout)
 
     assert payload["structural_delta"]["removed_node_ids"] == ["node:039"]
     assert payload["markers"][0]["freshness"] == "removed"

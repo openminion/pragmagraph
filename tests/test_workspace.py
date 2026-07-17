@@ -31,6 +31,16 @@ def _repo_root(tmp_path: Path) -> Path:
     )
 
 
+def _run_workspace_cli(*args: object) -> dict[str, object]:
+    result = subprocess.run(
+        [sys.executable, "-m", "pragmagraph", *(str(arg) for arg in args), "--json"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return json.loads(result.stdout)
+
+
 def test_workspace_init_persists_expected_files_and_status(tmp_path: Path) -> None:
     root = _repo_root(tmp_path)
     workspace = tmp_path / "workspace"
@@ -96,42 +106,19 @@ def test_cli_workspace_commands_and_workspace_service(tmp_path: Path) -> None:
     root = _repo_root(tmp_path)
     workspace = tmp_path / "workspace"
 
-    init = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pragmagraph",
-            "workspace-init",
-            str(root),
-            "--workspace",
-            str(workspace),
-            "--label",
-            "demo",
-            "--namespace",
-            "fixture",
-            "--json",
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
+    init_payload = _run_workspace_cli(
+        "workspace-init",
+        root,
+        "--workspace",
+        workspace,
+        "--label",
+        "demo",
+        "--namespace",
+        "fixture",
     )
-    init_payload = json.loads(init.stdout)
     assert init_payload["workspace"]["label"] == "demo"
 
-    status = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pragmagraph",
-            "workspace-status",
-            str(workspace),
-            "--json",
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    status_payload = json.loads(status.stdout)
+    status_payload = _run_workspace_cli("workspace-status", workspace)
     assert status_payload["snapshot_present"] is True
 
     proc = subprocess.Popen(
@@ -174,19 +161,6 @@ def test_cli_workspace_commands_and_workspace_service(tmp_path: Path) -> None:
         "class OperatorGraph:\n    pass\n",
         encoding="utf-8",
     )
-    refreshed = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pragmagraph",
-            "workspace-refresh",
-            str(workspace),
-            "--json",
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    refreshed_payload = json.loads(refreshed.stdout)
+    refreshed_payload = _run_workspace_cli("workspace-refresh", workspace)
     assert "src/ops.py" in refreshed_payload["operation"]["changed_paths"]
     assert refreshed_payload["operation"]["work"]["parsed_path_count"] == 1

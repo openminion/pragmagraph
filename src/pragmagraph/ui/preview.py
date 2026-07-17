@@ -12,7 +12,7 @@ from graphfakos.server import (
 from graphfakos.static import render_static_html
 
 from .graphfakos_adapter import PragmaGraphViewerProvider
-from .preview_support import (
+from .preview_inputs import (
     graphfakos_request,
     render_server_preview_path,
     snapshot_for_request,

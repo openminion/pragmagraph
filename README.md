@@ -163,7 +163,7 @@ open it through GraphFakos:
 ```bash
 pragmagraph viewer-fixture \
   --scenario viewer-scale-200k \
-  --out ../workspace-tmp/pragmagraph-viewer-support/viewer-scale-200k.json \
+  --out .pragmagraph/viewer-fixtures/viewer-scale-200k.json \
   --json
 ```
 
@@ -174,7 +174,7 @@ You can run the package-local visual UI today:
 
 ```bash
 pragmagraph-ui \
-  --screen summary \
+  --screen search \
   --serve \
   --open
 ```
@@ -184,7 +184,7 @@ Use a persistent workspace as the preview source:
 ```bash
 pragmagraph-ui \
   --workspace <workspace-root> \
-  --screen workspace \
+  --screen provider_status \
   --serve
 ```
 

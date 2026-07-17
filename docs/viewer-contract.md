@@ -33,24 +33,24 @@ gets a bounded overview plus deterministic expansion handles.
 
 ## CLI Examples
 
-Generate deterministic viewer fixtures under the umbrella scratch tree:
+Generate deterministic viewer fixtures under the package-local workspace:
 
 ```bash
 cd pragmagraph
 
 PYTHONPATH=src .venv/bin/python3.11 -m pragmagraph.__main__ viewer-fixture \
   --scenario viewer-scale-1k \
-  --out ../workspace-tmp/pragmagraph-viewer-support/viewer-scale-1k.json \
+  --out .pragmagraph/viewer-fixtures/viewer-scale-1k.json \
   --json
 
 PYTHONPATH=src .venv/bin/python3.11 -m pragmagraph.__main__ viewer-fixture \
   --scenario viewer-scale-200k \
-  --out ../workspace-tmp/pragmagraph-viewer-support/viewer-scale-200k.json \
+  --out .pragmagraph/viewer-fixtures/viewer-scale-200k.json \
   --json
 
 PYTHONPATH=src .venv/bin/python3.11 -m pragmagraph.__main__ viewer-fixture \
   --scenario viewer-scale-1m \
-  --out ../workspace-tmp/pragmagraph-viewer-support/viewer-scale-1m.json \
+  --out .pragmagraph/viewer-fixtures/viewer-scale-1m.json \
   --json
 ```
 
@@ -70,40 +70,40 @@ Inspect bounded viewer details:
 
 ```bash
 PYTHONPATH=src .venv/bin/python3.11 -m pragmagraph.__main__ viewer-cluster \
-  ../workspace-tmp/pragmagraph-viewer-support/viewer-scale-200k.json \
+  .pragmagraph/viewer-fixtures/viewer-scale-200k.json \
   scale-001 \
   --budget 50 \
   --json
 
 PYTHONPATH=src .venv/bin/python3.11 -m pragmagraph.__main__ viewer-content \
-  ../workspace-tmp/pragmagraph-viewer-support/viewer-scale-200k.json \
+  .pragmagraph/viewer-fixtures/viewer-scale-200k.json \
   scale-001:node:0000 \
   --mode preview \
   --json
 
 PYTHONPATH=src .venv/bin/python3.11 -m pragmagraph.__main__ viewer-neighborhood \
-  ../workspace-tmp/pragmagraph-viewer-support/viewer-scale-200k.json \
+  .pragmagraph/viewer-fixtures/viewer-scale-200k.json \
   scale-001:node:0000 \
   --depth 2 \
   --budget 50 \
   --json
 
 PYTHONPATH=src .venv/bin/python3.11 -m pragmagraph.__main__ viewer-path \
-  ../workspace-tmp/pragmagraph-viewer-support/viewer-scale-200k.json \
+  .pragmagraph/viewer-fixtures/viewer-scale-200k.json \
   scale-001:node:0000 \
   scale-002:node:0000 \
   --budget 50 \
   --json
 
 PYTHONPATH=src .venv/bin/python3.11 -m pragmagraph.__main__ viewer-cluster-nodes \
-  ../workspace-tmp/pragmagraph-viewer-support/viewer-scale-200k.json \
+  .pragmagraph/viewer-fixtures/viewer-scale-200k.json \
   scale-001 \
   --role hub \
   --budget 25 \
   --json
 
 PYTHONPATH=src .venv/bin/python3.11 -m pragmagraph.__main__ viewer-omitted \
-  ../workspace-tmp/pragmagraph-viewer-support/viewer-scale-200k.json \
+  .pragmagraph/viewer-fixtures/viewer-scale-200k.json \
   --reason node_budget \
   --json
 
@@ -120,13 +120,12 @@ inspect PragmaGraph internals.
 
 ## GraphFakos Handoff
 
-GraphFakos consumes the exported JSON through its provider-envelope adapter:
+GraphFakos consumes the exported JSON through its installed provider-envelope
+adapter:
 
 ```bash
-cd ../graphfakos
-
-PYTHONPATH=src .venv/bin/python3.11 -m graphfakos.__main__ ui \
-  --provider-envelope ../workspace-tmp/pragmagraph-viewer-support/viewer-scale-200k.json \
+graphfakos-ui \
+  --provider-envelope .pragmagraph/viewer-fixtures/viewer-scale-200k.json \
   --render-engine 3d \
   --theme space \
   --layout grouped \
@@ -137,7 +136,10 @@ PYTHONPATH=src .venv/bin/python3.11 -m graphfakos.__main__ ui \
 
 ## Boundaries
 
-- PragmaGraph does not import GraphFakos.
+- PragmaGraph's core graph, index, and query layers do not depend on GraphFakos
+  behavior. The package's `pragmagraph.ui` adapter imports GraphFakos for the
+  shared local viewer shell while PragmaGraph retains ownership of observed
+  graph facts and provider mapping.
 - PragmaGraph does not own browser rendering, canvas, WebGL, themes, or camera
   state.
 - PragmaGraph does not infer semantic truth or durable memory from viewer
