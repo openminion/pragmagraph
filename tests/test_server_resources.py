@@ -5,10 +5,12 @@ from pathlib import Path
 from urllib.parse import quote
 
 from pragmagraph.adapters import index_path
+from pragmagraph.interchange import load_native_scip
 from pragmagraph.server.backend import ServiceConfig, build_wired_registry
 from pragmagraph.server.server import ServerInfo, dispatch
 from pragmagraph.server.tools import ToolRegistry
 from pragmagraph.storage import save_snapshot
+from .scip_fixtures import TYPESCRIPT_SCIP
 
 
 def _call(registry, method: str, params=None):
@@ -42,6 +44,7 @@ def test_mcp_resources_list_templates_and_read_loaded_state(tmp_path: Path) -> N
         "pragma://status",
         "pragma://snapshot",
         "pragma://report",
+        "pragma://precise-ingestion",
     ]
     assert (
         templates["result"]["resourceTemplates"][0]["uriTemplate"]
@@ -51,6 +54,22 @@ def test_mcp_resources_list_templates_and_read_loaded_state(tmp_path: Path) -> N
     node_payload = json.loads(node["result"]["contents"][0]["text"])
     assert status_payload["capabilities"]["namespace"] == "resources"
     assert node_payload["id"] == node_id
+
+
+def test_mcp_precise_ingestion_resource_reports_loaded_state(tmp_path: Path) -> None:
+    snapshot_path = tmp_path / "precise.json"
+    save_snapshot(load_native_scip(TYPESCRIPT_SCIP).snapshot, snapshot_path)
+    registry = build_wired_registry(ServiceConfig(snapshot_path=str(snapshot_path)))
+
+    response = _call(
+        registry,
+        "resources/read",
+        {"uri": "pragma://precise-ingestion"},
+    )
+    payload = json.loads(response["result"]["contents"][0]["text"])
+
+    assert payload["loaded"] is True
+    assert payload["report"]["producer"]["name"] == "scip-typescript"
 
 
 def test_initialize_omits_resources_when_registry_is_not_wired() -> None:

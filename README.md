@@ -34,7 +34,8 @@ indexer can recover without an LLM.
 This semantic alpha includes deterministic DTOs, JSON snapshots, local
 code/document indexing, refresh manifests, structural deltas, query helpers,
 local service contracts, MCP tools and read-only resources, reports, exports,
-Graphify-shaped and SCIP-subset interop, benchmark helpers, and CLI commands
+Graphify-shaped interop, loss-aware SCIP JSON and native protobuf intake,
+benchmark helpers, and CLI commands
 for observed-fact graph work.
 
 ## Trust and Brand Safety
@@ -83,8 +84,8 @@ The package currently provides:
   commands, and store-backed query/service routing
 - Reports, export, and interop: structural reports, DOT/Mermaid export,
   export-time redaction profiles, Graphify-shaped JSON interchange, stable
-  symbol/reference interchange, a loss-aware SCIP JSON subset, caller-fed
-  compiler/LSP facts,
+  symbol/reference interchange, a loss-aware SCIP JSON subset, optional native
+  SCIP protobuf intake, caller-fed compiler/LSP facts,
   topology/doc-graph views, git lineage, parser-support metadata, and
   certification packs
 - Viewer contract: bounded `pragmagraph.viewer` envelopes for GraphFakos and
@@ -279,6 +280,26 @@ Install with the optional precise TypeScript/JavaScript parser family:
 python3.11 -m pip install -e ".[precise]"
 ```
 
+Install native SCIP protobuf intake support:
+
+```bash
+python3.11 -m pip install -e ".[scip]"
+```
+
+Import an externally produced `index.scip` file:
+
+```bash
+pragmagraph precise-import index.scip \
+  --root . \
+  --namespace my-project \
+  --out precise-snapshot.json \
+  --json
+```
+
+Add `--base snapshot.json` to compose precise facts with an existing canonical
+snapshot. PragmaGraph reads the file but never installs, discovers, or launches
+an external indexer.
+
 Wheel build:
 
 ```bash
@@ -325,6 +346,8 @@ stable import roots, and `semantic_contract: true`.
 - `docs/advanced-structural-views.md` records symbol/reference interchange,
   topology, document-graph, query-plan, git-lineage, parser-support, and
   certification helper surfaces.
+- `docs/native-scip-ingestion.md` records the bounded native SCIP
+  field subset, explicit CLI, freshness, privacy, and certification posture.
 - `docs/ui-contracts.md` records the package-owned UI boundary
   contract.
 - `docs/source-tree-owner-map.md` explains the source-tree module

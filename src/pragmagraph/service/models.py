@@ -141,6 +141,9 @@ class ServiceCapabilities:
     store_path: str = ""
     store_manifest_schema_version: str = ""
     store_fts_available: bool = False
+    native_scip_available: bool = False
+    precise_ingestion_loaded: bool = False
+    precise_producer: str = ""
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -196,6 +199,9 @@ class ServiceCapabilities:
             "store_path": self.store_path,
             "store_manifest_schema_version": self.store_manifest_schema_version,
             "store_fts_available": self.store_fts_available,
+            "native_scip_available": self.native_scip_available,
+            "precise_ingestion_loaded": self.precise_ingestion_loaded,
+            "precise_producer": self.precise_producer,
         }
 
 

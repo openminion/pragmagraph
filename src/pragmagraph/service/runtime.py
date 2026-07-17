@@ -273,6 +273,7 @@ class LocalQueryService:
 
     def capabilities(self) -> ServiceCapabilities:
         import pragmagraph
+        from pragmagraph.interchange import native_scip_available
 
         methods = list(SERVICE_METHODS)
         if not self.refresh_supported:
@@ -299,6 +300,8 @@ class LocalQueryService:
             )
         )
         store_manifest = self._store.manifest() if self._store is not None else None
+        precise_ingestion = self._precise_ingestion_summary()
+        producer = precise_ingestion.get("producer", {})
         return ServiceCapabilities(
             service_version=SERVICE_VERSION,
             package_version=pragmagraph.__version__,
@@ -342,6 +345,11 @@ class LocalQueryService:
             ),
             store_fts_available=(
                 store_manifest.fts_available if store_manifest is not None else False
+            ),
+            native_scip_available=native_scip_available(),
+            precise_ingestion_loaded=bool(precise_ingestion),
+            precise_producer=str(
+                producer.get("name", "") if isinstance(producer, Mapping) else ""
             ),
         )
 
@@ -396,6 +404,7 @@ class LocalQueryService:
                 "git_overlay": self._git_overlay_summary(),
                 "refresh_state": self._refresh_state_payload(),
                 "store": self._store_summary(),
+                "precise_ingestion": self._precise_ingestion_summary() or None,
             }
             return summary
         if method in {METHOD_QUERY, METHOD_EXPLAIN}:
@@ -788,6 +797,10 @@ class LocalQueryService:
             "fts_available": manifest.fts_available,
             "capabilities": capabilities.to_dict(),
         }
+
+    def _precise_ingestion_summary(self) -> dict[str, Any]:
+        value = self._snapshot.stats.get("precise_ingestion", {})
+        return dict(value) if isinstance(value, Mapping) else {}
 
 
 def _snapshot_id(snapshot: GraphSnapshot) -> str:

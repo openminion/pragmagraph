@@ -96,3 +96,8 @@ The package prefers:
 1. explicit owners over convenience,
 2. deterministic observed facts over magical ones,
 3. maintainable structure over short-term shortcuts.
+
+For a broad cleanup, simplification, or maintainability pass, follow
+[docs/cleanup-workflow.md](docs/cleanup-workflow.md) so the coverage claim is
+backed by a fresh inventory, explicit per-file dispositions, and current
+validation.

@@ -13,6 +13,8 @@ This directory holds the public package documentation for standalone
   summarizes the package-local engineering and boundary rules for contributors.
 - [`code-quality-enforcement.md`](code-quality-enforcement.md)
   summarizes the active public quality gates and validation posture.
+- [`cleanup-workflow.md`](cleanup-workflow.md) defines the live-inventory,
+  per-file-ledger, and closeout process for broad maintainability work.
 - [`testing-and-validation.md`](testing-and-validation.md)
   records the package-local install, smoke, test, lint, and release-check
   flow.
@@ -49,6 +51,9 @@ This directory holds the public package documentation for standalone
 - [`advanced-ingestion-and-interchange.md`](advanced-ingestion-and-interchange.md)
   records multi-root composition, artifact indexing, CI delta, precise-fact
   interchange, query pagination, export redaction, and MCP resources.
+- [`native-scip-ingestion.md`](native-scip-ingestion.md) records
+  optional native SCIP protobuf intake, exact merge/freshness rules, and the
+  certified producer boundary.
 - [`certification-readiness-matrix.md`](certification-readiness-matrix.md)
   records the current standalone and OpenMinion proof targets for the public
   package surface.
@@ -83,6 +88,7 @@ compact navigation maps,
 Graphify-shaped interop, package-local service and UI boundary contracts,
 explicit refresh/profile/status helpers, workspace persistence helpers,
 git-aware provenance overlays and path lineage, symbol/reference interchange,
+optional native SCIP protobuf intake,
 topology and document-graph summaries, query-plan evidence, parser-support
 metadata, certification packs, benchmark helpers, and package-owned validation
 fixtures.

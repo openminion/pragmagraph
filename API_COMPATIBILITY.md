@@ -66,7 +66,10 @@ The following top-level exports are part of the current public contract:
 - stable symbol/reference interchange helper `build_symbol_reference_bundle`
 - precise-fact interchange helpers under `pragmagraph.interchange`, including
   `snapshot_from_compiler_facts`, `snapshot_to_scip_json`, and
-  `snapshot_from_scip_json`
+  `snapshot_from_scip_json`; optional native SCIP contracts and helpers include
+  `NativeScipImport`, `ScipIngestionReport`, `ScipFreshness`,
+  `ScipLossReport`, `load_native_scip`, `snapshot_from_scip_protobuf`,
+  `merge_precise_snapshot`, and `native_scip_available`
 - topology and document-graph helpers `build_topology_summary` and
   `build_doc_graph_summary`
 - query-plan evidence helper `explain_query_plan`
@@ -146,7 +149,8 @@ Public-contract confidence should be enforced by tests that cover:
 14. deterministic workspace init/status/refresh behavior and
     `serve --workspace` startup,
 15. deterministic compact repo-map and handoff rendering,
-16. deterministic symbol/reference interchange, topology, document-graph,
+16. deterministic symbol/reference interchange, bounded native SCIP intake,
+    topology, document-graph,
     query-plan, git-lineage, parser-support, and certification behavior.
 
 ## Non-goals
