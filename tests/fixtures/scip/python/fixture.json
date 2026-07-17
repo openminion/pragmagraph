@@ -1,0 +1,7 @@
+{
+  "producer": "@sourcegraph/scip-python",
+  "producer_version": "0.6.6",
+  "project_name": "pgpi-python-fixture",
+  "project_version": "1.0.0",
+  "sha256": "28bcb9178650c4918cb594fb11f8a06daceb75d5803262def9ee09ba623b9e04"
+}

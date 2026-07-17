@@ -322,13 +322,17 @@ class CiDeltaReport:
     structural: SnapshotStructuralDelta
     changed_node_ids: tuple[str, ...] = ()
     changed_edge_ids: tuple[str, ...] = ()
+    changed_snapshot_fields: tuple[str, ...] = ()
     fail_on_changes: bool = False
 
     @property
     def has_changes(self) -> bool:
         structural_changes = any(self.structural.to_dict().values())
         return bool(
-            self.changed_node_ids or self.changed_edge_ids or structural_changes
+            self.changed_node_ids
+            or self.changed_edge_ids
+            or self.changed_snapshot_fields
+            or structural_changes
         )
 
     @property
@@ -344,6 +348,7 @@ class CiDeltaReport:
             "structural": self.structural.to_dict(),
             "changed_node_ids": list(self.changed_node_ids),
             "changed_edge_ids": list(self.changed_edge_ids),
+            "changed_snapshot_fields": list(self.changed_snapshot_fields),
         }
 
 
@@ -373,6 +378,16 @@ def build_ci_delta(
                 for item_id in before_edges.keys() & after_edges.keys()
                 if before_edges[item_id] != after_edges[item_id]
             )
+        ),
+        changed_snapshot_fields=tuple(
+            key
+            for key, before_value, after_value in (
+                ("root_path", before.root_path, after.root_path),
+                ("stats", dict(before.stats), dict(after.stats)),
+                ("schema_version", before.schema_version, after.schema_version),
+                ("indexer_version", before.indexer_version, after.indexer_version),
+            )
+            if before_value != after_value
         ),
         fail_on_changes=fail_on_changes,
     )

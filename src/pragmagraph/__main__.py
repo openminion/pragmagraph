@@ -22,7 +22,11 @@ from pragmagraph.graphify import (
     snapshot_from_graphify_payload,
     to_graphify_payload,
 )
-from pragmagraph.interchange import build_symbol_reference_bundle
+from pragmagraph.interchange import (
+    build_symbol_reference_bundle,
+    load_native_scip,
+    merge_precise_snapshot,
+)
 from pragmagraph.incremental import load_extraction_cache, save_extraction_cache
 from pragmagraph.lineage import build_git_lineage
 from pragmagraph.models import PragmaGraphError, QueryRequest
@@ -248,6 +252,20 @@ def main(argv: list[str] | None = None) -> int:
         "interchange", help="emit stable symbol/reference interchange JSON"
     )
     interchange_parser.add_argument("snapshot")
+
+    precise_import_parser = subparsers.add_parser(
+        "precise-import",
+        help="import an externally produced native SCIP index",
+    )
+    precise_import_parser.add_argument("scip_index")
+    precise_import_parser.add_argument("--out", required=True)
+    precise_import_parser.add_argument("--base")
+    precise_import_parser.add_argument("--root", default="")
+    precise_import_parser.add_argument("--namespace", default="scip")
+    precise_import_parser.add_argument("--index-commit", default="")
+    precise_import_parser.add_argument("--workspace-commit", default="")
+    precise_import_parser.add_argument("--strict-freshness", action="store_true")
+    _add_json_flag(precise_import_parser)
 
     query_plan_parser = subparsers.add_parser(
         "query-plan", help="explain deterministic query execution facts"
@@ -646,6 +664,32 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "interchange":
         snapshot = load_snapshot(args.snapshot)
         _print_payload(build_symbol_reference_bundle(snapshot), as_json=True)
+    elif args.command == "precise-import":
+        base = load_snapshot(args.base) if args.base else None
+        namespace = base.namespace if base is not None else args.namespace
+        imported = load_native_scip(
+            args.scip_index,
+            namespace=namespace,
+            root_path=args.root,
+            index_commit=args.index_commit,
+            workspace_commit=args.workspace_commit,
+            strict_freshness=args.strict_freshness,
+        )
+        snapshot = (
+            merge_precise_snapshot(base, imported.snapshot)
+            if base is not None
+            else imported.snapshot
+        )
+        save_snapshot(snapshot, args.out)
+        _print_payload(
+            {
+                "output": str(args.out),
+                "merged": base is not None,
+                "report": imported.report.to_dict(),
+                "health": health(snapshot).to_dict(),
+            },
+            as_json=True,
+        )
     elif args.command == "query-plan":
         snapshot = load_snapshot(args.snapshot)
         _print_payload(

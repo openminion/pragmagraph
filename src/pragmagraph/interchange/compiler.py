@@ -48,6 +48,7 @@ class ObservedReferenceFact:
     kind: str = EDGE_MENTIONS
     line: int | None = None
     column: int | None = None
+    occurrence_id: str = ""
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
 
@@ -74,41 +75,33 @@ def snapshot_from_compiler_facts(
     symbol_ids: dict[str, str] = {}
     omitted: list[OmittedDiagnostic] = []
     for fact in sorted(symbols, key=lambda item: (item.path, item.symbol)):
-        file_id = _ensure_file(namespace, fact.path, project_id, nodes, edges, file_ids)
-        symbol_id = node_id(namespace, fact.kind, fact.symbol)
+        file_id = (
+            _ensure_file(namespace, fact.path, project_id, nodes, edges, file_ids)
+            if fact.path
+            else ""
+        )
+        symbol_id = _add_symbol_fact(
+            fact,
+            namespace=namespace,
+            producer=producer,
+            file_id=file_id,
+            nodes=nodes,
+            edges=edges,
+        )
         symbol_ids[fact.symbol] = symbol_id
-        source_ref = SourceRef(
-            path=fact.path,
-            line=fact.line,
-            column=fact.column,
-            end_line=fact.end_line,
-            end_column=fact.end_column,
-        )
-        nodes[symbol_id] = GraphNode(
-            id=symbol_id,
-            kind=fact.kind,
-            label=fact.label,
-            source_ref=source_ref,
-            metadata={
-                **dict(fact.metadata),
-                "producer": producer,
-                "symbol": fact.symbol,
-            },
-        )
-        defines_id = edge_id(namespace, file_id, EDGE_DEFINES, symbol_id)
-        edges[defines_id] = GraphEdge(
-            id=defines_id,
-            kind=EDGE_DEFINES,
-            source_id=file_id,
-            target_id=symbol_id,
-            source_ref=source_ref,
-            metadata={"producer": producer},
-        )
     for fact in sorted(
         references,
         key=lambda item: (item.path, item.source_symbol, item.target_symbol),
     ):
-        source_id = symbol_ids.get(fact.source_symbol)
+        source_id = _reference_source_id(
+            fact,
+            namespace=namespace,
+            project_id=project_id,
+            nodes=nodes,
+            edges=edges,
+            file_ids=file_ids,
+            symbol_ids=symbol_ids,
+        )
         target_id = symbol_ids.get(fact.target_symbol)
         if source_id is None or target_id is None:
             omitted.append(
@@ -119,7 +112,15 @@ def snapshot_from_compiler_facts(
                 )
             )
             continue
-        reference_id = edge_id(namespace, source_id, fact.kind, target_id)
+        reference_identity = (
+            f"{target_id}:{fact.occurrence_id}" if fact.occurrence_id else target_id
+        )
+        reference_id = edge_id(
+            namespace,
+            source_id,
+            fact.kind,
+            reference_identity,
+        )
         edges[reference_id] = GraphEdge(
             id=reference_id,
             kind=fact.kind,
@@ -140,6 +141,70 @@ def snapshot_from_compiler_facts(
             "reference_count": len(references),
             "unresolved_reference_count": len(omitted),
         },
+    )
+
+
+def _add_symbol_fact(
+    fact: ObservedSymbolFact,
+    *,
+    namespace: str,
+    producer: str,
+    file_id: str,
+    nodes: dict[str, GraphNode],
+    edges: dict[str, GraphEdge],
+) -> str:
+    symbol_id = node_id(namespace, fact.kind, fact.symbol)
+    source_ref = SourceRef(
+        path=fact.path,
+        line=fact.line,
+        column=fact.column,
+        end_line=fact.end_line,
+        end_column=fact.end_column,
+    )
+    nodes[symbol_id] = GraphNode(
+        id=symbol_id,
+        kind=fact.kind,
+        label=fact.label,
+        source_ref=source_ref,
+        metadata={
+            **dict(fact.metadata),
+            "producer": producer,
+            "symbol": fact.symbol,
+        },
+    )
+    if file_id:
+        defines_id = edge_id(namespace, file_id, EDGE_DEFINES, symbol_id)
+        edges[defines_id] = GraphEdge(
+            id=defines_id,
+            kind=EDGE_DEFINES,
+            source_id=file_id,
+            target_id=symbol_id,
+            source_ref=source_ref,
+            metadata={"producer": producer},
+        )
+    return symbol_id
+
+
+def _reference_source_id(
+    fact: ObservedReferenceFact,
+    *,
+    namespace: str,
+    project_id: str,
+    nodes: dict[str, GraphNode],
+    edges: dict[str, GraphEdge],
+    file_ids: dict[str, str],
+    symbol_ids: dict[str, str],
+) -> str | None:
+    source_id = symbol_ids.get(fact.source_symbol)
+    if source_id is not None or fact.source_symbol or not fact.path:
+        return source_id
+    return _ensure_file(
+        namespace,
+        fact.path,
+        project_id,
+        nodes,
+        edges,
+        file_ids,
     )
 
 

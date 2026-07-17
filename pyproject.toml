@@ -36,9 +36,13 @@ precise = [
   "tree-sitter>=0.25,<1",
   "tree-sitter-language-pack>=1.8,<2",
 ]
+scip = [
+  "protobuf>=7.35,<8",
+]
 dev = [
   "build>=1,<2",
   "pre-commit>=4,<5",
+  "protobuf>=7.35,<8",
   "pytest>=8,<9",
   "ruff>=0.11,<1",
   "tree-sitter>=0.25,<1",

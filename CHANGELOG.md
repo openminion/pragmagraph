@@ -19,6 +19,9 @@ This file tracks package-facing release notes for `pragmagraph`.
   snapshot deltas, artifact-specific facts, and exact manifest/lock resolution.
 - Added a loss-aware SCIP JSON subset, caller-fed compiler/LSP fact bridge,
   export redaction profiles, and read-only MCP resources.
+- Added optional native SCIP protobuf intake, exact base-snapshot composition,
+  freshness checks, producer certification fixtures, and read-only service/MCP
+  ingestion evidence.
 - Added package-local public contributor references for testing, engineering
   patterns, agent bootstrap, and code-quality enforcement.
 

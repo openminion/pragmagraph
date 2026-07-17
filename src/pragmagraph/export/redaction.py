@@ -80,11 +80,20 @@ def project_snapshot(
         for edge in snapshot.edges
     )
     root_path = snapshot.root_path
+    stats = dict(snapshot.stats)
     if normalized == EXPORT_PROFILE_PORTABLE and root_path:
         root_path = ""
         fields.add("snapshot.root_path")
+    if normalized == EXPORT_PROFILE_PORTABLE:
+        stats = _portable_stats(stats, redacted_fields=fields)
     return ExportProjection(
-        snapshot=replace(snapshot, root_path=root_path, nodes=nodes, edges=edges),
+        snapshot=replace(
+            snapshot,
+            root_path=root_path,
+            nodes=nodes,
+            edges=edges,
+            stats=stats,
+        ),
         profile=normalized,
         redacted_fields=tuple(sorted(fields)),
     )
@@ -128,6 +137,31 @@ def _project_metadata(
             redacted_fields.add(f"metadata.{key}")
             continue
         result[key] = value
+    return result
+
+
+def _portable_stats(
+    stats: Mapping[str, Any],
+    *,
+    redacted_fields: set[str],
+) -> dict[str, Any]:
+    result = dict(stats)
+    raw_report = result.get("precise_ingestion")
+    if not isinstance(raw_report, Mapping):
+        return result
+    report = dict(raw_report)
+    if report.get("project_root"):
+        report["project_root"] = ""
+        redacted_fields.add("stats.precise_ingestion.project_root")
+    raw_freshness = report.get("freshness")
+    if isinstance(raw_freshness, Mapping):
+        freshness = dict(raw_freshness)
+        for key in ("index_root", "workspace_root"):
+            if freshness.get(key):
+                freshness[key] = ""
+                redacted_fields.add(f"stats.precise_ingestion.freshness.{key}")
+        report["freshness"] = freshness
+    result["precise_ingestion"] = report
     return result
 
 

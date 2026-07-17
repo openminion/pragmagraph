@@ -35,6 +35,7 @@ def test_package_policy_and_release_automation_docs_exist() -> None:
     assert (root / "docs" / "ui-contracts.md").is_file()
     assert (root / "docs" / "workspace-mode.md").is_file()
     assert (root / "docs" / "certification-readiness-matrix.md").is_file()
+    assert (root / "docs" / "native-scip-ingestion.md").is_file()
     assert (root / "tests" / "fixtures" / "repos" / "tiny_repo").is_dir()
     assert (root / "tests" / "contracts" / "capabilities.json").is_file()
     assert not (root / "fixtures").exists()
@@ -58,6 +59,8 @@ def test_package_readme_mentions_policy_and_quickstart() -> None:
     assert "pragmagraph.workspace" in readme
     assert "pragmagraph.ui" in readme
     assert '".[precise]"' in readme
+    assert '".[scip]"' in readme
+    assert "pragmagraph precise-import" in readme
 
 
 def test_package_metadata_declares_public_urls() -> None:
@@ -69,3 +72,6 @@ def test_package_metadata_declares_public_urls() -> None:
         "Repository": "https://github.com/openminion/pragmagraph",
         "Download": "https://pypi.org/project/pragmagraph/",
     }
+    assert pyproject["project"]["optional-dependencies"]["scip"] == [
+        "protobuf>=7.35,<8"
+    ]

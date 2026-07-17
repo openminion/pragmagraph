@@ -1,0 +1,7 @@
+{
+  "producer": "@sourcegraph/scip-typescript",
+  "producer_version": "0.4.0",
+  "project_name": "pgpi-typescript-fixture",
+  "project_version": "1.0.0",
+  "sha256": "0a4c2fc9cb0355d089db2d0f7c762b9269809765c960c63d4f1cf3edf0460ca9"
+}

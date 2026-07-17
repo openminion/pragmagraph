@@ -7,6 +7,7 @@ from pathlib import Path
 
 from pragmagraph.adapters import index_path
 from pragmagraph.models import QueryRequest
+from pragmagraph.interchange import load_native_scip
 from pragmagraph.query import query
 from pragmagraph.service import (
     ERROR_INVALID_PARAMS,
@@ -23,6 +24,7 @@ from pragmagraph.service import (
 )
 from pragmagraph.storage import save_snapshot
 from .package_paths import build_fixture_repo
+from .scip_fixtures import TYPESCRIPT_SCIP
 
 
 def _repo_root(tmp_path: Path) -> Path:
@@ -94,6 +96,26 @@ def test_snapshot_service_keeps_loaded_state_and_rejects_refresh(
     )[0]
     assert refresh.ok is False
     assert refresh.to_dict()["error"]["code"] == ERROR_REFRESH_UNSUPPORTED
+
+
+def test_service_capabilities_expose_native_scip_and_loaded_report(
+    tmp_path: Path,
+) -> None:
+    snapshot_path = tmp_path / "precise.json"
+    save_snapshot(load_native_scip(TYPESCRIPT_SCIP).snapshot, snapshot_path)
+    service = LocalQueryService.from_snapshot_path(snapshot_path)
+
+    capabilities = service.capabilities().to_dict()
+    health_result = service.handle_request(
+        ServiceRequest(id="health", method="health", params={})
+    )[0].to_dict()["result"]
+
+    assert capabilities["native_scip_available"] is True
+    assert capabilities["precise_ingestion_loaded"] is True
+    assert capabilities["precise_producer"] == "scip-typescript"
+    assert health_result["service"]["precise_ingestion"]["producer"]["name"] == (
+        "scip-typescript"
+    )
 
 
 def test_root_service_refresh_updates_state_and_persists_outputs(

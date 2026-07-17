@@ -45,22 +45,29 @@ resolutions and malformed artifacts are diagnostics, not inferred facts.
 
 ## Precise code-intelligence interchange
 
-`pragmagraph.interchange` exposes two exact-fact paths:
+`pragmagraph.interchange` exposes three exact-fact paths:
 
 1. `snapshot_from_compiler_facts(...)` accepts caller-produced symbol and
    reference DTOs with source ranges.
 2. `snapshot_to_scip_json(...)` and `snapshot_from_scip_json(...)` implement a
    documented JSON subset of SCIP metadata, documents, symbols, occurrences,
    definition/reference roles, and ranges.
+3. `load_native_scip(...)` and `snapshot_from_scip_protobuf(...)` consume a
+   bounded native protobuf subset when the optional `scip` extra is installed.
+   `merge_precise_snapshot(...)` composes those facts with an existing snapshot
+   by exact IDs only.
 
 The package does not launch compilers or language servers and does not claim
-full SCIP protobuf compatibility. Unsupported SCIP fields remain outside the
-accepted subset.
+full SCIP compatibility. Unsupported, malformed, and unknown fields are
+reported through the ingestion loss report. See
+[`native-scip-ingestion.md`](native-scip-ingestion.md) for the accepted field,
+freshness, privacy, and producer-certification contract.
 
 ## CI delta
 
 `build_ci_delta(before, after, fail_on_changes=...)` compares canonical node,
-edge, and omission facts. It reports added, removed, and payload-changed IDs.
+edge, omission, and snapshot-level facts. It reports added, removed, and
+payload-changed IDs plus changed snapshot fields such as ingestion stats.
 The optional exit policy is structural only; it does not label changes risky or
 recommend action.
 
@@ -72,7 +79,7 @@ recommend action.
 - `no_content`: removes node text, labels, and content-like metadata
 - `no_identities`: removes author and committer identity metadata
 - `portable`: removes the machine-local snapshot root while keeping relative
-  source paths
+  source paths; native SCIP project/workspace roots are also removed
 
 The `pragmagraph export` command and local service `export` method accept the
 same profile names.
@@ -85,6 +92,7 @@ service instance:
 - `pragma://status`
 - `pragma://snapshot`
 - `pragma://report`
+- `pragma://precise-ingestion`
 - `pragma://node/{node_id}`
 
 Use `resources/list`, `resources/templates/list`, and `resources/read` through

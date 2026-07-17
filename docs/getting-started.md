@@ -22,6 +22,12 @@ If you need the optional precise parser surface, also install:
 python3.11 -m pip install -e ".[precise]"
 ```
 
+If you need to consume externally produced native SCIP files, install:
+
+```bash
+python3.11 -m pip install -e ".[scip]"
+```
+
 ## Read first
 
 Before substantial code changes, read:

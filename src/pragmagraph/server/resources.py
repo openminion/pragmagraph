@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from typing import Mapping
 from urllib.parse import unquote, urlparse
 
 from pragmagraph.report import build_report
@@ -12,6 +13,7 @@ from pragmagraph.service import LocalQueryService
 RESOURCE_STATUS = "pragma://status"
 RESOURCE_SNAPSHOT = "pragma://snapshot"
 RESOURCE_REPORT = "pragma://report"
+RESOURCE_PRECISE_INGESTION = "pragma://precise-ingestion"
 RESOURCE_NODE_TEMPLATE = "pragma://node/{node_id}"
 
 
@@ -54,6 +56,11 @@ class ResourceRegistry:
                 "PragmaGraph report",
                 "Deterministic structural report.",
             ),
+            ResourceDescriptor(
+                RESOURCE_PRECISE_INGESTION,
+                "PragmaGraph precise ingestion",
+                "Loaded external precise-index provenance and loss report.",
+            ),
         )
 
     def list_templates(self) -> tuple[dict[str, str], ...]:
@@ -79,6 +86,12 @@ class ResourceRegistry:
             payload = self._service.snapshot.to_dict()
         elif uri == RESOURCE_REPORT:
             payload = build_report(self._service.snapshot).to_dict()
+        elif uri == RESOURCE_PRECISE_INGESTION:
+            report = self._service.snapshot.stats.get("precise_ingestion", {})
+            payload = {
+                "loaded": bool(report),
+                "report": dict(report) if isinstance(report, Mapping) else {},
+            }
         elif parsed.netloc == "node" and parsed.path.strip("/"):
             node_id = unquote(parsed.path.strip("/"))
             node = self._service.snapshot.node_map().get(node_id)
@@ -100,6 +113,7 @@ class ResourceRegistry:
 
 __all__ = [
     "RESOURCE_NODE_TEMPLATE",
+    "RESOURCE_PRECISE_INGESTION",
     "RESOURCE_REPORT",
     "RESOURCE_SNAPSHOT",
     "RESOURCE_STATUS",

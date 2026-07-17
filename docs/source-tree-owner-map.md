@@ -40,7 +40,8 @@ and `pragmagraph.ui`.
 10. `interchange/`, `topology/`, `docgraph/`, `planner/`,
    `certification/`, `lineage/`, and `parser_support/` own advanced
    structural views over observed snapshots. `interchange/` also owns the SCIP
-   JSON subset and caller-fed exact compiler/LSP fact bridge.
+   JSON subset, optional native SCIP protobuf intake, and caller-fed exact
+   compiler/LSP fact bridge.
 11. `workspace/` owns the persistent local workspace directory contract,
    explicit workspace lifecycle helpers, and deterministic multi-root overlays.
 12. `service/` owns the local repeated-query service boundary. `server/` owns
