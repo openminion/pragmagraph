@@ -71,11 +71,14 @@ from pragmagraph.viewer.cli import (
     run_viewer_command,
 )
 from pragmagraph.workspace import (
-    WorkspaceRoot,
     initialize_workspace,
-    index_multi_root,
     load_workspace_status,
     refresh_workspace,
+)
+from pragmagraph.workspace.cli import (
+    WORKSPACE_COMMANDS,
+    register_workspace_commands,
+    run_workspace_command,
 )
 
 
@@ -159,15 +162,6 @@ def main(argv: list[str] | None = None) -> int:
     query_parser.add_argument("--cursor", default="")
     query_parser.add_argument("--max-examined", type=int)
     _add_json_flag(query_parser)
-
-    multi_root_parser = subparsers.add_parser(
-        "multi-root-index",
-        help="index explicitly named roots into one overlay",
-    )
-    multi_root_parser.add_argument("--root", action="append", required=True)
-    multi_root_parser.add_argument("--namespace", default="workspace")
-    multi_root_parser.add_argument("--out", required=True)
-    _add_json_flag(multi_root_parser)
 
     ci_delta_parser = subparsers.add_parser(
         "ci-delta",
@@ -545,6 +539,7 @@ def main(argv: list[str] | None = None) -> int:
     ui_parser.add_argument("--port", type=int, default=8766)
     _add_json_flag(ui_parser)
 
+    register_workspace_commands(subparsers)
     register_viewer_commands(subparsers)
 
     args = parser.parse_args(argv)
@@ -571,16 +566,11 @@ def main(argv: list[str] | None = None) -> int:
             ).to_dict(),
             as_json=True,
         )
-    elif args.command == "multi-root-index":
-        roots = []
-        for value in args.root:
-            name, separator, path_value = value.partition("=")
-            if not separator or not name.strip() or not path_value.strip():
-                parser.error("--root must use NAME=PATH")
-            roots.append(WorkspaceRoot(name=name, path=path_value))
-        snapshot = index_multi_root(roots, namespace=args.namespace)
-        save_snapshot(snapshot, args.out)
-        _print_payload(snapshot.to_dict(), as_json=args.json)
+    elif args.command in WORKSPACE_COMMANDS:
+        _print_payload(
+            run_workspace_command(args, parser),
+            as_json=args.json,
+        )
     elif args.command == "ci-delta":
         report = build_ci_delta(
             load_snapshot(args.before),

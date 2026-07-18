@@ -294,10 +294,22 @@ from pragmagraph.workspace.multi_root import (  # noqa: E402
     WorkspaceRoot,
     index_multi_root,
 )
+from pragmagraph.workspace.composition import (  # noqa: E402
+    AMBIGUITY_CANDIDATE_LIMIT,
+    DETAIL_SAMPLE_LIMIT,
+    CrossRepoResolutionReport,
+    NamedSnapshot,
+    SnapshotCompositionResult,
+    compose_snapshots,
+    save_composed_snapshot_atomic,
+)
 
 
 __all__ = [
     "MULTI_ROOT_SCHEMA_VERSION",
+    "AMBIGUITY_CANDIDATE_LIMIT",
+    "CrossRepoResolutionReport",
+    "DETAIL_SAMPLE_LIMIT",
     "WORKSPACE_MANIFEST_FILE",
     "WORKSPACE_CACHE_FILE",
     "WORKSPACE_METADATA_FILE",
@@ -310,7 +322,10 @@ __all__ = [
     "WorkspaceRefreshResult",
     "WorkspaceStatusView",
     "WorkspaceRoot",
+    "NamedSnapshot",
+    "SnapshotCompositionResult",
     "build_workspace_metadata",
+    "compose_snapshots",
     "ensure_workspace_snapshot",
     "initialize_workspace",
     "index_multi_root",
@@ -318,4 +333,5 @@ __all__ = [
     "load_workspace_status",
     "refresh_workspace",
     "save_workspace_metadata",
+    "save_composed_snapshot_atomic",
 ]

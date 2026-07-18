@@ -50,7 +50,8 @@ This directory holds the public package documentation for standalone
   git-lineage, parser-support, and certification helper surfaces.
 - [`advanced-ingestion-and-interchange.md`](advanced-ingestion-and-interchange.md)
   records multi-root composition, artifact indexing, CI delta, precise-fact
-  interchange, query pagination, export redaction, and MCP resources.
+  interchange, exact cross-repository SCIP resolution, query pagination,
+  export redaction, and read-only MCP resources.
 - [`native-scip-ingestion.md`](native-scip-ingestion.md) records
   optional native SCIP protobuf intake, exact merge/freshness rules, and the
   certified producer boundary.

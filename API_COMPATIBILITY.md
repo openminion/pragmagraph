@@ -70,6 +70,8 @@ The following top-level exports are part of the current public contract:
   `NativeScipImport`, `ScipIngestionReport`, `ScipFreshness`,
   `ScipLossReport`, `load_native_scip`, `snapshot_from_scip_protobuf`,
   `merge_precise_snapshot`, and `native_scip_available`
+- exact SCIP identity helpers `ScipSymbolIdentity`, `parse_scip_symbol`, and
+  `require_cross_repository_symbol` under `pragmagraph.interchange`
 - topology and document-graph helpers `build_topology_summary` and
   `build_doc_graph_summary`
 - query-plan evidence helper `explain_query_plan`
@@ -84,7 +86,12 @@ The following top-level exports are part of the current public contract:
 - workspace contracts `WorkspaceMetadata`, `WorkspacePaths`,
   `WorkspaceStatusView`, `WorkspaceRefreshResult`, and helpers such as
   `initialize_workspace`, `refresh_workspace`, `load_workspace_metadata`, and
-  `load_workspace_status`, plus `WorkspaceRoot` and `index_multi_root`
+  `load_workspace_status`, plus `WorkspaceRoot`, `index_multi_root`,
+  `NamedSnapshot`, `CrossRepoResolutionReport`, `SnapshotCompositionResult`,
+  `compose_snapshots`, and `save_composed_snapshot_atomic`
+- read-only exact-resolution helpers `resolved_definition`,
+  `incoming_external_symbols`, and `cross_repo_resolution_diagnostics` under
+  `pragmagraph.query`
 - export projection helpers `project_snapshot` and `ExportProjection`
 - typed UI boundary contracts such as `UiTransportBoundary`,
   `UiScreenDefinition`, and `build_ui_screen_manifest`

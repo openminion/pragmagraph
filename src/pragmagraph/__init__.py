@@ -141,15 +141,20 @@ from pragmagraph.operations import (
 from pragmagraph.refresh import diff_snapshots, refresh_snapshot
 from pragmagraph.storage import load_snapshot, save_snapshot, stable_dumps
 from pragmagraph.workspace import (
+    CrossRepoResolutionReport,
+    NamedSnapshot,
+    SnapshotCompositionResult,
     WorkspaceMetadata,
     WorkspacePaths,
     WorkspaceRefreshResult,
     WorkspaceStatusView,
     build_workspace_metadata,
+    compose_snapshots,
     initialize_workspace,
     load_workspace_metadata,
     load_workspace_status,
     refresh_workspace,
+    save_composed_snapshot_atomic,
 )
 
 __version__ = "0.0.5"
@@ -191,6 +196,7 @@ __all__ = [
     "BenchmarkMeasurement",
     "BenchmarkReport",
     "CertificationPack",
+    "CrossRepoResolutionReport",
     "DocGraphSummary",
     "DocMentionCandidate",
     "DocReferenceTarget",
@@ -212,6 +218,7 @@ __all__ = [
     "InterchangeBundle",
     "MemoryEvidenceBundle",
     "MemoryEvidenceRef",
+    "NamedSnapshot",
     "OmittedDiagnostic",
     "PACKAGE_STATUS",
     "PathResult",
@@ -234,6 +241,7 @@ __all__ = [
     "RepoMapSection",
     "SCHEMA_VERSION",
     "SnapshotStructuralDelta",
+    "SnapshotCompositionResult",
     "STABLE_IMPORT_ROOTS",
     "SourceRef",
     "SymbolRecord",
@@ -248,6 +256,7 @@ __all__ = [
     "commits_touching_symbol_file",
     "collect_memory_evidence",
     "collect_related_memory_evidence",
+    "compose_snapshots",
     "files_touched_by_commit",
     "benchmark_root",
     "build_certification_pack",
@@ -297,6 +306,7 @@ __all__ = [
     "load_refresh_status",
     "run_refresh_profile",
     "save_snapshot",
+    "save_composed_snapshot_atomic",
     "save_refresh_profile",
     "save_refresh_status",
     "snapshot_evidence_id",

@@ -41,9 +41,13 @@ and `pragmagraph.ui`.
    `certification/`, `lineage/`, and `parser_support/` own advanced
    structural views over observed snapshots. `interchange/` also owns the SCIP
    JSON subset, optional native SCIP protobuf intake, and caller-fed exact
-   compiler/LSP fact bridge.
+   compiler/LSP fact bridge. `interchange/scip_symbols.py` owns grammar-aware
+   complete SCIP identity validation; query-time code must not reimplement it.
 11. `workspace/` owns the persistent local workspace directory contract,
-   explicit workspace lifecycle helpers, and deterministic multi-root overlays.
+   explicit workspace lifecycle helpers, deterministic multi-root overlays,
+   named canonical-snapshot composition, and exact cross-root resolution.
+   `workspace/cli.py` owns both multi-root command registrations so the root CLI
+   remains an orchestrator.
 12. `service/` owns the local repeated-query service boundary. `server/` owns
    the bounded MCP transport, tool registry, and read-only resource registry.
 13. `ui/` owns typed UI contracts, the PragmaGraph-to-GraphFakos adapter, and
