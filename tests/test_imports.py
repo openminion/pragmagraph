@@ -136,6 +136,7 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "VIEWER_ENVELOPE_SCHEMA_VERSION",
         "VIEWER_FIXTURE_SCENARIOS",
         "ViewerGraphEnvelope",
+        "WorkspaceConfig",
         "RepoMap",
         "RepoMapSection",
         "backlinks",
@@ -153,6 +154,7 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "build_topology_summary",
         "build_viewer_envelope",
         "build_viewer_fixture_envelope",
+        "build_workspace_config",
         "collect_memory_evidence",
         "collect_related_memory_evidence",
         "compose_snapshots",
@@ -167,6 +169,7 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "load_refresh_profile",
         "load_refresh_status",
         "load_snapshot",
+        "load_workspace_config",
         "load_viewer_envelope",
         "recent_commits_for_path",
         "render_dot",
@@ -178,6 +181,7 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "render_markdown_topology",
         "render_mermaid",
         "render_markdown_report",
+        "render_markdown_certification_pack",
         "refresh_snapshot",
         "refresh_status_from_result",
         "refresh_workspace",
@@ -188,6 +192,7 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "save_refresh_status",
         "save_snapshot",
         "save_composed_snapshot_atomic",
+        "save_workspace_config",
         "snapshot_evidence_id",
         "snapshot_from_graphify_payload",
         "stable_dumps",
@@ -275,6 +280,7 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     assert "index_path" in adapters.__all__
     assert "render_markdown_benchmark" in bench.__all__
     assert "build_certification_pack" in certification.__all__
+    assert "render_markdown_certification_pack" in certification.__all__
     assert "SCHEMA_VERSION" in contracts.__all__
     assert "build_doc_graph_summary" in docgraph.__all__
     assert "collect_memory_evidence" in evidence.__all__
@@ -297,12 +303,16 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     assert "ScopePolicy" in security.__all__
     assert "LocalQueryService" in service.__all__
     assert "save_snapshot" in storage.__all__
+    assert "explain_store_query" in storage.__all__
     assert "build_topology_summary" in topology.__all__
     assert "build_ui_screen_manifest" in ui.__all__
     assert "build_viewer_envelope" in viewer.__all__
     assert "viewer_delta" in viewer.__all__
     assert "viewer_envelope_neighborhood" in viewer.__all__
     assert "initialize_workspace" in workspace.__all__
+    assert "build_workspace_config" in workspace.__all__
+    assert "load_workspace_config" in workspace.__all__
+    assert "save_workspace_config" in workspace.__all__
 
 
 def test_pragmagraph_package_does_not_import_openminion_from_source() -> None:

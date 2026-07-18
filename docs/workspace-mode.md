@@ -16,6 +16,8 @@ repeatable local operation without widening into background automation.
 - one-command workspace creation via `initialize_workspace(...)`
 - repeatable workspace refresh via `refresh_workspace(...)`
 - typed workspace status inspection via `load_workspace_status(...)`
+- public TOML workspace config via `WorkspaceConfig`,
+  `save_workspace_config(...)`, and `load_workspace_config(...)`
 - workspace-backed service startup via `LocalQueryService.from_workspace(...)`
   and `pragmagraph serve --workspace ...`
 - deterministic multi-root overlays via `WorkspaceRoot` and
@@ -26,8 +28,34 @@ repeatable local operation without widening into background automation.
 - `pragmagraph workspace-init <root> --workspace <dir> --json`
 - `pragmagraph workspace-refresh <dir> --json`
 - `pragmagraph workspace-status <dir> --json`
+- `pragmagraph workspace-config-init <root> --out .pragmagraph/workspace.toml --json`
+- `pragmagraph workspace-config-status .pragmagraph/workspace.toml --json`
+- `pragmagraph demo-ui --config .pragmagraph/workspace.toml --serve --open`
 - `pragmagraph serve --workspace <dir>`
 - `pragmagraph multi-root-index --root api=../api --root web=../web --out snapshot.json --json`
+
+## Workspace config
+
+The config file is a small package-owned TOML contract for first-run and
+repeatable demos:
+
+```toml
+schema_version = "pragmagraph.workspace_config.v1alpha1"
+label = "demo"
+namespace = "demo"
+root_path = "."
+workspace_path = ".pragmagraph/workspace"
+git_identity_mode = "name_email_hash"
+store_path = "graph.sqlite"
+
+[ui]
+screen = "search"
+query = "RuntimeGraph"
+```
+
+Relative paths are resolved from the config file directory. The config records
+local execution defaults only; it does not create a background operator or
+hosted runtime.
 
 ## Workspace layout
 

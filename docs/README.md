@@ -9,6 +9,9 @@ This directory holds the public package documentation for standalone
 
 - [`getting-started.md`](getting-started.md) gives the
   package-local bootstrap and execution summary for contributors and automation.
+- [`ten-minute-tour.md`](ten-minute-tour.md) gives the shortest public
+  standalone path through workspace config, visual preview, store explain, and
+  certification output.
 - [`engineering-patterns.md`](engineering-patterns.md)
   summarizes the package-local engineering and boundary rules for contributors.
 - [`code-quality-enforcement.md`](code-quality-enforcement.md)
@@ -91,8 +94,8 @@ explicit refresh/profile/status helpers, workspace persistence helpers,
 git-aware provenance overlays and path lineage, symbol/reference interchange,
 optional native SCIP protobuf intake,
 topology and document-graph summaries, query-plan evidence, parser-support
-metadata, certification packs, benchmark helpers, and package-owned validation
-fixtures.
+metadata, certification packs with Markdown output, benchmark helpers,
+package-owned visual demo commands, and package-owned validation fixtures.
 
 ## Boundary shorthand
 

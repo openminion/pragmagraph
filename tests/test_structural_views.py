@@ -7,7 +7,11 @@ import sys
 from pathlib import Path
 
 from pragmagraph.adapters import index_path
-from pragmagraph.certification import build_certification_pack, build_privacy_profile
+from pragmagraph.certification import (
+    build_certification_pack,
+    build_privacy_profile,
+    render_markdown_certification_pack,
+)
 from pragmagraph.docgraph import build_doc_graph_summary
 from pragmagraph.interchange import build_symbol_reference_bundle
 from pragmagraph.parser_support import build_parser_support_matrix
@@ -47,6 +51,7 @@ def test_structural_view_helpers_are_observed_fact_only(tmp_path) -> None:
     plan = explain_query_plan(snapshot, "RuntimeGraph")
     privacy = build_privacy_profile(snapshot)
     certification = build_certification_pack(snapshot, top_n=5)
+    certification_markdown = render_markdown_certification_pack(certification)
     parser_support = build_parser_support_matrix()
 
     assert bundle.format == "pragmagraph.symbol_reference.v1alpha1"
@@ -60,11 +65,14 @@ def test_structural_view_helpers_are_observed_fact_only(tmp_path) -> None:
     assert plan.candidate_count >= plan.returned_count
     assert privacy.export_safe is True
     assert certification.privacy.export_safe is True
+    assert "# PragmaGraph Certification Pack" in certification_markdown
+    assert "## Parser Coverage" in certification_markdown
     assert any(row.family == "python_ast" for row in parser_support)
 
 
 def test_structural_view_cli_commands_emit_json(tmp_path) -> None:
     snapshot_path = tmp_path / "snapshot.json"
+    markdown_path = tmp_path / "certification.md"
     save_snapshot(index_path(_repo(tmp_path), namespace="fixture"), snapshot_path)
 
     commands = [
@@ -92,3 +100,26 @@ def test_structural_view_cli_commands_emit_json(tmp_path) -> None:
             ).stdout
         )
         assert payload
+
+    certification_payload = json.loads(
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pragmagraph",
+                "certify",
+                str(snapshot_path),
+                "--markdown-out",
+                str(markdown_path),
+                "--json",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=env,
+        ).stdout
+    )
+    assert certification_payload["privacy"]["export_safe"] is True
+    assert "# PragmaGraph Certification Pack" in markdown_path.read_text(
+        encoding="utf-8"
+    )

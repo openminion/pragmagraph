@@ -178,6 +178,31 @@ cluster, content, fixture, and GraphFakos handoff contract.
 You can run the package-local visual UI today:
 
 ```bash
+pragmagraph demo-ui --serve --open --json
+```
+
+For a repeatable local project demo, write a workspace config and let
+`demo-ui` initialize the workspace on first use:
+
+```bash
+pragmagraph workspace-config-init . \
+  --out .pragmagraph/workspace.toml \
+  --workspace .pragmagraph/workspace \
+  --label my-project \
+  --namespace my-project \
+  --ui-query RuntimeGraph \
+  --json
+
+pragmagraph demo-ui \
+  --config .pragmagraph/workspace.toml \
+  --serve \
+  --open \
+  --json
+```
+
+The lower-level preview command remains available:
+
+```bash
 pragmagraph-ui \
   --screen search \
   --serve \
@@ -197,6 +222,9 @@ Use `--html-out` only when you want to export a standalone HTML snapshot. The
 equivalent module form is `python3.11 -m pragmagraph ui-preview`.
 
 ## CLI Quickstart
+
+For the shortest end-to-end public path, see
+[`docs/ten-minute-tour.md`](docs/ten-minute-tour.md).
 
 Index a local code/docs root into a deterministic JSON snapshot:
 
@@ -417,8 +445,17 @@ pragmagraph store-import .pragmagraph/snapshot.json \
   --out .pragmagraph/graph.sqlite
 
 pragmagraph store-query .pragmagraph/graph.sqlite RuntimeGraph --json
+pragmagraph store-search-explain .pragmagraph/graph.sqlite RuntimeGraph --json
 
 pragmagraph store-health .pragmagraph/graph.sqlite --json
+```
+
+Create a compact certification pack before sharing a snapshot:
+
+```bash
+pragmagraph certify .pragmagraph/snapshot.json \
+  --markdown-out .pragmagraph/certification.md \
+  --json
 ```
 
 Run the local query service against the materialized store:

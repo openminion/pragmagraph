@@ -32,6 +32,7 @@ def test_package_policy_and_release_automation_docs_exist() -> None:
     assert (root / "docs" / "git-history-mode.md").is_file()
     assert (root / "docs" / "graphify-interop.md").is_file()
     assert (root / "docs" / "service-mode.md").is_file()
+    assert (root / "docs" / "ten-minute-tour.md").is_file()
     assert (root / "docs" / "ui-contracts.md").is_file()
     assert (root / "docs" / "workspace-mode.md").is_file()
     assert (root / "docs" / "certification-readiness-matrix.md").is_file()
@@ -56,6 +57,10 @@ def test_package_readme_mentions_policy_and_quickstart() -> None:
     assert "pragmagraph graphify-export" in readme
     assert "pragmagraph serve" in readme
     assert "pragmagraph workspace-init" in readme
+    assert "pragmagraph workspace-config-init" in readme
+    assert "pragmagraph demo-ui" in readme
+    assert "pragmagraph store-search-explain" in readme
+    assert "pragmagraph certify" in readme
     assert "pragmagraph.workspace" in readme
     assert "pragmagraph.ui" in readme
     assert '".[precise]"' in readme

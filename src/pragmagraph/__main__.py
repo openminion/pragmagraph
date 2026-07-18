@@ -15,7 +15,10 @@ from pragmagraph.adapters import (
     index_path,
 )
 from pragmagraph.bench import benchmark_root, render_markdown_benchmark
-from pragmagraph.certification import build_certification_pack
+from pragmagraph.certification import (
+    build_certification_pack,
+    render_markdown_certification_pack,
+)
 from pragmagraph.docgraph import build_doc_graph_summary, render_markdown_doc_graph
 from pragmagraph.export import EXPORT_PROFILES, project_snapshot, render_graph_export
 from pragmagraph.graphify import (
@@ -63,7 +66,12 @@ from pragmagraph.refresh import (
     save_manifest,
 )
 from pragmagraph.service import LocalQueryService, run_stdio_service
-from pragmagraph.storage import SQLiteGraphStore, load_snapshot, save_snapshot
+from pragmagraph.storage import load_snapshot, save_snapshot
+from pragmagraph.storage.cli import (
+    STORAGE_COMMANDS,
+    register_storage_commands,
+    run_storage_command,
+)
 from pragmagraph.topology import build_topology_summary, render_markdown_topology
 from pragmagraph.viewer.cli import (
     VIEWER_COMMANDS,
@@ -71,9 +79,14 @@ from pragmagraph.viewer.cli import (
     run_viewer_command,
 )
 from pragmagraph.workspace import (
+    SUPPORTED_UI_SCREENS,
+    build_workspace_config,
     initialize_workspace,
+    load_workspace_config,
     load_workspace_status,
     refresh_workspace,
+    resolve_config_path,
+    save_workspace_config,
 )
 from pragmagraph.workspace.cli import (
     WORKSPACE_COMMANDS,
@@ -116,14 +129,6 @@ def _add_git_identity_mode_argument(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _store_payload(store: SQLiteGraphStore) -> dict[str, object]:
-    return {
-        "manifest": store.manifest().to_dict(),
-        "capabilities": store.capabilities().to_dict(),
-        "health": store.health().to_dict(),
-    }
-
-
 def _service_from_args(args: argparse.Namespace) -> LocalQueryService:
     if args.workspace:
         return LocalQueryService.from_workspace(args.workspace)
@@ -141,6 +146,47 @@ def _service_from_args(args: argparse.Namespace) -> LocalQueryService:
         cache_path=args.cache,
         git_identity_mode=args.git_identity_mode,
     )
+
+
+def _config_workspace_paths(config_path: str | Path) -> tuple[object, Path, Path]:
+    config = load_workspace_config(config_path)
+    workspace_path = resolve_config_path(config_path, config.workspace_path)
+    root_path = resolve_config_path(config_path, config.root_path)
+    return config, workspace_path, root_path
+
+
+def _ensure_config_workspace(config_path: str | Path) -> Path:
+    config, workspace_path, root_path = _config_workspace_paths(config_path)
+    if not (workspace_path / "workspace.json").exists():
+        initialize_workspace(
+            label=config.label,
+            root_path=root_path,
+            workspace_path=workspace_path,
+            namespace=config.namespace,
+            git_identity_mode=config.git_identity_mode,
+        )
+    return workspace_path
+
+
+def _ensure_demo_workspace(args: argparse.Namespace) -> Path | None:
+    if args.config:
+        return _ensure_config_workspace(args.config)
+    if not args.root and not args.workspace:
+        return None
+    workspace_path = (
+        Path(args.workspace)
+        if args.workspace
+        else Path(args.root) / ".pragmagraph" / "workspace"
+    )
+    if not (workspace_path / "workspace.json").exists():
+        initialize_workspace(
+            label=args.label,
+            root_path=args.root or ".",
+            workspace_path=workspace_path,
+            namespace=args.namespace,
+            git_identity_mode=args.git_identity_mode,
+        )
+    return workspace_path
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -285,6 +331,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     certify_parser.add_argument("snapshot")
     certify_parser.add_argument("--top-n", type=int, default=10)
+    certify_parser.add_argument("--markdown-out")
+    _add_json_flag(certify_parser)
 
     export_parser = subparsers.add_parser(
         "export", help="export a snapshot as graph text"
@@ -312,82 +360,6 @@ def main(argv: list[str] | None = None) -> int:
     graphify_import_parser.add_argument("--out", required=True)
     graphify_import_parser.add_argument("--namespace", default="graphify")
     graphify_import_parser.add_argument("--root-path", default="")
-
-    store_import_parser = subparsers.add_parser(
-        "store-import",
-        help="import a canonical snapshot into a materialized graph store",
-    )
-    store_import_parser.add_argument("snapshot")
-    store_import_parser.add_argument("--out", required=True)
-    store_import_parser.add_argument(
-        "--backend",
-        choices=("sqlite",),
-        default="sqlite",
-    )
-    _add_json_flag(store_import_parser)
-
-    store_export_parser = subparsers.add_parser(
-        "store-export",
-        help="export a materialized graph store as canonical snapshot JSON",
-    )
-    store_export_parser.add_argument("store")
-    store_export_parser.add_argument("--out")
-    _add_json_flag(store_export_parser)
-
-    store_health_parser = subparsers.add_parser(
-        "store-health",
-        help="summarize a materialized graph store",
-    )
-    store_health_parser.add_argument("store")
-    _add_json_flag(store_health_parser)
-
-    store_query_parser = subparsers.add_parser(
-        "store-query",
-        help="query a materialized graph store",
-    )
-    store_query_parser.add_argument("store")
-    store_query_parser.add_argument("query")
-    store_query_parser.add_argument("--max-results", type=int, default=10)
-    store_query_parser.add_argument("--cursor", default="")
-    store_query_parser.add_argument("--max-examined", type=int)
-    _add_json_flag(store_query_parser)
-
-    store_neighborhood_parser = subparsers.add_parser(
-        "store-neighborhood",
-        help="show nodes around a materialized-store node",
-    )
-    store_neighborhood_parser.add_argument("store")
-    store_neighborhood_parser.add_argument("node_id")
-    store_neighborhood_parser.add_argument("--depth", type=int, default=1)
-    store_neighborhood_parser.add_argument("--max-results", type=int, default=10)
-    store_neighborhood_parser.add_argument("--edge-kind", action="append", default=[])
-    store_neighborhood_parser.add_argument("--node-kind", action="append", default=[])
-    _add_json_flag(store_neighborhood_parser)
-
-    store_path_parser = subparsers.add_parser(
-        "store-path",
-        help="find a bounded path in a materialized graph store",
-    )
-    store_path_parser.add_argument("store")
-    store_path_parser.add_argument("source_id")
-    store_path_parser.add_argument("target_id")
-    store_path_parser.add_argument("--max-hops", type=int, default=4)
-    store_path_parser.add_argument("--edge-kind", action="append", default=[])
-    store_path_parser.add_argument("--node-kind", action="append", default=[])
-    _add_json_flag(store_path_parser)
-
-    store_migrate_parser = subparsers.add_parser(
-        "store-migrate", help="explicitly migrate a SQLite graph store"
-    )
-    store_migrate_parser.add_argument("store")
-    _add_json_flag(store_migrate_parser)
-
-    store_update_parser = subparsers.add_parser(
-        "store-update", help="atomically apply a canonical snapshot delta"
-    )
-    store_update_parser.add_argument("store")
-    store_update_parser.add_argument("snapshot")
-    _add_json_flag(store_update_parser)
 
     benchmark_parser = subparsers.add_parser(
         "benchmark", help="benchmark package operations against a local root"
@@ -507,6 +479,34 @@ def main(argv: list[str] | None = None) -> int:
     workspace_status_parser.add_argument("workspace")
     _add_json_flag(workspace_status_parser)
 
+    workspace_config_parser = subparsers.add_parser(
+        "workspace-config-init",
+        help="write a shareable package-local workspace TOML file",
+    )
+    workspace_config_parser.add_argument("root")
+    workspace_config_parser.add_argument("--out", default=".pragmagraph/workspace.toml")
+    workspace_config_parser.add_argument(
+        "--workspace", default=".pragmagraph/workspace"
+    )
+    workspace_config_parser.add_argument("--label", default="default")
+    workspace_config_parser.add_argument("--namespace", default="default")
+    workspace_config_parser.add_argument("--store", default="graph.sqlite")
+    workspace_config_parser.add_argument(
+        "--ui-screen",
+        choices=tuple(sorted(SUPPORTED_UI_SCREENS)),
+        default="search",
+    )
+    workspace_config_parser.add_argument("--ui-query", default="RuntimeGraph")
+    _add_git_identity_mode_argument(workspace_config_parser)
+    _add_json_flag(workspace_config_parser)
+
+    workspace_config_status_parser = subparsers.add_parser(
+        "workspace-config-status",
+        help="inspect a workspace TOML file and any realized workspace state",
+    )
+    workspace_config_status_parser.add_argument("config")
+    _add_json_flag(workspace_config_status_parser)
+
     ui_parser = subparsers.add_parser(
         "ui-preview",
         help="open the package-local visual graph preview",
@@ -539,6 +539,32 @@ def main(argv: list[str] | None = None) -> int:
     ui_parser.add_argument("--port", type=int, default=8766)
     _add_json_flag(ui_parser)
 
+    demo_parser = subparsers.add_parser(
+        "demo-ui",
+        help="open or write the quickest visual PragmaGraph demo",
+    )
+    demo_parser.add_argument("--config")
+    demo_parser.add_argument("--root")
+    demo_parser.add_argument("--workspace")
+    demo_parser.add_argument("--label", default="default")
+    demo_parser.add_argument("--namespace", default="default")
+    _add_git_identity_mode_argument(demo_parser)
+    demo_parser.add_argument(
+        "--screen",
+        choices=tuple(sorted(SUPPORTED_UI_SCREENS)),
+        default="search",
+    )
+    demo_parser.add_argument("--query", default="RuntimeGraph")
+    demo_parser.add_argument("--html-out", default="pragmagraph-demo.html")
+    demo_parser.add_argument("--artifact-out", default="")
+    demo_parser.add_argument("--report-out", default="")
+    demo_parser.add_argument("--open", action="store_true")
+    demo_parser.add_argument("--serve", action="store_true")
+    demo_parser.add_argument("--host", default="127.0.0.1")
+    demo_parser.add_argument("--port", type=int, default=8766)
+    _add_json_flag(demo_parser)
+
+    register_storage_commands(subparsers)
     register_workspace_commands(subparsers)
     register_viewer_commands(subparsers)
 
@@ -705,10 +731,13 @@ def main(argv: list[str] | None = None) -> int:
         )
     elif args.command == "certify":
         snapshot = load_snapshot(args.snapshot)
-        _print_payload(
-            build_certification_pack(snapshot, top_n=args.top_n),
-            as_json=True,
-        )
+        certification = build_certification_pack(snapshot, top_n=args.top_n)
+        if args.markdown_out:
+            Path(args.markdown_out).write_text(
+                render_markdown_certification_pack(certification),
+                encoding="utf-8",
+            )
+        _print_payload(certification, as_json=True)
     elif args.command == "export":
         snapshot = load_snapshot(args.snapshot)
         projection = project_snapshot(snapshot, profile=args.profile)
@@ -726,62 +755,8 @@ def main(argv: list[str] | None = None) -> int:
         )
         save_snapshot(snapshot, args.out)
         _print_payload(health(snapshot), as_json=True)
-    elif args.command == "store-import":
-        snapshot = load_snapshot(args.snapshot)
-        if args.backend != "sqlite":
-            raise ValueError(f"unsupported store backend: {args.backend}")
-        store = SQLiteGraphStore.from_snapshot(snapshot, args.out)
-        _print_payload(_store_payload(store), as_json=True)
-    elif args.command == "store-export":
-        store = SQLiteGraphStore(args.store)
-        snapshot = store.export_snapshot()
-        if args.out:
-            save_snapshot(snapshot, args.out)
-            _print_payload(health(snapshot), as_json=True)
-        else:
-            _print_payload(snapshot.to_dict(), as_json=True)
-    elif args.command == "store-health":
-        store = SQLiteGraphStore(args.store)
-        _print_payload(_store_payload(store), as_json=True)
-    elif args.command == "store-query":
-        store = SQLiteGraphStore(args.store)
-        _print_payload(
-            store.query(
-                QueryRequest(query=args.query, max_results=args.max_results),
-            ).to_dict(),
-            as_json=True,
-        )
-    elif args.command == "store-neighborhood":
-        store = SQLiteGraphStore(args.store)
-        _print_payload(
-            store.neighborhood(
-                args.node_id,
-                depth=args.depth,
-                max_results=args.max_results,
-                edge_kinds=tuple(args.edge_kind),
-                node_kinds=tuple(args.node_kind),
-            ).to_dict(),
-            as_json=True,
-        )
-    elif args.command == "store-path":
-        store = SQLiteGraphStore(args.store)
-        _print_payload(
-            store.path(
-                args.source_id,
-                args.target_id,
-                max_hops=args.max_hops,
-                edge_kinds=tuple(args.edge_kind),
-                node_kinds=tuple(args.node_kind),
-            ).to_dict(),
-            as_json=True,
-        )
-    elif args.command == "store-migrate":
-        store = SQLiteGraphStore(args.store)
-        _print_payload(store.migrate().to_dict(), as_json=True)
-    elif args.command == "store-update":
-        store = SQLiteGraphStore(args.store)
-        report = store.apply_snapshot_delta(load_snapshot(args.snapshot))
-        _print_payload(report.to_dict(), as_json=True)
+    elif args.command in STORAGE_COMMANDS:
+        _print_payload(run_storage_command(args), as_json=True)
     elif args.command == "benchmark":
         report = benchmark_root(
             args.root,
@@ -876,6 +851,36 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "workspace-status":
         status = load_workspace_status(args.workspace)
         _print_payload(status.to_dict(), as_json=True)
+    elif args.command == "workspace-config-init":
+        config = build_workspace_config(
+            args.root,
+            workspace_path=args.workspace,
+            label=args.label,
+            namespace=args.namespace,
+            git_identity_mode=args.git_identity_mode,
+            store_path=args.store,
+            ui_screen=args.ui_screen,
+            ui_query=args.ui_query,
+        )
+        config_output_path = save_workspace_config(config, args.out)
+        _print_payload(
+            {"config_path": str(config_output_path), "config": config.to_dict()},
+            as_json=args.json,
+        )
+    elif args.command == "workspace-config-status":
+        config, workspace_path, root_path = _config_workspace_paths(args.config)
+        status = None
+        if (workspace_path / "workspace.json").exists():
+            status = load_workspace_status(workspace_path).to_dict()
+        _print_payload(
+            {
+                "config": config.to_dict(),
+                "resolved_root_path": str(root_path),
+                "resolved_workspace_path": str(workspace_path),
+                "workspace_status": status,
+            },
+            as_json=True,
+        )
     elif args.command == "profile-init":
         profile = build_refresh_profile(
             label=args.label,
@@ -948,6 +953,31 @@ def main(argv: list[str] | None = None) -> int:
             _print_payload(result.to_dict(), as_json=args.json)
             return 0
         result = write_ui_preview(request)
+        _print_payload(result.to_dict(), as_json=args.json)
+    elif args.command == "demo-ui":
+        from pragmagraph.ui import UiPreviewRequest, serve_ui_preview, write_ui_preview
+
+        workspace = _ensure_demo_workspace(args)
+        if args.config:
+            config = load_workspace_config(args.config)
+            screen = config.ui_screen
+            query_text = config.ui_query
+        else:
+            screen = args.screen
+            query_text = args.query
+        request = UiPreviewRequest(
+            screen=screen,
+            workspace=str(workspace) if workspace is not None else "",
+            output_path=args.html_out,
+            artifact_path=args.artifact_out,
+            report_path=args.report_out,
+            query=query_text,
+            open_browser=args.open,
+        )
+        if args.serve:
+            result = serve_ui_preview(request, host=args.host, port=args.port)
+        else:
+            result = write_ui_preview(request)
         _print_payload(result.to_dict(), as_json=args.json)
     elif args.command in VIEWER_COMMANDS:
         _print_payload(run_viewer_command(args), as_json=True)

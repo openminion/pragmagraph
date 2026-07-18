@@ -133,6 +133,7 @@ def _assert_package_docs_shape(root: Path) -> None:
         root / "docs" / "report-mode.md",
         root / "docs" / "service-mode.md",
         root / "docs" / "source-tree-owner-map.md",
+        root / "docs" / "ten-minute-tour.md",
         root / "docs" / "ui-contracts.md",
         root / "docs" / "viewer-contract.md",
         root / "docs" / "workspace-mode.md",
