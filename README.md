@@ -190,7 +190,13 @@ pragmagraph workspace-config-init . \
   --workspace .pragmagraph/workspace \
   --label my-project \
   --namespace my-project \
+  --ui-screen project_health \
   --ui-query RuntimeGraph \
+  --json
+
+pragmagraph workspace-query \
+  --config .pragmagraph/workspace.toml \
+  RuntimeGraph \
   --json
 
 pragmagraph demo-ui \
@@ -441,6 +447,10 @@ pragmagraph serve --snapshot .pragmagraph/snapshot.json
 Build and query a local SQLite materialized store:
 
 ```bash
+pragmagraph store-import --config .pragmagraph/workspace.toml --json
+pragmagraph store-query --config .pragmagraph/workspace.toml RuntimeGraph --json
+pragmagraph store-search-explain --config .pragmagraph/workspace.toml RuntimeGraph --json
+
 pragmagraph store-import .pragmagraph/snapshot.json \
   --out .pragmagraph/graph.sqlite
 

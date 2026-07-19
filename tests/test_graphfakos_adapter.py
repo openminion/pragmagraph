@@ -64,6 +64,17 @@ def test_pragmagraph_adapter_returns_third_brain_graphfakos_graph() -> None:
     assert graph.citations
     assert graph.provider_payload["namespace"] == "demo"
     assert "integration_commands" in graph.provider_payload
+    assert graph.provider_payload["project_health"] == {
+        "created_at": "2026-06-22T00:00:00+00:00",
+        "edge_count": 1,
+        "edge_kinds": {"documents": 1},
+        "node_count": 2,
+        "node_kinds": {"file": 1, "python_function": 1},
+        "omitted_count": 0,
+        "omitted_reasons": {},
+        "parser_set": ["python_ast"],
+        "source_path_count": 2,
+    }
     assert_graph_viewer_contract(
         html,
         expected_role="source",

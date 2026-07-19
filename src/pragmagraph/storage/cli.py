@@ -12,6 +12,12 @@ from pragmagraph.storage import (
     load_snapshot,
     save_snapshot,
 )
+from pragmagraph.workspace import (
+    ResolvedWorkspaceConfig,
+    ensure_workspace_snapshot,
+    initialize_workspace,
+    resolve_workspace_config_paths,
+)
 
 STORAGE_COMMANDS = frozenset(
     {
@@ -34,9 +40,10 @@ def register_storage_commands(subparsers: argparse._SubParsersAction) -> None:
         "store-import",
         help="import a canonical snapshot into a materialized graph store",
     )
-    import_parser.add_argument("snapshot")
-    import_parser.add_argument("--out", required=True)
+    import_parser.add_argument("snapshot", nargs="?")
+    import_parser.add_argument("--out")
     import_parser.add_argument("--backend", choices=("sqlite",), default="sqlite")
+    import_parser.add_argument("--config")
     _add_json_flag(import_parser)
 
     export_parser = subparsers.add_parser(
@@ -51,15 +58,17 @@ def register_storage_commands(subparsers: argparse._SubParsersAction) -> None:
         "store-health",
         help="summarize a materialized graph store",
     )
-    health_parser.add_argument("store")
+    health_parser.add_argument("store", nargs="?")
+    health_parser.add_argument("--config")
     _add_json_flag(health_parser)
 
     query_parser = subparsers.add_parser(
         "store-query",
         help="query a materialized graph store",
     )
-    query_parser.add_argument("store")
-    query_parser.add_argument("query")
+    query_parser.add_argument("store", nargs="?")
+    query_parser.add_argument("query", nargs="?")
+    query_parser.add_argument("--config")
     query_parser.add_argument("--max-results", type=int, default=10)
     query_parser.add_argument("--cursor", default="")
     query_parser.add_argument("--max-examined", type=int)
@@ -69,8 +78,9 @@ def register_storage_commands(subparsers: argparse._SubParsersAction) -> None:
         "store-search-explain",
         help="explain materialized-store search strategy and candidates",
     )
-    explain_parser.add_argument("store")
-    explain_parser.add_argument("query")
+    explain_parser.add_argument("store", nargs="?")
+    explain_parser.add_argument("query", nargs="?")
+    explain_parser.add_argument("--config")
     explain_parser.add_argument("--max-results", type=int, default=10)
     explain_parser.add_argument("--max-examined", type=int)
     _add_json_flag(explain_parser)
@@ -122,7 +132,8 @@ def run_storage_command(args: argparse.Namespace) -> object:
                 code="STORE_BACKEND_UNSUPPORTED",
                 details={"backend": args.backend},
             )
-        store = SQLiteGraphStore.from_snapshot(load_snapshot(args.snapshot), args.out)
+        snapshot_path, store_path = _import_paths(args)
+        store = SQLiteGraphStore.from_snapshot(load_snapshot(snapshot_path), store_path)
         return _store_payload(store)
     if args.command == "store-export":
         snapshot = SQLiteGraphStore(args.store).export_snapshot()
@@ -131,11 +142,20 @@ def run_storage_command(args: argparse.Namespace) -> object:
             return health(snapshot).to_dict()
         return snapshot.to_dict()
     if args.command == "store-health":
-        return _store_payload(SQLiteGraphStore(args.store))
+        return _store_payload(SQLiteGraphStore(_store_path(args)))
     if args.command == "store-query":
-        return SQLiteGraphStore(args.store).query(_query_request(args)).to_dict()
+        store_path, query_text = _store_query_args(args)
+        return (
+            SQLiteGraphStore(store_path)
+            .query(_query_request(args, query_text))
+            .to_dict()
+        )
     if args.command == "store-search-explain":
-        return explain_store_query(SQLiteGraphStore(args.store), _query_request(args))
+        store_path, query_text = _store_query_args(args)
+        return explain_store_query(
+            SQLiteGraphStore(store_path),
+            _query_request(args, query_text),
+        )
     if args.command == "store-neighborhood":
         return (
             SQLiteGraphStore(args.store)
@@ -174,9 +194,68 @@ def run_storage_command(args: argparse.Namespace) -> object:
     )
 
 
-def _query_request(args: argparse.Namespace) -> QueryRequest:
+def _import_paths(args: argparse.Namespace) -> tuple[str, str]:
+    if getattr(args, "config", None):
+        resolved = _ensure_config_workspace(args.config)
+        snapshot_path = (
+            args.snapshot
+            or ensure_workspace_snapshot(resolved.workspace_path).paths.snapshot_path
+        )
+        store_path = args.out or str(resolved.store_path)
+        return str(snapshot_path), store_path
+    if not args.snapshot or not args.out:
+        raise PragmaGraphError(
+            "store-import requires SNAPSHOT and --out, or --config",
+            code="INVALID_STORE_COMMAND",
+        )
+    return str(args.snapshot), str(args.out)
+
+
+def _store_path(args: argparse.Namespace) -> str:
+    if getattr(args, "config", None):
+        return str(resolve_workspace_config_paths(args.config).store_path)
+    if not getattr(args, "store", None):
+        raise PragmaGraphError(
+            f"{args.command} requires STORE or --config",
+            code="INVALID_STORE_COMMAND",
+        )
+    return str(args.store)
+
+
+def _store_query_args(args: argparse.Namespace) -> tuple[str, str]:
+    if getattr(args, "config", None):
+        store_path = str(resolve_workspace_config_paths(args.config).store_path)
+        query_text = args.query if args.query is not None else args.store
+        if not query_text:
+            raise PragmaGraphError(
+                f"{args.command} requires QUERY when --config is used",
+                code="INVALID_STORE_COMMAND",
+            )
+        return store_path, str(query_text)
+    if not args.store or not args.query:
+        raise PragmaGraphError(
+            f"{args.command} requires STORE QUERY or --config QUERY",
+            code="INVALID_STORE_COMMAND",
+        )
+    return str(args.store), str(args.query)
+
+
+def _ensure_config_workspace(config_path: str) -> ResolvedWorkspaceConfig:
+    resolved = resolve_workspace_config_paths(config_path)
+    if not (resolved.workspace_path / "workspace.json").exists():
+        initialize_workspace(
+            label=resolved.config.label,
+            root_path=resolved.root_path,
+            workspace_path=resolved.workspace_path,
+            namespace=resolved.config.namespace,
+            git_identity_mode=resolved.config.git_identity_mode,
+        )
+    return resolved
+
+
+def _query_request(args: argparse.Namespace, query_text: str) -> QueryRequest:
     return QueryRequest(
-        query=args.query,
+        query=query_text,
         max_results=args.max_results,
         cursor=getattr(args, "cursor", ""),
         max_examined=args.max_examined,

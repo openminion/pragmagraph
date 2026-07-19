@@ -36,6 +36,7 @@ class PragmaGraphViewerProvider(GraphFakosProvider):
         "provenance",
         "freshness",
         "provider_status",
+        "project_health",
         "context_preview",
         "source_graph",
         "document_graph",
@@ -45,8 +46,13 @@ class PragmaGraphViewerProvider(GraphFakosProvider):
         "local_preview",
     )
 
-    def __init__(self, snapshot: GraphSnapshot) -> None:
+    def __init__(
+        self,
+        snapshot: GraphSnapshot,
+        project_health_context: dict[str, object] | None = None,
+    ) -> None:
         self._snapshot = snapshot
+        self._project_health_context = project_health_context
 
     def load_graph(self, request: GraphFakosRequest) -> GraphFakosGraph:
         return _snapshot_to_graphfakos(
@@ -56,6 +62,7 @@ class PragmaGraphViewerProvider(GraphFakosProvider):
             provider_label=self.provider_label,
             graph_role=self.graph_role,
             capabilities=self.capabilities,
+            project_health_context=self._project_health_context,
         )
 
 
@@ -184,6 +191,7 @@ def _snapshot_to_graphfakos(
     provider_label: str,
     graph_role: str,
     capabilities: tuple[str, ...],
+    project_health_context: dict[str, object] | None = None,
 ) -> GraphFakosGraph:
     citations = tuple(_citation_for_node(node) for node in snapshot.nodes) + tuple(
         _citation_for_edge(edge) for edge in snapshot.edges
@@ -215,6 +223,10 @@ def _snapshot_to_graphfakos(
             "root_path": snapshot.root_path,
             "schema_version": snapshot.schema_version,
             "indexer_version": snapshot.indexer_version,
+            "project_health": _project_health_payload(
+                snapshot,
+                project_health_context=project_health_context,
+            ),
             "snapshot_label": (
                 f"{snapshot.namespace} snapshot at "
                 f"{snapshot.created_at or 'unknown time'}"
@@ -225,6 +237,47 @@ def _snapshot_to_graphfakos(
             ),
         },
     )
+
+
+def _project_health_payload(
+    snapshot: GraphSnapshot,
+    *,
+    project_health_context: dict[str, object] | None = None,
+) -> dict[str, object]:
+    paths = {
+        item.source_ref.path
+        for item in (*snapshot.nodes, *snapshot.edges)
+        if item.source_ref.path
+    }
+    parser_set = snapshot.stats.get("parser_set", ())
+    if isinstance(parser_set, str):
+        parsers = (parser_set,)
+    else:
+        parsers = tuple(str(item) for item in parser_set)
+    omitted_reasons: dict[str, int] = {}
+    for item in snapshot.omitted:
+        omitted_reasons[item.reason] = omitted_reasons.get(item.reason, 0) + 1
+    payload: dict[str, object] = {
+        "node_count": len(snapshot.nodes),
+        "edge_count": len(snapshot.edges),
+        "omitted_count": len(snapshot.omitted),
+        "source_path_count": len(paths),
+        "node_kinds": _count_by([node.kind for node in snapshot.nodes]),
+        "edge_kinds": _count_by([edge.kind for edge in snapshot.edges]),
+        "omitted_reasons": dict(sorted(omitted_reasons.items())),
+        "parser_set": sorted(parsers),
+        "created_at": snapshot.created_at,
+    }
+    if project_health_context:
+        payload.update(project_health_context)
+    return payload
+
+
+def _count_by(values: list[str]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for value in values:
+        counts[value] = counts.get(value, 0) + 1
+    return dict(sorted(counts.items()))
 
 
 def _node_to_graphfakos(node: GraphNode) -> GraphFakosNode:

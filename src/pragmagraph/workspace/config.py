@@ -27,6 +27,7 @@ SUPPORTED_UI_SCREENS = frozenset(
         "neighborhood",
         "path",
         "provider_status",
+        "project_health",
     }
 )
 
@@ -118,6 +119,24 @@ class WorkspaceConfig:
         )
 
 
+@dataclass(frozen=True)
+class ResolvedWorkspaceConfig:
+    """Workspace config plus paths resolved relative to the config file."""
+
+    config: WorkspaceConfig
+    root_path: Path
+    workspace_path: Path
+    store_path: Path
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "config": self.config.to_dict(),
+            "resolved_root_path": str(self.root_path),
+            "resolved_workspace_path": str(self.workspace_path),
+            "resolved_store_path": str(self.store_path),
+        }
+
+
 def build_workspace_config(
     root_path: str | Path,
     *,
@@ -171,6 +190,17 @@ def resolve_config_path(config_path: str | Path, value: str) -> Path:
     return (Path(config_path).resolve().parent / path).resolve()
 
 
+def resolve_workspace_config_paths(config_path: str | Path) -> ResolvedWorkspaceConfig:
+    """Load one config and resolve its package-owned local paths."""
+    config = load_workspace_config(config_path)
+    return ResolvedWorkspaceConfig(
+        config=config,
+        root_path=resolve_config_path(config_path, config.root_path),
+        workspace_path=resolve_config_path(config_path, config.workspace_path),
+        store_path=resolve_config_path(config_path, config.store_path),
+    )
+
+
 def render_workspace_config(config: WorkspaceConfig) -> str:
     """Render deterministic TOML for the tiny public config contract."""
     lines = [
@@ -208,10 +238,12 @@ __all__ = [
     "DEFAULT_WORKSPACE_DIR",
     "SUPPORTED_UI_SCREENS",
     "WORKSPACE_CONFIG_SCHEMA_VERSION",
+    "ResolvedWorkspaceConfig",
     "WorkspaceConfig",
     "build_workspace_config",
     "load_workspace_config",
     "render_workspace_config",
     "resolve_config_path",
+    "resolve_workspace_config_paths",
     "save_workspace_config",
 ]

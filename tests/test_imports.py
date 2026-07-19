@@ -312,6 +312,7 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     assert "initialize_workspace" in workspace.__all__
     assert "build_workspace_config" in workspace.__all__
     assert "load_workspace_config" in workspace.__all__
+    assert "resolve_workspace_config_paths" in workspace.__all__
     assert "save_workspace_config" in workspace.__all__
 
 

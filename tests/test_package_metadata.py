@@ -58,8 +58,10 @@ def test_package_readme_mentions_policy_and_quickstart() -> None:
     assert "pragmagraph serve" in readme
     assert "pragmagraph workspace-init" in readme
     assert "pragmagraph workspace-config-init" in readme
+    assert "pragmagraph workspace-query" in readme
     assert "pragmagraph demo-ui" in readme
     assert "pragmagraph store-search-explain" in readme
+    assert "project_health" in readme
     assert "pragmagraph certify" in readme
     assert "pragmagraph.workspace" in readme
     assert "pragmagraph.ui" in readme

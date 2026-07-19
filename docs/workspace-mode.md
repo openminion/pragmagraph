@@ -27,7 +27,10 @@ repeatable local operation without widening into background automation.
 
 - `pragmagraph workspace-init <root> --workspace <dir> --json`
 - `pragmagraph workspace-refresh <dir> --json`
+- `pragmagraph workspace-refresh --config .pragmagraph/workspace.toml --json`
 - `pragmagraph workspace-status <dir> --json`
+- `pragmagraph workspace-status --config .pragmagraph/workspace.toml --json`
+- `pragmagraph workspace-query --config .pragmagraph/workspace.toml RuntimeGraph --json`
 - `pragmagraph workspace-config-init <root> --out .pragmagraph/workspace.toml --json`
 - `pragmagraph workspace-config-status .pragmagraph/workspace.toml --json`
 - `pragmagraph demo-ui --config .pragmagraph/workspace.toml --serve --open`
@@ -49,13 +52,20 @@ git_identity_mode = "name_email_hash"
 store_path = "graph.sqlite"
 
 [ui]
-screen = "search"
+screen = "project_health"
 query = "RuntimeGraph"
 ```
 
 Relative paths are resolved from the config file directory. The config records
 local execution defaults only; it does not create a background operator or
 hosted runtime.
+
+The current screen values are `search`, `result_detail`, `neighborhood`,
+`path`, `provider_status`, and `project_health`. `project_health` uses the
+existing provider-status renderer while exposing PragmaGraph-owned structural
+health facts in the provider payload. When launched from a workspace config, it
+also includes last-refresh counts and store availability if a materialized store
+has been imported.
 
 ## Workspace layout
 

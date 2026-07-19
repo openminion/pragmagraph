@@ -14,6 +14,7 @@ from graphfakos.static import render_static_html
 from .graphfakos_adapter import PragmaGraphViewerProvider
 from .preview_inputs import (
     graphfakos_request,
+    project_health_context_for_request,
     render_server_preview_path,
     snapshot_for_request,
 )
@@ -28,7 +29,10 @@ from .preview_types import (
 def write_ui_preview(request: UiPreviewRequest) -> UiPreviewResult:
     """Write one local visual UI preview to an HTML file."""
     snapshot = snapshot_for_request(request)
-    provider = PragmaGraphViewerProvider(snapshot)
+    provider = PragmaGraphViewerProvider(
+        snapshot,
+        project_health_context=project_health_context_for_request(request),
+    )
     graph_request = graphfakos_request(request)
     payload = write_provider_preview_outputs(
         provider,
@@ -44,7 +48,7 @@ def write_ui_preview(request: UiPreviewRequest) -> UiPreviewResult:
     )
     return UiPreviewResult(
         output_path=str(payload["output_path"]),
-        screen=str(payload["screen"]),
+        screen=request.screen,
         workspace=request.workspace,
         snapshot=request.snapshot,
         node_count=int(payload["node_count"]),
@@ -62,7 +66,10 @@ def write_ui_preview(request: UiPreviewRequest) -> UiPreviewResult:
 def render_ui_preview(request: UiPreviewRequest) -> UiPreviewRender:
     """Render the local visual UI preview for a snapshot, workspace, or demo graph."""
     snapshot = snapshot_for_request(request)
-    provider = PragmaGraphViewerProvider(snapshot)
+    provider = PragmaGraphViewerProvider(
+        snapshot,
+        project_health_context=project_health_context_for_request(request),
+    )
     graph_request = graphfakos_request(request)
     html = render_static_html(provider, graph_request)
     return UiPreviewRender(

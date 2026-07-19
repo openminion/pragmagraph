@@ -54,6 +54,8 @@ pragmagraph index . \
 Import it into SQLite:
 
 ```bash
+pragmagraph store-import --config .pragmagraph/workspace.toml --json
+
 pragmagraph store-import .pragmagraph/snapshot.json \
   --out .pragmagraph/graph.sqlite
 ```
@@ -61,6 +63,10 @@ pragmagraph store-import .pragmagraph/snapshot.json \
 Query, inspect, and export the store:
 
 ```bash
+pragmagraph store-query --config .pragmagraph/workspace.toml RuntimeGraph --json
+pragmagraph store-search-explain --config .pragmagraph/workspace.toml RuntimeGraph --json
+pragmagraph store-health --config .pragmagraph/workspace.toml --json
+
 pragmagraph store-query .pragmagraph/graph.sqlite RuntimeGraph --json
 pragmagraph store-search-explain .pragmagraph/graph.sqlite RuntimeGraph --json
 pragmagraph store-health .pragmagraph/graph.sqlite --json

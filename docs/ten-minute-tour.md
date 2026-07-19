@@ -14,7 +14,7 @@ pragmagraph workspace-config-init . \
   --workspace .pragmagraph/workspace \
   --label demo \
   --namespace demo \
-  --ui-screen search \
+  --ui-screen project_health \
   --ui-query RuntimeGraph \
   --json
 ```
@@ -57,10 +57,17 @@ pragmagraph demo-ui \
 ## 3. Search The Workspace Snapshot
 
 ```bash
-pragmagraph query \
-  .pragmagraph/workspace/snapshot.json \
+pragmagraph workspace-query \
+  --config .pragmagraph/workspace.toml \
   RuntimeGraph \
   --json
+```
+
+The lower-level snapshot command accepts the same config when you want to keep
+using `query` directly:
+
+```bash
+pragmagraph query --config .pragmagraph/workspace.toml RuntimeGraph --json
 ```
 
 Use the compact repository map for fast orientation:
@@ -75,14 +82,13 @@ pragmagraph repo-map \
 
 ```bash
 pragmagraph store-import \
-  .pragmagraph/workspace/snapshot.json \
-  --out .pragmagraph/workspace/graph.sqlite \
+  --config .pragmagraph/workspace.toml \
   --json
 ```
 
 ```bash
 pragmagraph store-search-explain \
-  .pragmagraph/workspace/graph.sqlite \
+  --config .pragmagraph/workspace.toml \
   RuntimeGraph \
   --json
 ```
@@ -107,7 +113,7 @@ when present, and the canonical snapshot hash.
 ## 6. Refresh Explicitly
 
 ```bash
-pragmagraph workspace-refresh .pragmagraph/workspace --json
+pragmagraph workspace-refresh --config .pragmagraph/workspace.toml --json
 ```
 
 PragmaGraph does not install watchers, git hooks, background daemons, or hosted

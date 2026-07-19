@@ -216,6 +216,86 @@ def test_cli_workspace_config_and_demo_ui_flow(tmp_path: Path) -> None:
     )
 
 
+def test_cli_workspace_config_drives_refresh_query_store_and_health_ui(
+    tmp_path: Path,
+) -> None:
+    root = _repo_root(tmp_path)
+    config_path = tmp_path / "workspace.toml"
+    workspace = tmp_path / "workspace"
+    health_html = tmp_path / "health.html"
+    artifact_path = tmp_path / "health-artifact.json"
+
+    _run_workspace_cli(
+        "workspace-config-init",
+        root,
+        "--out",
+        config_path,
+        "--workspace",
+        workspace,
+        "--ui-screen",
+        "project_health",
+        "--ui-query",
+        "OperatorGraph",
+    )
+    bootstrap_query = _run_workspace_cli(
+        "workspace-query",
+        "--config",
+        config_path,
+        "RuntimeGraph",
+    )
+    (root / "src" / "ops.py").write_text(
+        "class OperatorGraph:\n    pass\n",
+        encoding="utf-8",
+    )
+
+    refreshed = _run_workspace_cli("workspace-refresh", "--config", config_path)
+    queried = _run_workspace_cli("query", "--config", config_path, "OperatorGraph")
+    workspace_query = _run_workspace_cli(
+        "workspace-query",
+        "--config",
+        config_path,
+        "OperatorGraph",
+    )
+    store_import = _run_workspace_cli("store-import", "--config", config_path)
+    store_health = _run_workspace_cli("store-health", "--config", config_path)
+    explained = _run_workspace_cli(
+        "store-search-explain",
+        "--config",
+        config_path,
+        "OperatorGraph",
+    )
+    demo_payload = _run_workspace_cli(
+        "demo-ui",
+        "--config",
+        config_path,
+        "--html-out",
+        health_html,
+        "--artifact-out",
+        artifact_path,
+    )
+
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    health = artifact["provider_payload"]["project_health"]
+    assert bootstrap_query["hits"][0]["node"]["label"] == "RuntimeGraph"
+    assert "src/ops.py" in refreshed["operation"]["changed_paths"]
+    assert queried["hits"][0]["node"]["label"] == "OperatorGraph"
+    assert workspace_query["hits"][0]["node"]["label"] == "OperatorGraph"
+    assert store_import["health"]["node_count"] >= 1
+    assert explained["query"] == "OperatorGraph"
+    assert explained["hit_count"] >= 1
+    assert demo_payload["screen"] == "project_health"
+    assert health["node_count"] == demo_payload["node_count"]
+    assert health["source_path_count"] >= 1
+    assert health["refresh_status"]["changed_path_count"] >= 1
+    assert health["refresh_status"]["added_node_count"] >= 1
+    assert health["store_status"]["available"] is True
+    assert (
+        health["store_status"]["health"]["node_count"]
+        == (store_health["health"]["node_count"])
+    )
+    assert "Provider Status" in health_html.read_text(encoding="utf-8")
+
+
 def test_workspace_config_rejects_schema_drift_and_escapes_toml(
     tmp_path: Path,
 ) -> None:

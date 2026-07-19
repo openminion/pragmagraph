@@ -80,13 +80,10 @@ from pragmagraph.viewer.cli import (
 )
 from pragmagraph.workspace import (
     SUPPORTED_UI_SCREENS,
-    build_workspace_config,
     initialize_workspace,
     load_workspace_config,
-    load_workspace_status,
-    refresh_workspace,
-    resolve_config_path,
-    save_workspace_config,
+    load_workspace_metadata,
+    resolve_workspace_config_paths,
 )
 from pragmagraph.workspace.cli import (
     WORKSPACE_COMMANDS,
@@ -148,24 +145,17 @@ def _service_from_args(args: argparse.Namespace) -> LocalQueryService:
     )
 
 
-def _config_workspace_paths(config_path: str | Path) -> tuple[object, Path, Path]:
-    config = load_workspace_config(config_path)
-    workspace_path = resolve_config_path(config_path, config.workspace_path)
-    root_path = resolve_config_path(config_path, config.root_path)
-    return config, workspace_path, root_path
-
-
 def _ensure_config_workspace(config_path: str | Path) -> Path:
-    config, workspace_path, root_path = _config_workspace_paths(config_path)
-    if not (workspace_path / "workspace.json").exists():
+    resolved = resolve_workspace_config_paths(config_path)
+    if not (resolved.workspace_path / "workspace.json").exists():
         initialize_workspace(
-            label=config.label,
-            root_path=root_path,
-            workspace_path=workspace_path,
-            namespace=config.namespace,
-            git_identity_mode=config.git_identity_mode,
+            label=resolved.config.label,
+            root_path=resolved.root_path,
+            workspace_path=resolved.workspace_path,
+            namespace=resolved.config.namespace,
+            git_identity_mode=resolved.config.git_identity_mode,
         )
-    return workspace_path
+    return resolved.workspace_path
 
 
 def _ensure_demo_workspace(args: argparse.Namespace) -> Path | None:
@@ -189,6 +179,22 @@ def _ensure_demo_workspace(args: argparse.Namespace) -> Path | None:
     return workspace_path
 
 
+def _query_args(
+    args: argparse.Namespace, parser: argparse.ArgumentParser
+) -> tuple[str, str]:
+    if args.config:
+        workspace_path = _ensure_config_workspace(args.config)
+        metadata = load_workspace_metadata(workspace_path)
+        if args.query is None:
+            if args.snapshot is None:
+                parser.error("query requires query text when --config is used")
+            return metadata.paths.snapshot_path, args.snapshot
+        return metadata.paths.snapshot_path, args.query
+    if args.snapshot is None or args.query is None:
+        parser.error("query requires SNAPSHOT QUERY or --config QUERY")
+    return args.snapshot, args.query
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="pragmagraph package smoke")
     _add_json_flag(parser)
@@ -202,8 +208,9 @@ def main(argv: list[str] | None = None) -> int:
     _add_json_flag(index_parser)
 
     query_parser = subparsers.add_parser("query", help="query a snapshot")
-    query_parser.add_argument("snapshot")
-    query_parser.add_argument("query")
+    query_parser.add_argument("snapshot", nargs="?")
+    query_parser.add_argument("query", nargs="?")
+    query_parser.add_argument("--config")
     query_parser.add_argument("--max-results", type=int, default=10)
     query_parser.add_argument("--cursor", default="")
     query_parser.add_argument("--max-examined", type=int)
@@ -454,59 +461,6 @@ def main(argv: list[str] | None = None) -> int:
     serve_parser.add_argument("--cache")
     _add_git_identity_mode_argument(serve_parser)
 
-    workspace_init_parser = subparsers.add_parser(
-        "workspace-init",
-        help="initialize a persistent local workspace directory",
-    )
-    workspace_init_parser.add_argument("root")
-    workspace_init_parser.add_argument("--workspace", required=True)
-    workspace_init_parser.add_argument("--label", default="default")
-    workspace_init_parser.add_argument("--namespace", default="default")
-    _add_git_identity_mode_argument(workspace_init_parser)
-    _add_json_flag(workspace_init_parser)
-
-    workspace_refresh_parser = subparsers.add_parser(
-        "workspace-refresh",
-        help="refresh a persistent local workspace directory",
-    )
-    workspace_refresh_parser.add_argument("workspace")
-    _add_json_flag(workspace_refresh_parser)
-
-    workspace_status_parser = subparsers.add_parser(
-        "workspace-status",
-        help="inspect a persistent local workspace directory",
-    )
-    workspace_status_parser.add_argument("workspace")
-    _add_json_flag(workspace_status_parser)
-
-    workspace_config_parser = subparsers.add_parser(
-        "workspace-config-init",
-        help="write a shareable package-local workspace TOML file",
-    )
-    workspace_config_parser.add_argument("root")
-    workspace_config_parser.add_argument("--out", default=".pragmagraph/workspace.toml")
-    workspace_config_parser.add_argument(
-        "--workspace", default=".pragmagraph/workspace"
-    )
-    workspace_config_parser.add_argument("--label", default="default")
-    workspace_config_parser.add_argument("--namespace", default="default")
-    workspace_config_parser.add_argument("--store", default="graph.sqlite")
-    workspace_config_parser.add_argument(
-        "--ui-screen",
-        choices=tuple(sorted(SUPPORTED_UI_SCREENS)),
-        default="search",
-    )
-    workspace_config_parser.add_argument("--ui-query", default="RuntimeGraph")
-    _add_git_identity_mode_argument(workspace_config_parser)
-    _add_json_flag(workspace_config_parser)
-
-    workspace_config_status_parser = subparsers.add_parser(
-        "workspace-config-status",
-        help="inspect a workspace TOML file and any realized workspace state",
-    )
-    workspace_config_status_parser.add_argument("config")
-    _add_json_flag(workspace_config_status_parser)
-
     ui_parser = subparsers.add_parser(
         "ui-preview",
         help="open the package-local visual graph preview",
@@ -515,13 +469,7 @@ def main(argv: list[str] | None = None) -> int:
     ui_parser.add_argument("--snapshot")
     ui_parser.add_argument(
         "--screen",
-        choices=(
-            "search",
-            "result_detail",
-            "neighborhood",
-            "path",
-            "provider_status",
-        ),
+        choices=tuple(sorted(SUPPORTED_UI_SCREENS)),
         default="search",
     )
     ui_parser.add_argument("--html-out", default="pragmagraph-ui-preview.html")
@@ -579,12 +527,13 @@ def main(argv: list[str] | None = None) -> int:
         save_snapshot(snapshot, args.out)
         _print_payload(health(snapshot), as_json=args.json)
     elif args.command == "query":
-        snapshot = load_snapshot(args.snapshot)
+        snapshot_path, query_text = _query_args(args, parser)
+        snapshot = load_snapshot(snapshot_path)
         _print_payload(
             query(
                 snapshot,
                 QueryRequest(
-                    query=args.query,
+                    query=query_text,
                     max_results=args.max_results,
                     cursor=args.cursor,
                     max_examined=args.max_examined,
@@ -836,51 +785,6 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "refresh-status":
         status = load_refresh_status(args.state)
         _print_payload(status.to_dict(), as_json=True)
-    elif args.command == "workspace-init":
-        result = initialize_workspace(
-            label=args.label,
-            root_path=args.root,
-            workspace_path=args.workspace,
-            namespace=args.namespace,
-            git_identity_mode=args.git_identity_mode,
-        )
-        _print_payload(result.to_dict(), as_json=True)
-    elif args.command == "workspace-refresh":
-        result = refresh_workspace(args.workspace)
-        _print_payload(result.to_dict(), as_json=True)
-    elif args.command == "workspace-status":
-        status = load_workspace_status(args.workspace)
-        _print_payload(status.to_dict(), as_json=True)
-    elif args.command == "workspace-config-init":
-        config = build_workspace_config(
-            args.root,
-            workspace_path=args.workspace,
-            label=args.label,
-            namespace=args.namespace,
-            git_identity_mode=args.git_identity_mode,
-            store_path=args.store,
-            ui_screen=args.ui_screen,
-            ui_query=args.ui_query,
-        )
-        config_output_path = save_workspace_config(config, args.out)
-        _print_payload(
-            {"config_path": str(config_output_path), "config": config.to_dict()},
-            as_json=args.json,
-        )
-    elif args.command == "workspace-config-status":
-        config, workspace_path, root_path = _config_workspace_paths(args.config)
-        status = None
-        if (workspace_path / "workspace.json").exists():
-            status = load_workspace_status(workspace_path).to_dict()
-        _print_payload(
-            {
-                "config": config.to_dict(),
-                "resolved_root_path": str(root_path),
-                "resolved_workspace_path": str(workspace_path),
-                "workspace_status": status,
-            },
-            as_json=True,
-        )
     elif args.command == "profile-init":
         profile = build_refresh_profile(
             label=args.label,
@@ -958,8 +862,10 @@ def main(argv: list[str] | None = None) -> int:
         from pragmagraph.ui import UiPreviewRequest, serve_ui_preview, write_ui_preview
 
         workspace = _ensure_demo_workspace(args)
+        store_path = None
         if args.config:
             config = load_workspace_config(args.config)
+            store_path = str(resolve_workspace_config_paths(args.config).store_path)
             screen = config.ui_screen
             query_text = config.ui_query
         else:
@@ -971,6 +877,7 @@ def main(argv: list[str] | None = None) -> int:
             output_path=args.html_out,
             artifact_path=args.artifact_out,
             report_path=args.report_out,
+            store_path=store_path,
             query=query_text,
             open_browser=args.open,
         )

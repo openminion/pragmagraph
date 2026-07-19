@@ -86,9 +86,10 @@ The following top-level exports are part of the current public contract:
 - workspace contracts `WorkspaceMetadata`, `WorkspacePaths`,
   `WorkspaceStatusView`, `WorkspaceRefreshResult`, and helpers such as
   `initialize_workspace`, `refresh_workspace`, `load_workspace_metadata`,
-  `load_workspace_status`, `WorkspaceConfig`, `build_workspace_config`,
-  `load_workspace_config`, and `save_workspace_config`, plus `WorkspaceRoot`,
-  `index_multi_root`,
+  `load_workspace_status`, `WorkspaceConfig`, `ResolvedWorkspaceConfig`,
+  `build_workspace_config`, `load_workspace_config`,
+  `resolve_workspace_config_paths`, and `save_workspace_config`, plus
+  `WorkspaceRoot`, `index_multi_root`,
   `NamedSnapshot`, `CrossRepoResolutionReport`, `SnapshotCompositionResult`,
   `compose_snapshots`, and `save_composed_snapshot_atomic`
 - read-only exact-resolution helpers `resolved_definition`,
