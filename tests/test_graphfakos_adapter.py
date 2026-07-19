@@ -3,16 +3,12 @@ from __future__ import annotations
 from graphfakos import (
     FileGraphProvider,
     GraphFakosGraphActionProvider,
-    GraphFakosLiveSessionRequest,
     GraphFakosRequest,
     render_static_html,
 )
 from graphfakos.artifacts import write_graph_artifact
 from graphfakos.provider import load_provider_graph
-from graphfakos.testing import (
-    assert_graph_viewer_contract,
-    assert_live_provider_contract,
-)
+import pytest
 
 from pragmagraph.models import GraphEdge, GraphNode, GraphSnapshot, SourceRef
 from pragmagraph.ui.graphfakos_adapter import (
@@ -54,8 +50,27 @@ def test_pragmagraph_adapter_returns_third_brain_graphfakos_graph() -> None:
         created_at="2026-06-22T00:00:00+00:00",
     )
     provider = PragmaGraphViewerProvider(snapshot)
-    graph = provider.load_graph(GraphFakosRequest())
-    html = render_static_html(provider, GraphFakosRequest())
+    graphfakos_conformance = pytest.importorskip("graphfakos.testing.conformance")
+    result = graphfakos_conformance.assert_provider_conformance(
+        graphfakos_conformance.GraphFakosProviderConformanceCase(
+            provider=provider,
+            request=GraphFakosRequest(),
+            expected_role="source",
+            expected_provider="PragmaGraph",
+            expected_node="README.md",
+            expected_edge="documents",
+            required_capabilities=(
+                "search",
+                "neighborhood",
+                "path",
+                "provenance",
+                "provider_status",
+                "static_export",
+                "local_preview",
+            ),
+        )
+    )
+    graph = result.graph
 
     assert graph.provider_id == "pragmagraph"
     assert graph.graph_role == "source"
@@ -75,13 +90,6 @@ def test_pragmagraph_adapter_returns_third_brain_graphfakos_graph() -> None:
         "parser_set": ["python_ast"],
         "source_path_count": 2,
     }
-    assert_graph_viewer_contract(
-        html,
-        expected_role="source",
-        expected_provider="PragmaGraph",
-        expected_node="README.md",
-        expected_edge="documents",
-    )
 
 
 def test_pragmagraph_adapter_artifact_round_trip_matches_loaded_graph(tmp_path) -> None:
@@ -116,6 +124,8 @@ def test_pragmagraph_adapter_artifact_round_trip_matches_loaded_graph(tmp_path) 
 
 
 def test_pragmagraph_live_adapter_emits_structural_snapshot_patch() -> None:
+    graphfakos_live = pytest.importorskip("graphfakos.live")
+    graphfakos_assertions = pytest.importorskip("graphfakos.testing.assertions")
     initial = GraphSnapshot(
         namespace="demo",
         root_path="repo",
@@ -158,11 +168,13 @@ def test_pragmagraph_live_adapter_emits_structural_snapshot_patch() -> None:
 
     assert not isinstance(live_provider, GraphFakosGraphActionProvider)
 
-    state = assert_live_provider_contract(
+    state = graphfakos_assertions.assert_live_provider_contract(
         live_provider,
         initial_graph=live_provider.load_graph(GraphFakosRequest()),
         initial_revision="0",
-        request=GraphFakosLiveSessionRequest(session_id="pragmagraph-test"),
+        request=graphfakos_live.GraphFakosLiveSessionRequest(
+            session_id="pragmagraph-test"
+        ),
     )
 
     assert set(state.graph.node_map()) == {"file:README.md", "symbol:build"}
