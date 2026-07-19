@@ -11,6 +11,7 @@ PreviewScreen = Literal[
     "neighborhood",
     "path",
     "provider_status",
+    "project_health",
 ]
 
 
@@ -26,6 +27,7 @@ class UiPreviewRequest:
     embed_path: str = ""
     report_path: str = ""
     markdown_report_path: str = ""
+    store_path: str | None = None
     query: str = "RuntimeGraph"
     node_id: str | None = None
     source_id: str | None = None

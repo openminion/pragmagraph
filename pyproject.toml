@@ -23,7 +23,7 @@ classifiers = [
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-  "graphfakos>=0.0.1,<1",
+  "graphfakos>=0.0.5,<1",
 ]
 
 [project.urls]

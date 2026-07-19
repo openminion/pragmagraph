@@ -8,3 +8,4 @@ dist/
 .pypirc
 .pypirc.local
 .env.release
+.pragmagraph/

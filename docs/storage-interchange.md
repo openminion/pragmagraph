@@ -54,6 +54,8 @@ pragmagraph index . \
 Import it into SQLite:
 
 ```bash
+pragmagraph store-import --config .pragmagraph/workspace.toml --json
+
 pragmagraph store-import .pragmagraph/snapshot.json \
   --out .pragmagraph/graph.sqlite
 ```
@@ -61,11 +63,21 @@ pragmagraph store-import .pragmagraph/snapshot.json \
 Query, inspect, and export the store:
 
 ```bash
+pragmagraph store-query --config .pragmagraph/workspace.toml RuntimeGraph --json
+pragmagraph store-search-explain --config .pragmagraph/workspace.toml RuntimeGraph --json
+pragmagraph store-health --config .pragmagraph/workspace.toml --json
+
 pragmagraph store-query .pragmagraph/graph.sqlite RuntimeGraph --json
+pragmagraph store-search-explain .pragmagraph/graph.sqlite RuntimeGraph --json
 pragmagraph store-health .pragmagraph/graph.sqlite --json
 pragmagraph store-export .pragmagraph/graph.sqlite \
   --out .pragmagraph/exported-snapshot.json
 ```
+
+`store-search-explain` runs the same materialized-store query path as
+`store-query` and reports the observed execution strategy, FTS availability,
+candidate node IDs, omitted reasons, and a reproducible `store-query` command.
+It is an explain surface over existing search, not a separate ranking engine.
 
 Older v1 stores remain readable without mutation. Migrate explicitly before
 delta application:

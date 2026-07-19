@@ -4,6 +4,8 @@ from __future__ import annotations
 
 SCHEMA_VERSION = "pragmagraph.snapshot.v1alpha1"
 INDEXER_VERSION = "pragmagraph.indexer.v1alpha2"
+CROSS_REPO_RESOLUTION_SCHEMA_VERSION = "pragmagraph.cross_repo_resolution.v1alpha1"
+RESOLUTION_KIND_EXACT_SCIP_SYMBOL = "exact_scip_symbol"
 
 CAPABILITY_QUERY = "query"
 CAPABILITY_NEIGHBORHOOD = "neighborhood"
@@ -198,6 +200,7 @@ __all__ = [
     "CAPABILITY_QUERY",
     "CAPABILITY_REFRESH",
     "CAPABILITY_SECURITY_POLICY",
+    "CROSS_REPO_RESOLUTION_SCHEMA_VERSION",
     "EDGE_CALLS",
     "EDGE_CONTAINS",
     "EDGE_DEPENDS_ON",
@@ -247,6 +250,7 @@ __all__ = [
     "NODE_PROJECT",
     "NODE_SYMBOL",
     "NODE_WORKSPACE",
+    "RESOLUTION_KIND_EXACT_SCIP_SYMBOL",
     "NODE_PYTHON_CLASS",
     "NODE_PYTHON_FUNCTION",
     "NODE_PYTHON_METHOD",

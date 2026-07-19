@@ -9,6 +9,9 @@ This directory holds the public package documentation for standalone
 
 - [`getting-started.md`](getting-started.md) gives the
   package-local bootstrap and execution summary for contributors and automation.
+- [`ten-minute-tour.md`](ten-minute-tour.md) gives the shortest public
+  standalone path through workspace config, visual preview, store explain, and
+  certification output.
 - [`engineering-patterns.md`](engineering-patterns.md)
   summarizes the package-local engineering and boundary rules for contributors.
 - [`code-quality-enforcement.md`](code-quality-enforcement.md)
@@ -50,7 +53,8 @@ This directory holds the public package documentation for standalone
   git-lineage, parser-support, and certification helper surfaces.
 - [`advanced-ingestion-and-interchange.md`](advanced-ingestion-and-interchange.md)
   records multi-root composition, artifact indexing, CI delta, precise-fact
-  interchange, query pagination, export redaction, and MCP resources.
+  interchange, exact cross-repository SCIP resolution, query pagination,
+  export redaction, and read-only MCP resources.
 - [`native-scip-ingestion.md`](native-scip-ingestion.md) records
   optional native SCIP protobuf intake, exact merge/freshness rules, and the
   certified producer boundary.
@@ -90,8 +94,8 @@ explicit refresh/profile/status helpers, workspace persistence helpers,
 git-aware provenance overlays and path lineage, symbol/reference interchange,
 optional native SCIP protobuf intake,
 topology and document-graph summaries, query-plan evidence, parser-support
-metadata, certification packs, benchmark helpers, and package-owned validation
-fixtures.
+metadata, certification packs with Markdown output, benchmark helpers,
+package-owned visual demo commands, and package-owned validation fixtures.
 
 ## Boundary shorthand
 

@@ -165,18 +165,29 @@ def _python_files(*roots: Path) -> list[Path]:
 def _git_python_files() -> list[Path] | None:
     try:
         result = subprocess.run(
-            ["git", "-C", str(REPO_ROOT), "ls-files", "-z", "--", "*.py"],
+            [
+                "git",
+                "-C",
+                str(REPO_ROOT),
+                "ls-files",
+                "--cached",
+                "--others",
+                "--exclude-standard",
+                "-z",
+                "--",
+                "*.py",
+            ],
             check=True,
             capture_output=True,
             text=False,
         )
     except (OSError, subprocess.CalledProcessError):
         return None
-    return [
-        REPO_ROOT / raw_path.decode("utf-8")
+    return sorted(
+        path
         for raw_path in result.stdout.split(b"\0")
-        if raw_path
-    ]
+        if raw_path and (path := REPO_ROOT / raw_path.decode("utf-8")).is_file()
+    )
 
 
 def _rel(path: Path) -> str:

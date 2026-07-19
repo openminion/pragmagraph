@@ -827,9 +827,18 @@ def health(snapshot: GraphSnapshot) -> HealthSummary:
     )
 
 
+from pragmagraph.query.resolution import (  # noqa: E402
+    cross_repo_resolution_diagnostics,
+    incoming_external_symbols,
+    resolved_definition,
+)
+
+
 __all__ = [
     "backlinks",
+    "cross_repo_resolution_diagnostics",
     "health",
+    "incoming_external_symbols",
     "impact",
     "recent_commits_for_path",
     "files_touched_by_commit",
@@ -840,4 +849,5 @@ __all__ = [
     "query_nodes",
     "reverse_dependencies",
     "reverse_imports",
+    "resolved_definition",
 ]

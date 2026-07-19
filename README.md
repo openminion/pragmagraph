@@ -35,7 +35,7 @@ This semantic alpha includes deterministic DTOs, JSON snapshots, local
 code/document indexing, refresh manifests, structural deltas, query helpers,
 local service contracts, MCP tools and read-only resources, reports, exports,
 Graphify-shaped interop, loss-aware SCIP JSON and native protobuf intake,
-benchmark helpers, and CLI commands
+exact cross-repository symbol resolution, benchmark helpers, and CLI commands
 for observed-fact graph work.
 
 ## Trust and Brand Safety
@@ -88,6 +88,11 @@ The package currently provides:
   SCIP protobuf intake, caller-fed compiler/LSP facts,
   topology/doc-graph views, git lineage, parser-support metadata, and
   certification packs
+- Cross-repository navigation: deterministic composition of caller-named
+  canonical snapshots, complete package/version-aware SCIP identity matching,
+  ordinary `resolves_to` edges for one exact provider definition, and bounded
+  typed diagnostics for missing, ambiguous, malformed, same-root, or
+  version-mismatched identities
 - Viewer contract: bounded `pragmagraph.viewer` envelopes for GraphFakos and
   other provider-neutral graph viewers, including clusters, LOD, edge bundles,
   omitted counts, content previews, evidence, provenance, and deterministic
@@ -163,7 +168,7 @@ open it through GraphFakos:
 ```bash
 pragmagraph viewer-fixture \
   --scenario viewer-scale-200k \
-  --out ../workspace-tmp/pragmagraph-viewer-support/viewer-scale-200k.json \
+  --out .pragmagraph/viewer-fixtures/viewer-scale-200k.json \
   --json
 ```
 
@@ -173,8 +178,39 @@ cluster, content, fixture, and GraphFakos handoff contract.
 You can run the package-local visual UI today:
 
 ```bash
+pragmagraph demo-ui --serve --open --json
+```
+
+For a repeatable local project demo, write a workspace config and let
+`demo-ui` initialize the workspace on first use:
+
+```bash
+pragmagraph workspace-config-init . \
+  --out .pragmagraph/workspace.toml \
+  --workspace .pragmagraph/workspace \
+  --label my-project \
+  --namespace my-project \
+  --ui-screen project_health \
+  --ui-query RuntimeGraph \
+  --json
+
+pragmagraph workspace-query \
+  --config .pragmagraph/workspace.toml \
+  RuntimeGraph \
+  --json
+
+pragmagraph demo-ui \
+  --config .pragmagraph/workspace.toml \
+  --serve \
+  --open \
+  --json
+```
+
+The lower-level preview command remains available:
+
+```bash
 pragmagraph-ui \
-  --screen summary \
+  --screen search \
   --serve \
   --open
 ```
@@ -184,7 +220,7 @@ Use a persistent workspace as the preview source:
 ```bash
 pragmagraph-ui \
   --workspace <workspace-root> \
-  --screen workspace \
+  --screen provider_status \
   --serve
 ```
 
@@ -192,6 +228,9 @@ Use `--html-out` only when you want to export a standalone HTML snapshot. The
 equivalent module form is `python3.11 -m pragmagraph ui-preview`.
 
 ## CLI Quickstart
+
+For the shortest end-to-end public path, see
+[`docs/ten-minute-tour.md`](docs/ten-minute-tour.md).
 
 Index a local code/docs root into a deterministic JSON snapshot:
 
@@ -228,8 +267,28 @@ pragmagraph multi-root-index \
   --out .pragmagraph/workspace.json \
   --json
 
+# Compose already-built precise snapshots without reindexing source.
+pragmagraph multi-root-compose \
+  --snapshot api=.pragmagraph/api.json \
+  --snapshot web=.pragmagraph/web.json \
+  --out .pragmagraph/precise-workspace.json \
+  --json
+
 pragmagraph ci-delta before.json after.json --fail-on-changes --json
 ```
+
+`multi-root-compose` preserves each input ID and fact, adds explicit root
+provenance, and resolves an external SCIP symbol only when exactly one defining
+node in another named root has the same complete symbol and package version.
+It never falls back to labels, paths, package-name similarity, version ranges,
+or network lookup. The command writes atomically; failed validation leaves an
+existing destination unchanged. The composed file is derived and can be
+deleted and rebuilt from its unchanged input snapshots.
+
+The output records a stable SHA-256 digest for each canonical input snapshot.
+Treat those digests and producer metadata according to the same sharing policy
+as the source snapshots. Resolution itself adds no inferred intent, personal
+profile, source content, or memory record.
 
 Refresh and explain with deterministic metadata:
 
@@ -388,12 +447,25 @@ pragmagraph serve --snapshot .pragmagraph/snapshot.json
 Build and query a local SQLite materialized store:
 
 ```bash
+pragmagraph store-import --config .pragmagraph/workspace.toml --json
+pragmagraph store-query --config .pragmagraph/workspace.toml RuntimeGraph --json
+pragmagraph store-search-explain --config .pragmagraph/workspace.toml RuntimeGraph --json
+
 pragmagraph store-import .pragmagraph/snapshot.json \
   --out .pragmagraph/graph.sqlite
 
 pragmagraph store-query .pragmagraph/graph.sqlite RuntimeGraph --json
+pragmagraph store-search-explain .pragmagraph/graph.sqlite RuntimeGraph --json
 
 pragmagraph store-health .pragmagraph/graph.sqlite --json
+```
+
+Create a compact certification pack before sharing a snapshot:
+
+```bash
+pragmagraph certify .pragmagraph/snapshot.json \
+  --markdown-out .pragmagraph/certification.md \
+  --json
 ```
 
 Run the local query service against the materialized store:

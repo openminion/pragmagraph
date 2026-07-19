@@ -5,7 +5,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-from pragmagraph.models import QueryRequest
+import pytest
+
+from pragmagraph.models import PragmaGraphError, QueryRequest
 from pragmagraph.query import query
 from pragmagraph.service import (
     LocalQueryService,
@@ -15,6 +17,7 @@ from pragmagraph.service import (
     ServiceRequest,
 )
 from pragmagraph.workspace import (
+    load_workspace_config,
     initialize_workspace,
     load_workspace_status,
 )
@@ -29,6 +32,16 @@ def _repo_root(tmp_path: Path) -> Path:
             "src/app.py": "class RuntimeGraph:\n    pass\n",
         },
     )
+
+
+def _run_workspace_cli(*args: object) -> dict[str, object]:
+    result = subprocess.run(
+        [sys.executable, "-m", "pragmagraph", *(str(arg) for arg in args), "--json"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return json.loads(result.stdout)
 
 
 def test_workspace_init_persists_expected_files_and_status(tmp_path: Path) -> None:
@@ -96,42 +109,19 @@ def test_cli_workspace_commands_and_workspace_service(tmp_path: Path) -> None:
     root = _repo_root(tmp_path)
     workspace = tmp_path / "workspace"
 
-    init = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pragmagraph",
-            "workspace-init",
-            str(root),
-            "--workspace",
-            str(workspace),
-            "--label",
-            "demo",
-            "--namespace",
-            "fixture",
-            "--json",
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
+    init_payload = _run_workspace_cli(
+        "workspace-init",
+        root,
+        "--workspace",
+        workspace,
+        "--label",
+        "demo",
+        "--namespace",
+        "fixture",
     )
-    init_payload = json.loads(init.stdout)
     assert init_payload["workspace"]["label"] == "demo"
 
-    status = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pragmagraph",
-            "workspace-status",
-            str(workspace),
-            "--json",
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    status_payload = json.loads(status.stdout)
+    status_payload = _run_workspace_cli("workspace-status", workspace)
     assert status_payload["snapshot_present"] is True
 
     proc = subprocess.Popen(
@@ -174,19 +164,175 @@ def test_cli_workspace_commands_and_workspace_service(tmp_path: Path) -> None:
         "class OperatorGraph:\n    pass\n",
         encoding="utf-8",
     )
-    refreshed = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pragmagraph",
-            "workspace-refresh",
-            str(workspace),
-            "--json",
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    refreshed_payload = json.loads(refreshed.stdout)
+    refreshed_payload = _run_workspace_cli("workspace-refresh", workspace)
     assert "src/ops.py" in refreshed_payload["operation"]["changed_paths"]
     assert refreshed_payload["operation"]["work"]["parsed_path_count"] == 1
+
+
+def test_cli_workspace_config_and_demo_ui_flow(tmp_path: Path) -> None:
+    root = _repo_root(tmp_path)
+    config_path = tmp_path / "workspace.toml"
+    workspace = tmp_path / "workspace"
+    html_path = tmp_path / "demo.html"
+    artifact_path = tmp_path / "demo-artifact.json"
+
+    config_payload = _run_workspace_cli(
+        "workspace-config-init",
+        root,
+        "--out",
+        config_path,
+        "--workspace",
+        workspace,
+        "--label",
+        "demo",
+        "--namespace",
+        "fixture",
+        "--ui-screen",
+        "provider_status",
+        "--ui-query",
+        "RuntimeGraph",
+    )
+    status_payload = _run_workspace_cli("workspace-config-status", config_path)
+    demo_payload = _run_workspace_cli(
+        "demo-ui",
+        "--config",
+        config_path,
+        "--html-out",
+        html_path,
+        "--artifact-out",
+        artifact_path,
+    )
+
+    config = load_workspace_config(config_path)
+    assert config_payload["config"]["label"] == "demo"
+    assert config.label == "demo"
+    assert status_payload["workspace_status"] is None
+    assert demo_payload["screen"] == "provider_status"
+    assert demo_payload["node_count"] >= 1
+    assert (workspace / "workspace.json").is_file()
+    assert "PragmaGraph" in html_path.read_text(encoding="utf-8")
+    assert json.loads(artifact_path.read_text(encoding="utf-8"))["provider_id"] == (
+        "pragmagraph"
+    )
+
+
+def test_cli_workspace_config_drives_refresh_query_store_and_health_ui(
+    tmp_path: Path,
+) -> None:
+    root = _repo_root(tmp_path)
+    config_path = tmp_path / "workspace.toml"
+    workspace = tmp_path / "workspace"
+    health_html = tmp_path / "health.html"
+    artifact_path = tmp_path / "health-artifact.json"
+
+    _run_workspace_cli(
+        "workspace-config-init",
+        root,
+        "--out",
+        config_path,
+        "--workspace",
+        workspace,
+        "--ui-screen",
+        "project_health",
+        "--ui-query",
+        "OperatorGraph",
+    )
+    bootstrap_query = _run_workspace_cli(
+        "workspace-query",
+        "--config",
+        config_path,
+        "RuntimeGraph",
+    )
+    (root / "src" / "ops.py").write_text(
+        "class OperatorGraph:\n    pass\n",
+        encoding="utf-8",
+    )
+
+    refreshed = _run_workspace_cli("workspace-refresh", "--config", config_path)
+    queried = _run_workspace_cli("query", "--config", config_path, "OperatorGraph")
+    workspace_query = _run_workspace_cli(
+        "workspace-query",
+        "--config",
+        config_path,
+        "OperatorGraph",
+    )
+    store_import = _run_workspace_cli("store-import", "--config", config_path)
+    store_health = _run_workspace_cli("store-health", "--config", config_path)
+    explained = _run_workspace_cli(
+        "store-search-explain",
+        "--config",
+        config_path,
+        "OperatorGraph",
+    )
+    demo_payload = _run_workspace_cli(
+        "demo-ui",
+        "--config",
+        config_path,
+        "--html-out",
+        health_html,
+        "--artifact-out",
+        artifact_path,
+    )
+
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    health = artifact["provider_payload"]["project_health"]
+    assert bootstrap_query["hits"][0]["node"]["label"] == "RuntimeGraph"
+    assert "src/ops.py" in refreshed["operation"]["changed_paths"]
+    assert queried["hits"][0]["node"]["label"] == "OperatorGraph"
+    assert workspace_query["hits"][0]["node"]["label"] == "OperatorGraph"
+    assert store_import["health"]["node_count"] >= 1
+    assert explained["query"] == "OperatorGraph"
+    assert explained["hit_count"] >= 1
+    assert demo_payload["screen"] == "project_health"
+    assert health["node_count"] == demo_payload["node_count"]
+    assert health["source_path_count"] >= 1
+    assert health["refresh_status"]["changed_path_count"] >= 1
+    assert health["refresh_status"]["added_node_count"] >= 1
+    assert health["store_status"]["available"] is True
+    assert (
+        health["store_status"]["health"]["node_count"]
+        == (store_health["health"]["node_count"])
+    )
+    assert "Provider Status" in health_html.read_text(encoding="utf-8")
+
+
+def test_workspace_config_rejects_schema_drift_and_escapes_toml(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "workspace.toml"
+    config_path.write_text(
+        "\n".join(
+            [
+                'schema_version = "unsupported"',
+                'label = "demo"',
+                'namespace = "default"',
+                'root_path = "."',
+                'workspace_path = ".pragmagraph/workspace"',
+                'git_identity_mode = "name_email_hash"',
+                'store_path = "graph.sqlite"',
+                "",
+                "[ui]",
+                'screen = "search"',
+                'query = "RuntimeGraph"',
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(PragmaGraphError, match="schema_version"):
+        load_workspace_config(config_path)
+
+    escaped_path = tmp_path / "escaped.toml"
+    save_payload = _run_workspace_cli(
+        "workspace-config-init",
+        ".",
+        "--out",
+        escaped_path,
+        "--label",
+        "line\nbreak",
+    )
+
+    loaded = load_workspace_config(escaped_path)
+    assert save_payload["config"]["label"] == "line\nbreak"
+    assert loaded.label == "line\nbreak"

@@ -13,6 +13,7 @@ UiScreenId = Literal[
     "neighborhood",
     "path",
     "provider_status",
+    "project_health",
 ]
 
 
@@ -112,5 +113,17 @@ def build_ui_screen_manifest() -> tuple[UiScreenDefinition, ...]:
             ),
             mvp=True,
             mutating=True,
+        ),
+        UiScreenDefinition(
+            screen_id="project_health",
+            route="/third-brain/project-health",
+            title="Project Health",
+            primary_payloads=(
+                "KnowledgeGraphHealth",
+                "GraphRefreshResult",
+                "GraphOmittedItem",
+                "ParserDiagnostic",
+            ),
+            mvp=True,
         ),
     )

@@ -97,6 +97,15 @@ PYTHONPATH=src python3.11 -m pragmagraph certify snapshot.json
 ```
 
 The certification pack includes node/edge/omitted counts, parser provenance,
-privacy/export posture, and topology summary facts. It is designed for package
+privacy/export posture, topology summary facts, cross-repository resolution
+counts when present, and a canonical snapshot hash. It is designed for package
 consumers that need a compact proof artifact before exchanging or publishing a
 snapshot.
+
+Write a Markdown trust pack alongside the JSON payload:
+
+```bash
+PYTHONPATH=src python3.11 -m pragmagraph certify snapshot.json \
+  --markdown-out certification.md \
+  --json
+```

@@ -70,11 +70,13 @@ The following top-level exports are part of the current public contract:
   `NativeScipImport`, `ScipIngestionReport`, `ScipFreshness`,
   `ScipLossReport`, `load_native_scip`, `snapshot_from_scip_protobuf`,
   `merge_precise_snapshot`, and `native_scip_available`
+- exact SCIP identity helpers `ScipSymbolIdentity`, `parse_scip_symbol`, and
+  `require_cross_repository_symbol` under `pragmagraph.interchange`
 - topology and document-graph helpers `build_topology_summary` and
   `build_doc_graph_summary`
 - query-plan evidence helper `explain_query_plan`
-- certification/privacy helpers `build_certification_pack` and
-  `build_privacy_profile`
+- certification/privacy helpers `build_certification_pack`,
+  `build_privacy_profile`, and `render_markdown_certification_pack`
 - git lineage helper `build_git_lineage`
 - parser support helper `build_parser_support_matrix`
 - refresh helpers `refresh_snapshot`, `diff_snapshots`, and `build_ci_delta`
@@ -83,8 +85,16 @@ The following top-level exports are part of the current public contract:
 - service contracts `ServiceRequest`, `ServiceResponse`, and `LocalQueryService`
 - workspace contracts `WorkspaceMetadata`, `WorkspacePaths`,
   `WorkspaceStatusView`, `WorkspaceRefreshResult`, and helpers such as
-  `initialize_workspace`, `refresh_workspace`, `load_workspace_metadata`, and
-  `load_workspace_status`, plus `WorkspaceRoot` and `index_multi_root`
+  `initialize_workspace`, `refresh_workspace`, `load_workspace_metadata`,
+  `load_workspace_status`, `WorkspaceConfig`, `ResolvedWorkspaceConfig`,
+  `build_workspace_config`, `load_workspace_config`,
+  `resolve_workspace_config_paths`, and `save_workspace_config`, plus
+  `WorkspaceRoot`, `index_multi_root`,
+  `NamedSnapshot`, `CrossRepoResolutionReport`, `SnapshotCompositionResult`,
+  `compose_snapshots`, and `save_composed_snapshot_atomic`
+- read-only exact-resolution helpers `resolved_definition`,
+  `incoming_external_symbols`, and `cross_repo_resolution_diagnostics` under
+  `pragmagraph.query`
 - export projection helpers `project_snapshot` and `ExportProjection`
 - typed UI boundary contracts such as `UiTransportBoundary`,
   `UiScreenDefinition`, and `build_ui_screen_manifest`
@@ -147,11 +157,13 @@ Public-contract confidence should be enforced by tests that cover:
 13. deterministic stdio service behavior for snapshot-backed and root-backed
     repeated-request sessions,
 14. deterministic workspace init/status/refresh behavior and
-    `serve --workspace` startup,
+    `serve --workspace` startup, plus workspace config and visual demo CLI
+    behavior,
 15. deterministic compact repo-map and handoff rendering,
 16. deterministic symbol/reference interchange, bounded native SCIP intake,
     topology, document-graph,
-    query-plan, git-lineage, parser-support, and certification behavior.
+    query-plan, git-lineage, parser-support, store-search explainability, and
+    certification behavior.
 
 ## Non-goals
 

@@ -1,0 +1,7 @@
+{
+  "language": "python",
+  "license": "Apache-2.0",
+  "producer": "scip-python",
+  "producer_version": "0.6.6",
+  "symbol": "scip-python python example-service 1.0.0 example/service#serve()."
+}

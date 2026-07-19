@@ -138,6 +138,48 @@ class StoreCapabilityReport:
         return payload
 
 
+@dataclass(frozen=True)
+class StoreSearchExplanation:
+    """Auditable search-plan facts for one materialized-store query."""
+
+    backend: str
+    query_text: str
+    strategy: str
+    fts_available: bool
+    candidate_count: int
+    hit_count: int
+    candidate_node_ids: tuple[str, ...] = ()
+    omitted_reasons: tuple[str, ...] = ()
+    reproducible_command: tuple[str, ...] = ()
+    result: QueryResult | None = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "backend", str(self.backend))
+        object.__setattr__(self, "query_text", str(self.query_text))
+        object.__setattr__(self, "strategy", str(self.strategy))
+        object.__setattr__(
+            self, "candidate_node_ids", tuple_str(self.candidate_node_ids)
+        )
+        object.__setattr__(self, "omitted_reasons", tuple_str(self.omitted_reasons))
+        object.__setattr__(
+            self, "reproducible_command", tuple_str(self.reproducible_command)
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "backend": self.backend,
+            "query": self.query_text,
+            "strategy": self.strategy,
+            "fts_available": self.fts_available,
+            "candidate_count": self.candidate_count,
+            "hit_count": self.hit_count,
+            "candidate_node_ids": list(self.candidate_node_ids),
+            "omitted_reasons": list(self.omitted_reasons),
+            "reproducible_command": list(self.reproducible_command),
+            "result": self.result.to_dict() if self.result else {},
+        }
+
+
 class GraphStore(Protocol):
     """Storage contract for canonical and materialized graph stores."""
 
@@ -669,6 +711,36 @@ def open_store(path: str | Path, *, backend: str = "sqlite") -> GraphStore:
     )
 
 
+def explain_store_query(
+    store: SQLiteGraphStore,
+    request: QueryRequest | str,
+) -> StoreSearchExplanation:
+    """Run a SQLite store query and expose deterministic execution facts."""
+    req = request if isinstance(request, QueryRequest) else QueryRequest(query=request)
+    result = store.query(req)
+    diagnostics = result.diagnostics
+    return StoreSearchExplanation(
+        backend=store.backend,
+        query_text=req.query,
+        strategy=str(diagnostics.get("strategy", "") or ""),
+        fts_available=bool(diagnostics.get("fts_available", False)),
+        candidate_count=int(diagnostics.get("candidate_count", 0) or 0),
+        hit_count=len(result.hits),
+        candidate_node_ids=tuple_str(diagnostics.get("candidate_node_ids", ())),
+        omitted_reasons=tuple(item.reason for item in result.omitted),
+        reproducible_command=(
+            "pragmagraph",
+            "store-query",
+            str(store.store_path),
+            req.query,
+            "--max-results",
+            str(req.max_results),
+            "--json",
+        ),
+        result=result,
+    )
+
+
 def _initialize_sqlite_schema(connection: sqlite3.Connection) -> None:
     connection.executescript(
         """
@@ -877,7 +949,9 @@ __all__ = [
     "STORE_MANIFEST_SCHEMA_VERSION",
     "SQLiteGraphStore",
     "StoreCapabilityReport",
+    "StoreSearchExplanation",
     "StoreManifest",
     "StoreUpdateReport",
+    "explain_store_query",
     "open_store",
 ]

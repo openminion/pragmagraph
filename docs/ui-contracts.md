@@ -38,6 +38,15 @@ The first screen manifest is intentionally small and matches the workbench MVP:
 3. neighborhood
 4. path
 5. provider status
+6. project health
+
+`project_health` is a PragmaGraph-owned screen id for observed workspace facts
+such as node counts, edge counts, omitted reasons, parser set, source path
+count, and snapshot creation time. Workspace-backed previews also carry the last
+explicit-refresh status and materialized-store availability when those files are
+present. The current local preview maps it onto the GraphFakos provider-status
+renderer and carries the PragmaGraph-specific health payload inside the graph
+artifact.
 
 ## Local Visual UI
 
@@ -58,7 +67,7 @@ Workspace-backed preview uses the deterministic workspace layout:
 ```bash
 pragmagraph-ui \
   --workspace ./pragmagraph-workspace \
-  --screen provider_status \
+  --screen project_health \
   --serve
 ```
 

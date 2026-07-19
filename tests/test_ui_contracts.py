@@ -30,6 +30,7 @@ def test_ui_screen_manifest_covers_workbench_mvp_routes() -> None:
         "neighborhood",
         "path",
         "provider_status",
+        "project_health",
     ]
     assert [screen.screen_id for screen in screens if screen.mvp] == [
         "search",
@@ -37,6 +38,7 @@ def test_ui_screen_manifest_covers_workbench_mvp_routes() -> None:
         "neighborhood",
         "path",
         "provider_status",
+        "project_health",
     ]
     assert [screen.screen_id for screen in screens if screen.mutating] == [
         "provider_status"

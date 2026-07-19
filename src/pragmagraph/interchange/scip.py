@@ -6,7 +6,13 @@ from collections import defaultdict
 from dataclasses import replace
 from typing import Any, Mapping
 
-from pragmagraph.contracts import EDGE_DEFINES, EDGE_MENTIONS, NODE_SYMBOL
+from pragmagraph.contracts import (
+    EDGE_DEFINES,
+    EDGE_MENTIONS,
+    EDGE_RESOLVES_TO,
+    NODE_SYMBOL,
+    RESOLUTION_KIND_EXACT_SCIP_SYMBOL,
+)
 from pragmagraph.interchange.compiler import (
     ObservedReferenceFact,
     ObservedSymbolFact,
@@ -48,8 +54,16 @@ def snapshot_to_scip_json(snapshot: GraphSnapshot) -> dict[str, Any]:
             }
         )
     omitted_references = 0
+    omitted_cross_repo_resolutions = 0
     for edge in sorted(snapshot.edges, key=lambda item: item.id):
         if edge.kind == EDGE_DEFINES:
+            continue
+        if (
+            edge.kind == EDGE_RESOLVES_TO
+            and edge.metadata.get("resolution_kind")
+            == RESOLUTION_KIND_EXACT_SCIP_SYMBOL
+        ):
+            omitted_cross_repo_resolutions += 1
             continue
         target_symbol = symbol_ids.get(edge.target_id)
         if target_symbol is None or not edge.source_ref.path:
@@ -97,6 +111,7 @@ def snapshot_to_scip_json(snapshot: GraphSnapshot) -> dict[str, Any]:
                 "documents.occurrences",
             ],
             "omitted_reference_count": omitted_references,
+            "omitted_cross_repo_resolution_count": omitted_cross_repo_resolutions,
         },
     }
 

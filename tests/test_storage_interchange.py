@@ -18,6 +18,7 @@ from pragmagraph.service import (
 from pragmagraph.storage import (
     JsonSnapshotStore,
     SQLiteGraphStore,
+    explain_store_query,
     load_snapshot,
     save_snapshot,
     stable_dumps,
@@ -137,6 +138,28 @@ def test_sqlite_store_query_neighborhood_and_path_match_snapshot_oracle(
     assert store_neighborhood.query == runtime_node.id
     assert store_path.source_id == runtime_node.id
     assert store_path.target_id == guide_node.id
+
+
+def test_sqlite_store_search_explanation_reports_strategy_and_candidates(
+    tmp_path: Path,
+) -> None:
+    snapshot = _snapshot(tmp_path)
+    store_path = tmp_path / "graph.sqlite"
+    store = SQLiteGraphStore.from_snapshot(snapshot, store_path)
+
+    explanation = explain_store_query(store, QueryRequest(query="RuntimeGraph"))
+    payload = _run_cli_json(
+        "store-search-explain",
+        str(store_path),
+        "RuntimeGraph",
+    )
+
+    assert explanation.strategy in {"direct_exact", "sqlite_fts5", "sqlite_scan"}
+    assert explanation.hit_count >= 1
+    assert explanation.reproducible_command[:2] == ("pragmagraph", "store-query")
+    assert payload["strategy"] == explanation.strategy
+    assert payload["hit_count"] == explanation.hit_count
+    assert payload["candidate_node_ids"]
 
 
 def test_cli_store_import_query_export_and_health(tmp_path: Path) -> None:

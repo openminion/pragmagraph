@@ -18,7 +18,14 @@ from pragmagraph.interchange.compiler import (
     ObservedSymbolFact,
     snapshot_from_compiler_facts,
 )
-from pragmagraph.models import GraphEdge, GraphNode, GraphSnapshot, OmittedDiagnostic
+from pragmagraph.interchange.scip_symbols import parse_scip_symbol
+from pragmagraph.models import (
+    GraphEdge,
+    GraphNode,
+    GraphSnapshot,
+    OmittedDiagnostic,
+    PragmaGraphError,
+)
 
 SCIP_NATIVE_FORMAT = "scip.protobuf.v1"
 SCIP_SCHEMA_REVISION = "e01e97efac2f6b8c266b4d04825f1f1eab7b8f6c"
@@ -718,14 +725,17 @@ def _occurrence_identity(
 
 
 def _symbol_package_metadata(symbol: str) -> dict[str, str]:
-    parts = symbol.split(" ", 4)
-    if len(parts) < 5 or symbol.startswith("local "):
+    try:
+        identity = parse_scip_symbol(symbol)
+    except PragmaGraphError:
+        return {}
+    if identity.is_local:
         return {}
     return {
-        "scip_scheme": parts[0],
-        "scip_package_manager": parts[1],
-        "scip_package_name": parts[2],
-        "scip_package_version": parts[3],
+        "scip_scheme": identity.scheme,
+        "scip_package_manager": identity.package_manager,
+        "scip_package_name": identity.package_name,
+        "scip_package_version": identity.package_version,
     }
 
 

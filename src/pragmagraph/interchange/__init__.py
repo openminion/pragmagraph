@@ -16,6 +16,8 @@ from pragmagraph.contracts import (
     EDGE_PARENT_SYMBOL,
     EDGE_REFERENCES_DOC,
     EDGE_REFERENCES_SECTION,
+    EDGE_RESOLVES_TO,
+    NODE_SYMBOL,
 )
 from pragmagraph.models import GraphNode, GraphSnapshot, SourceRef
 
@@ -32,6 +34,7 @@ REFERENCE_EDGE_KINDS = frozenset(
         EDGE_PARENT_SYMBOL,
         EDGE_REFERENCES_DOC,
         EDGE_REFERENCES_SECTION,
+        EDGE_RESOLVES_TO,
     }
 )
 
@@ -149,11 +152,24 @@ def build_symbol_reference_bundle(snapshot: GraphSnapshot) -> InterchangeBundle:
 
 
 def _is_symbol_node(node: GraphNode) -> bool:
-    return node.kind.endswith(SYMBOL_NODE_SUFFIXES)
+    return node.kind == NODE_SYMBOL or node.kind.endswith(SYMBOL_NODE_SUFFIXES)
 
 
 def _symbol_metadata(node: GraphNode) -> dict[str, Any]:
-    keys = ("parser", "parser_version", "language", "module", "resolved")
+    keys = (
+        "parser",
+        "parser_version",
+        "language",
+        "module",
+        "resolved",
+        "scip_symbol",
+        "scip_external",
+        "scip_scheme",
+        "scip_package_manager",
+        "scip_package_name",
+        "scip_package_version",
+        "workspace_root",
+    )
     return {
         key: node.metadata[key]
         for key in keys
@@ -190,6 +206,11 @@ from pragmagraph.interchange.native import (  # noqa: E402
     native_scip_available,
     snapshot_from_scip_protobuf,
 )
+from pragmagraph.interchange.scip_symbols import (  # noqa: E402
+    ScipSymbolIdentity,
+    parse_scip_symbol,
+    require_cross_repository_symbol,
+)
 
 
 __all__ = [
@@ -214,13 +235,16 @@ __all__ = [
     "ScipIngestionReport",
     "ScipLossReport",
     "ScipProducer",
+    "ScipSymbolIdentity",
     "build_symbol_reference_bundle",
     "evaluate_scip_freshness",
     "load_native_scip",
     "merge_precise_snapshot",
     "native_scip_available",
+    "parse_scip_symbol",
     "snapshot_from_compiler_facts",
     "snapshot_from_scip_json",
     "snapshot_to_scip_json",
+    "require_cross_repository_symbol",
     "snapshot_from_scip_protobuf",
 ]

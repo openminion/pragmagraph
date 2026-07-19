@@ -27,6 +27,16 @@ def _repo_root(tmp_path: Path) -> Path:
     )
 
 
+def _run_refresh_cli(*args: object) -> dict[str, object]:
+    result = subprocess.run(
+        [sys.executable, "-m", "pragmagraph", *(str(arg) for arg in args), "--json"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return json.loads(result.stdout)
+
+
 def test_build_refresh_plan_surfaces_changed_and_removed_paths(
     tmp_path: Path,
 ) -> None:
@@ -50,7 +60,6 @@ def test_build_refresh_plan_surfaces_changed_and_removed_paths(
         previous_manifest=previous_manifest,
     )
 
-    # The first plan is still useful as a baseline sanity check.
     assert initial.manifest_entry_count == 2
     assert "README.md" in updated.changed_paths
     assert "src/app.py" in updated.changed_paths
@@ -103,69 +112,33 @@ def test_cli_profile_init_run_and_status_commands(tmp_path: Path) -> None:
     state_path = tmp_path / "status.json"
     cache_path = tmp_path / "cache.json"
 
-    init = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pragmagraph",
-            "profile-init",
-            str(root),
-            "--out",
-            str(profile_path),
-            "--label",
-            "demo",
-            "--namespace",
-            "fixture",
-            "--snapshot-out",
-            str(snapshot_path),
-            "--manifest-out",
-            str(manifest_path),
-            "--state-out",
-            str(state_path),
-            "--cache-out",
-            str(cache_path),
-            "--json",
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
+    init_payload = _run_refresh_cli(
+        "profile-init",
+        root,
+        "--out",
+        profile_path,
+        "--label",
+        "demo",
+        "--namespace",
+        "fixture",
+        "--snapshot-out",
+        snapshot_path,
+        "--manifest-out",
+        manifest_path,
+        "--state-out",
+        state_path,
+        "--cache-out",
+        cache_path,
     )
-    init_payload = json.loads(init.stdout)
     assert init_payload["label"] == "demo"
     assert profile_path.is_file()
 
-    run = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pragmagraph",
-            "profile-run",
-            str(profile_path),
-            "--json",
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    run_payload = json.loads(run.stdout)
+    run_payload = _run_refresh_cli("profile-run", profile_path)
     assert run_payload["status"]["status"] == "fresh"
     assert run_payload["work"]["strategy"] == "incremental"
     assert cache_path.is_file()
 
-    status = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "pragmagraph",
-            "refresh-status",
-            str(state_path),
-            "--json",
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    status_payload = json.loads(status.stdout)
+    status_payload = _run_refresh_cli("refresh-status", state_path)
     assert status_payload["status"] == "fresh"
     assert status_payload["manifest_entry_count"] == 2
     assert "added_node_count" in status_payload
