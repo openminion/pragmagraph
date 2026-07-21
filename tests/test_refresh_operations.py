@@ -160,6 +160,8 @@ def test_root_service_health_and_refresh_return_refresh_state(tmp_path: Path) ->
         ServiceRequest(id="health", method="health", params={})
     )[0].to_dict()["result"]
     assert health_payload["service"]["refresh_state"]["status"] == "fresh"
+    assert health_payload["service"]["status"]["refresh_readiness"]["can_refresh"]
+    assert health_payload["service"]["status"]["artifact_presence"]["refresh_status"]
     assert state_out.is_file()
 
     (root / "src" / "ops.py").write_text(

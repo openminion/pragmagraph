@@ -34,6 +34,7 @@ Capabilities and health responses are intentionally richer than the MVP surface:
 - git overlay support posture
 - git identity mode
 - git commit and changed-path counts
+- explicit refresh readiness and artifact-presence facts
 
 ## Request envelope
 
@@ -61,6 +62,7 @@ Failure:
 
 - `capabilities`
 - `health`
+- `status`
 - `query`
 - `explain`
 - `neighborhood`
@@ -79,12 +81,30 @@ summaries. `neighborhood` and `path` accept optional `edge_kinds` and
 `export` accepts `profile` with `full`, `no_content`, `no_identities`, or
 `portable`.
 
+`status` returns a compact machine-readable readiness view for clients and UI
+surfaces that need to know what is currently loaded and whether an explicit
+refresh can run:
+
+- startup mode and namespace
+- snapshot identity and graph counts
+- root, snapshot, workspace, and store paths when present
+- artifact presence for snapshot, manifest, refresh-status, cache, store, and
+  workspace files
+- refresh readiness with a deterministic reason such as
+  `root_backed_explicit_refresh_available`,
+  `workspace_explicit_refresh_available`,
+  `snapshot_backed_refresh_unsupported`, or
+  `store_backed_refresh_unsupported`
+- last refresh ledger facts when available
+
 ## MCP resources
 
 `pragmagraph-server serve-stdio` exposes the existing tools plus read-only
 `pragma://status`, `pragma://snapshot`, `pragma://report`, and
-`pragma://node/{node_id}` resources. Listing and reading resources reuse the
-already-loaded service state and never trigger refresh or semantic inference.
+`pragma://node/{node_id}` resources. `pragma://status` includes the same
+service `status` payload alongside capabilities and snapshot statistics.
+Listing and reading resources reuse the already-loaded service state and never
+trigger refresh or semantic inference.
 
 ## Boundary
 

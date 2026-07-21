@@ -18,6 +18,7 @@ from pragmagraph.service import (
     METHOD_QUERY,
     METHOD_REFRESH,
     METHOD_SHUTDOWN,
+    METHOD_STATUS,
     LocalQueryService,
     ServiceRequest,
     request_from_json_line,
@@ -97,6 +98,18 @@ def test_snapshot_service_keeps_loaded_state_and_rejects_refresh(
     assert refresh.ok is False
     assert refresh.to_dict()["error"]["code"] == ERROR_REFRESH_UNSUPPORTED
 
+    status = service.handle_request(
+        ServiceRequest(id="s1", method=METHOD_STATUS, params={})
+    )[0].to_dict()["result"]
+    assert status["refresh_readiness"] == {
+        "can_refresh": False,
+        "startup_mode": "snapshot",
+        "reason": "snapshot_backed_refresh_unsupported",
+        "root_path_present": True,
+    }
+    assert status["artifact_presence"]["snapshot"] is True
+    assert status["last_refresh"] is None
+
 
 def test_service_capabilities_expose_native_scip_and_loaded_report(
     tmp_path: Path,
@@ -135,6 +148,14 @@ def test_root_service_refresh_updates_state_and_persists_outputs(
     assert baseline.hits == ()
     assert snapshot_out.is_file()
     assert manifest_out.is_file()
+    status_before = service.status().to_dict()
+    assert status_before["refresh_readiness"]["can_refresh"] is True
+    assert status_before["refresh_readiness"]["reason"] == (
+        "root_backed_explicit_refresh_available"
+    )
+    assert status_before["artifact_presence"]["snapshot"] is True
+    assert status_before["artifact_presence"]["manifest"] is True
+    assert status_before["last_refresh"]["status"] == "fresh"
 
     (root / "src" / "ops.py").write_text(
         "class OperatorGraph:\n    pass\n",
@@ -153,6 +174,11 @@ def test_root_service_refresh_updates_state_and_persists_outputs(
     assert latest.hits[0].node.label == "OperatorGraph"
     assert snapshot_out.is_file()
     assert manifest_out.is_file()
+    status_after = service.handle_request(
+        ServiceRequest(id="status", method=METHOD_STATUS, params={})
+    )[0].to_dict()["result"]
+    assert status_after["last_refresh"]["changed_path_count"] >= 1
+    assert status_after["graph"]["node_count"] == len(service.snapshot.nodes)
 
 
 def test_service_stdio_runner_supports_snapshot_sessions(tmp_path: Path) -> None:
@@ -163,6 +189,7 @@ def test_service_stdio_runner_supports_snapshot_sessions(tmp_path: Path) -> None
     proc = _serve_process("--snapshot", str(snapshot_path))
     try:
         capabilities = _roundtrip(proc, {"id": "1", "method": METHOD_CAPABILITIES})
+        status = _roundtrip(proc, {"id": "status", "method": METHOD_STATUS})
         first = _roundtrip(
             proc,
             {"id": "2", "method": METHOD_QUERY, "params": {"text": "RuntimeGraph"}},
@@ -183,6 +210,8 @@ def test_service_stdio_runner_supports_snapshot_sessions(tmp_path: Path) -> None
     assert capabilities["result"]["snapshot_id"]
     assert capabilities["result"]["parser_set"]
     assert capabilities["result"]["parser_versions"]
+    assert status["result"]["refresh_readiness"]["can_refresh"] is False
+    assert status["result"]["artifact_presence"]["snapshot"] is True
     assert first["result"] == second["result"]
     assert shutdown["result"]["shutdown"] == "accepted"
     assert proc.returncode == 0

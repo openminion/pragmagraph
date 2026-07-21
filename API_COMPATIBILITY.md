@@ -82,7 +82,8 @@ The following top-level exports are part of the current public contract:
 - refresh helpers `refresh_snapshot`, `diff_snapshots`, and `build_ci_delta`
 - structural navigation helpers `reverse_imports`, `reverse_dependencies`,
   `backlinks`, and `impact`
-- service contracts `ServiceRequest`, `ServiceResponse`, and `LocalQueryService`
+- service contracts `ServiceRequest`, `ServiceResponse`, `ServiceStatus`, and
+  `LocalQueryService`
 - workspace contracts `WorkspaceMetadata`, `WorkspacePaths`,
   `WorkspaceStatusView`, `WorkspaceRefreshResult`, and helpers such as
   `initialize_workspace`, `refresh_workspace`, `load_workspace_metadata`,
@@ -162,8 +163,8 @@ Public-contract confidence should be enforced by tests that cover:
 15. deterministic compact repo-map and handoff rendering,
 16. deterministic symbol/reference interchange, bounded native SCIP intake,
     topology, document-graph,
-    query-plan, git-lineage, parser-support, store-search explainability, and
-    certification behavior.
+    query-plan, git-lineage, parser-support, store-search explainability,
+    explicit service status/readiness, and certification behavior.
 
 ## Non-goals
 

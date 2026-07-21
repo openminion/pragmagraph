@@ -20,6 +20,7 @@ from pragmagraph.service.constants import (
     METHOD_QUERY,
     METHOD_REFRESH,
     METHOD_REPORT,
+    METHOD_STATUS,
     METHOD_SHUTDOWN,
     SERVICE_METHODS,
     SERVICE_VERSION,
@@ -32,6 +33,7 @@ from pragmagraph.service.models import (
     ServiceError,
     ServiceRequest,
     ServiceResponse,
+    ServiceStatus,
 )
 from pragmagraph.service.runtime import LocalQueryService, ServiceStartup
 from pragmagraph.service.stdio import request_from_json_line, run_stdio_service
@@ -55,6 +57,7 @@ __all__ = [
     "METHOD_QUERY",
     "METHOD_REFRESH",
     "METHOD_REPORT",
+    "METHOD_STATUS",
     "METHOD_SHUTDOWN",
     "SERVICE_METHODS",
     "SERVICE_VERSION",
@@ -65,6 +68,7 @@ __all__ = [
     "ServiceError",
     "ServiceRequest",
     "ServiceResponse",
+    "ServiceStatus",
     "ServiceStartup",
     "request_from_json_line",
     "run_stdio_service",
