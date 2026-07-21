@@ -205,9 +205,68 @@ class ServiceCapabilities:
         }
 
 
+@dataclass(frozen=True)
+class ServiceStatus:
+    """Machine-readable readiness facts for one live service instance."""
+
+    service_version: str
+    startup_mode: str
+    namespace: str
+    refresh_supported: bool
+    snapshot_id: str
+    graph: Mapping[str, Any] = field(default_factory=dict)
+    refresh_readiness: Mapping[str, Any] = field(default_factory=dict)
+    artifact_presence: Mapping[str, Any] = field(default_factory=dict)
+    last_refresh: Mapping[str, Any] | None = None
+    diagnostics: Mapping[str, Any] = field(default_factory=dict)
+    root_path: str = ""
+    snapshot_path: str = ""
+    workspace_path: str = ""
+    store_path: str = ""
+    manifest_schema_version: str = ""
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "graph", frozen_mapping(self.graph))
+        object.__setattr__(
+            self,
+            "refresh_readiness",
+            frozen_mapping(self.refresh_readiness),
+        )
+        object.__setattr__(
+            self,
+            "artifact_presence",
+            frozen_mapping(self.artifact_presence),
+        )
+        if self.last_refresh is not None:
+            object.__setattr__(self, "last_refresh", frozen_mapping(self.last_refresh))
+        object.__setattr__(self, "diagnostics", frozen_mapping(self.diagnostics))
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "service_version": self.service_version,
+            "startup_mode": self.startup_mode,
+            "namespace": self.namespace,
+            "refresh_supported": self.refresh_supported,
+            "snapshot_id": self.snapshot_id,
+            "root_path": self.root_path,
+            "snapshot_path": self.snapshot_path,
+            "workspace_path": self.workspace_path,
+            "store_path": self.store_path,
+            "manifest_schema_version": self.manifest_schema_version,
+            "graph": dict(self.graph),
+            "refresh_readiness": dict(self.refresh_readiness),
+            "artifact_presence": dict(self.artifact_presence),
+            "last_refresh": (
+                dict(self.last_refresh) if self.last_refresh is not None else None
+            ),
+            "diagnostics": dict(self.diagnostics),
+        }
+
+
 __all__ = [
     "ServiceCapabilities",
     "ServiceError",
     "ServiceRequest",
     "ServiceResponse",
+    "ServiceStatus",
 ]

@@ -54,6 +54,7 @@ from pragmagraph.service.constants import (
     METHOD_QUERY,
     METHOD_REFRESH,
     METHOD_REPORT,
+    METHOD_STATUS,
     METHOD_SHUTDOWN,
     SERVICE_METHODS,
     SERVICE_VERSION,
@@ -66,6 +67,7 @@ from pragmagraph.service.models import (
     ServiceCapabilities,
     ServiceRequest,
     ServiceResponse,
+    ServiceStatus,
 )
 from pragmagraph.storage import (
     GraphStore,
@@ -356,6 +358,32 @@ class LocalQueryService:
     def current_refresh_status(self) -> RefreshStatus | None:
         return self._refresh_status
 
+    def status(self) -> ServiceStatus:
+        return ServiceStatus(
+            service_version=SERVICE_VERSION,
+            startup_mode=self._startup.mode,
+            namespace=self._snapshot.namespace,
+            refresh_supported=self.refresh_supported,
+            snapshot_id=_snapshot_id(self._snapshot),
+            root_path=self._startup.root_path or self._snapshot.root_path,
+            snapshot_path=self._startup.snapshot_path
+            or self._startup.snapshot_out_path,
+            workspace_path=self._startup.workspace_path,
+            store_path=self._startup.store_path,
+            manifest_schema_version=(
+                self._manifest.schema_version if self._manifest is not None else ""
+            ),
+            graph={
+                "node_count": len(self._snapshot.nodes),
+                "edge_count": len(self._snapshot.edges),
+                "omitted_count": len(self._snapshot.omitted),
+            },
+            refresh_readiness=self._refresh_readiness_payload(),
+            artifact_presence=self._artifact_presence_payload(),
+            last_refresh=self._refresh_state_payload(),
+            diagnostics={"omitted_reason_counts": _diagnostic_counts(self._snapshot)},
+        )
+
     def handle_request(self, request: ServiceRequest) -> tuple[ServiceResponse, bool]:
         try:
             result = self._dispatch(request)
@@ -403,10 +431,13 @@ class LocalQueryService:
                 "diagnostic_counts": _diagnostic_counts(self._snapshot),
                 "git_overlay": self._git_overlay_summary(),
                 "refresh_state": self._refresh_state_payload(),
+                "status": self.status().to_dict(),
                 "store": self._store_summary(),
                 "precise_ingestion": self._precise_ingestion_summary() or None,
             }
             return summary
+        if method == METHOD_STATUS:
+            return self.status().to_dict()
         if method in {METHOD_QUERY, METHOD_EXPLAIN}:
             return self._query_result(request.params).to_dict()
         if method == METHOD_NEIGHBORHOOD:
@@ -763,6 +794,39 @@ class LocalQueryService:
             self._refresh_status.to_dict() if self._refresh_status is not None else None
         )
 
+    def _refresh_readiness_payload(self) -> dict[str, Any]:
+        root_path = self._startup.root_path or self._snapshot.root_path
+        if self.refresh_supported:
+            reason = (
+                "workspace_explicit_refresh_available"
+                if self._startup.mode == STARTUP_MODE_WORKSPACE
+                else "root_backed_explicit_refresh_available"
+            )
+        elif self._startup.mode == STARTUP_MODE_SNAPSHOT:
+            reason = "snapshot_backed_refresh_unsupported"
+        elif self._startup.mode == STARTUP_MODE_STORE:
+            reason = "store_backed_refresh_unsupported"
+        else:
+            reason = "root_path_missing"
+        return {
+            "can_refresh": self.refresh_supported,
+            "startup_mode": self._startup.mode,
+            "reason": reason,
+            "root_path_present": bool(root_path),
+        }
+
+    def _artifact_presence_payload(self) -> dict[str, bool]:
+        snapshot_path = self._startup.snapshot_path or self._startup.snapshot_out_path
+        manifest_path = self._startup.manifest_out_path or self._startup.manifest_path
+        return {
+            "snapshot": _path_exists(snapshot_path),
+            "manifest": _path_exists(manifest_path),
+            "refresh_status": _path_exists(self._startup.state_out_path),
+            "cache": _path_exists(self._startup.cache_path),
+            "store": _path_exists(self._startup.store_path),
+            "workspace": _path_exists(self._startup.workspace_path),
+        }
+
     def _git_identity_mode(self) -> str:
         return str(
             self._snapshot.stats.get(
@@ -812,6 +876,10 @@ def _diagnostic_counts(snapshot: GraphSnapshot) -> dict[str, int]:
     for item in snapshot.omitted:
         counts[item.reason] = counts.get(item.reason, 0) + 1
     return dict(sorted(counts.items()))
+
+
+def _path_exists(path: str | Path | None) -> bool:
+    return bool(path) and Path(path).exists()
 
 
 __all__ = ["LocalQueryService", "ServiceStartup"]

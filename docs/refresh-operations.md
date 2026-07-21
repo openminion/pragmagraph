@@ -22,7 +22,8 @@ schedulers, git hooks, or background daemons.
 - one-command explicit runs via `run_refresh_profile(...)`
 - opt-in changed-only extraction through a deterministic local cache bundle
 - root-backed service refresh-state reporting through
-  `LocalQueryService.current_refresh_status()` and `health`
+  `LocalQueryService.current_refresh_status()`, `LocalQueryService.status()`,
+  and the `status` service method
 
 ## CLI entrypoints
 
@@ -91,3 +92,16 @@ only:
 
 Those facts are meant to be inspectable by local callers and host runtimes
 without forcing them to rebuild refresh bookkeeping around raw snapshot files.
+
+## Service readiness
+
+Long-lived local services expose refresh posture through the `status` method and
+the `pragma://status` MCP resource. This is a read-only view over the loaded
+state. It does not start a refresh, watch the source tree, schedule work, or
+interpret the meaning of changes.
+
+The readiness payload reports whether explicit refresh is currently available,
+why it is or is not available, and whether the expected local artifacts are
+present. Snapshot-backed and store-backed services report unsupported refresh
+with typed reasons; root-backed and workspace-backed services report that an
+explicit refresh can be requested by the caller.

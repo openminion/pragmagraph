@@ -79,6 +79,7 @@ class ResourceRegistry:
             raise ValueError("resource URI must use the pragma scheme")
         if uri == RESOURCE_STATUS:
             payload = {
+                "status": self._service.status().to_dict(),
                 "capabilities": self._service.capabilities().to_dict(),
                 "snapshot_stats": dict(self._service.snapshot.stats),
             }

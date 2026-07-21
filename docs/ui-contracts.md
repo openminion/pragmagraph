@@ -81,3 +81,8 @@ PragmaGraph to GraphFakos adapter mapping, compatibility wrappers for the local
 visual server primitive, and a package-local visual preview command so package
 structure stays aligned with sibling standalone packages and future UI work has
 one canonical import root.
+
+Adapter tests must use `graphfakos.testing.assert_provider_conformance(...)`
+for the shared viewer contract. PragmaGraph-specific tests should then cover
+observed-fact semantics such as snapshot health, parser/source payloads,
+bounded envelopes, and live structural patch behavior.

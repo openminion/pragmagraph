@@ -53,6 +53,8 @@ def test_mcp_resources_list_templates_and_read_loaded_state(tmp_path: Path) -> N
     status_payload = json.loads(status["result"]["contents"][0]["text"])
     node_payload = json.loads(node["result"]["contents"][0]["text"])
     assert status_payload["capabilities"]["namespace"] == "resources"
+    assert status_payload["status"]["namespace"] == "resources"
+    assert status_payload["status"]["refresh_readiness"]["can_refresh"] is False
     assert node_payload["id"] == node_id
 
 
