@@ -74,10 +74,27 @@ pragmagraph store-export .pragmagraph/graph.sqlite \
   --out .pragmagraph/exported-snapshot.json
 ```
 
+Verify the full import/export/search loop:
+
+```bash
+pragmagraph store-round-trip .pragmagraph/snapshot.json \
+  --store .pragmagraph/graph.sqlite \
+  --query RuntimeGraph \
+  --export-out .pragmagraph/exported-snapshot.json \
+  --json
+```
+
 `store-search-explain` runs the same materialized-store query path as
 `store-query` and reports the observed execution strategy, FTS availability,
-candidate node IDs, omitted reasons, and a reproducible `store-query` command.
+candidate node IDs, omitted reasons, store identity/schema facts, and a
+reproducible `store-query` command.
 It is an explain surface over existing search, not a separate ranking engine.
+
+`store-round-trip` imports a canonical JSON snapshot into the materialized
+store, exports it back to canonical JSON, compares deterministic snapshot bytes,
+and optionally includes the same search explanation facts for a query. It is a
+local interchange proof for operators and CI jobs; it does not create a new
+canonical store authority.
 
 Older v1 stores remain readable without mutation. Migrate explicitly before
 delta application:
@@ -105,7 +122,8 @@ pragmagraph serve --store .pragmagraph/graph.sqlite
 4. Migrated SQLite stores select `direct_exact`, `indexed_trigram`, or
    `sql_canonical_scan`, then apply the same canonical scorer used by JSON.
    Candidate sets are never truncated before scoring.
-5. `store-export` must round-trip back to a deterministic JSON snapshot.
+5. `store-export` and `store-round-trip` must round-trip back to deterministic
+   JSON snapshots.
 6. Migrated-store query and traversal use normalized SQL rows and report
    `snapshot_deserialized=false`; readable v1 stores report an explicit
    `snapshot_fallback` with `migration_required`.

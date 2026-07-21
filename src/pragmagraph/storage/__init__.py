@@ -93,6 +93,10 @@ from pragmagraph.storage.backends import (  # noqa: E402
     explain_store_query,
     open_store,
 )
+from pragmagraph.storage.roundtrip import (  # noqa: E402
+    StoreRoundTripReport,
+    verify_store_round_trip,
+)
 
 
 __all__ = [
@@ -102,6 +106,7 @@ __all__ = [
     "SnapshotRepository",
     "StoreCapabilityReport",
     "StoreManifest",
+    "StoreRoundTripReport",
     "StoreSearchExplanation",
     "StoreUpdateReport",
     "explain_store_query",
@@ -111,4 +116,5 @@ __all__ = [
     "snapshot_from_dict",
     "snapshot_to_dict",
     "stable_dumps",
+    "verify_store_round_trip",
 ]

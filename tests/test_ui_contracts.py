@@ -88,3 +88,24 @@ def test_ui_preview_exports_match_sophiagraph_local_visual_pattern() -> None:
     assert "Graph Canvas" in rendered.html
     assert "Provider Status" in rendered.html
     assert "PragmaGraph Observed Source Graph" in rendered.html
+
+
+def test_ui_preview_includes_snapshot_service_status(tmp_path) -> None:
+    from pragmagraph.adapters import index_path
+    from pragmagraph.storage import save_snapshot
+    from pragmagraph.ui import UiPreviewRequest, render_ui_preview
+    from .package_paths import build_fixture_repo
+
+    root = build_fixture_repo(
+        tmp_path,
+        files={"src/app.py": "class RuntimeGraph:\n    pass\n"},
+    )
+    snapshot_path = tmp_path / "snapshot.json"
+    save_snapshot(index_path(root, namespace="ui-status"), snapshot_path)
+
+    rendered = render_ui_preview(
+        UiPreviewRequest(screen="provider_status", snapshot=str(snapshot_path))
+    )
+
+    assert "PragmaGraph Observed Source Graph" in rendered.html
+    assert "snapshot_backed_refresh_unsupported" in rendered.html

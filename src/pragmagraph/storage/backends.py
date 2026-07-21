@@ -148,6 +148,10 @@ class StoreSearchExplanation:
     fts_available: bool
     candidate_count: int
     hit_count: int
+    store_path: str = ""
+    namespace: str = ""
+    store_schema_version: str = ""
+    snapshot_schema_version: str = ""
     candidate_node_ids: tuple[str, ...] = ()
     omitted_reasons: tuple[str, ...] = ()
     reproducible_command: tuple[str, ...] = ()
@@ -173,6 +177,10 @@ class StoreSearchExplanation:
             "fts_available": self.fts_available,
             "candidate_count": self.candidate_count,
             "hit_count": self.hit_count,
+            "store_path": self.store_path,
+            "namespace": self.namespace,
+            "store_schema_version": self.store_schema_version,
+            "snapshot_schema_version": self.snapshot_schema_version,
             "candidate_node_ids": list(self.candidate_node_ids),
             "omitted_reasons": list(self.omitted_reasons),
             "reproducible_command": list(self.reproducible_command),
@@ -717,6 +725,7 @@ def explain_store_query(
 ) -> StoreSearchExplanation:
     """Run a SQLite store query and expose deterministic execution facts."""
     req = request if isinstance(request, QueryRequest) else QueryRequest(query=request)
+    manifest = store.manifest()
     result = store.query(req)
     diagnostics = result.diagnostics
     return StoreSearchExplanation(
@@ -726,6 +735,10 @@ def explain_store_query(
         fts_available=bool(diagnostics.get("fts_available", False)),
         candidate_count=int(diagnostics.get("candidate_count", 0) or 0),
         hit_count=len(result.hits),
+        store_path=str(store.store_path),
+        namespace=manifest.namespace,
+        store_schema_version=manifest.schema_version,
+        snapshot_schema_version=manifest.snapshot_schema_version,
         candidate_node_ids=tuple_str(diagnostics.get("candidate_node_ids", ())),
         omitted_reasons=tuple(item.reason for item in result.omitted),
         reproducible_command=(

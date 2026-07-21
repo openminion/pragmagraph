@@ -97,6 +97,8 @@ The following top-level exports are part of the current public contract:
   `incoming_external_symbols`, and `cross_repo_resolution_diagnostics` under
   `pragmagraph.query`
 - export projection helpers `project_snapshot` and `ExportProjection`
+- store interchange helpers `StoreRoundTripReport` and
+  `verify_store_round_trip` under `pragmagraph.storage`
 - typed UI boundary contracts such as `UiTransportBoundary`,
   `UiScreenDefinition`, and `build_ui_screen_manifest`
 - parser/scope DTOs such as `ParserDiagnostic`, `ParserResult`,
@@ -164,7 +166,8 @@ Public-contract confidence should be enforced by tests that cover:
 16. deterministic symbol/reference interchange, bounded native SCIP intake,
     topology, document-graph,
     query-plan, git-lineage, parser-support, store-search explainability,
-    explicit service status/readiness, and certification behavior.
+    explicit service status/readiness, store round-trip proof, and
+    certification behavior.
 
 ## Non-goals
 

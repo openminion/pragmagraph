@@ -458,6 +458,12 @@ pragmagraph store-query .pragmagraph/graph.sqlite RuntimeGraph --json
 pragmagraph store-search-explain .pragmagraph/graph.sqlite RuntimeGraph --json
 
 pragmagraph store-health .pragmagraph/graph.sqlite --json
+
+pragmagraph store-round-trip .pragmagraph/snapshot.json \
+  --store .pragmagraph/graph.sqlite \
+  --query RuntimeGraph \
+  --export-out .pragmagraph/exported-snapshot.json \
+  --json
 ```
 
 Create a compact certification pack before sharing a snapshot:
