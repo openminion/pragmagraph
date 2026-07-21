@@ -11,6 +11,7 @@ from pragmagraph.storage import (
     explain_store_query,
     load_snapshot,
     save_snapshot,
+    verify_store_round_trip,
 )
 from pragmagraph.workspace import (
     ResolvedWorkspaceConfig,
@@ -29,6 +30,7 @@ STORAGE_COMMANDS = frozenset(
         "store-neighborhood",
         "store-path",
         "store-migrate",
+        "store-round-trip",
         "store-update",
     }
 )
@@ -115,6 +117,16 @@ def register_storage_commands(subparsers: argparse._SubParsersAction) -> None:
     migrate_parser.add_argument("store")
     _add_json_flag(migrate_parser)
 
+    round_trip_parser = subparsers.add_parser(
+        "store-round-trip",
+        help="verify import/export parity through a materialized graph store",
+    )
+    round_trip_parser.add_argument("snapshot")
+    round_trip_parser.add_argument("--store", required=True)
+    round_trip_parser.add_argument("--query", default="")
+    round_trip_parser.add_argument("--export-out")
+    _add_json_flag(round_trip_parser)
+
     update_parser = subparsers.add_parser(
         "store-update", help="atomically apply a canonical snapshot delta"
     )
@@ -182,6 +194,19 @@ def run_storage_command(args: argparse.Namespace) -> object:
         )
     if args.command == "store-migrate":
         return SQLiteGraphStore(args.store).migrate().to_dict()
+    if args.command == "store-round-trip":
+        snapshot = load_snapshot(args.snapshot)
+        report = verify_store_round_trip(
+            snapshot,
+            args.store,
+            query_text=args.query,
+        )
+        if args.export_out:
+            save_snapshot(
+                SQLiteGraphStore(args.store).export_snapshot(), args.export_out
+            )
+            return {**report.to_dict(), "export_path": str(args.export_out)}
+        return report.to_dict()
     if args.command == "store-update":
         report = SQLiteGraphStore(args.store).apply_snapshot_delta(
             load_snapshot(args.snapshot)

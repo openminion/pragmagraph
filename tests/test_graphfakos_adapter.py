@@ -123,6 +123,39 @@ def test_pragmagraph_adapter_artifact_round_trip_matches_loaded_graph(tmp_path) 
     assert "README.md" in replay_html
 
 
+def test_pragmagraph_adapter_surfaces_service_status_payload() -> None:
+    snapshot = GraphSnapshot(
+        namespace="demo",
+        root_path="repo",
+        nodes=(
+            GraphNode(
+                id="file:README.md",
+                kind="file",
+                label="README.md",
+                source_ref=SourceRef(path="README.md", line=1),
+                text="Repository overview.",
+            ),
+        ),
+        edges=(),
+    )
+    service_status = {
+        "startup_mode": "snapshot",
+        "refresh_readiness": {
+            "can_refresh": False,
+            "reason": "snapshot_backed_refresh_unsupported",
+        },
+        "artifact_presence": {"snapshot": True},
+    }
+    provider = PragmaGraphViewerProvider(
+        snapshot,
+        service_status_context=service_status,
+    )
+
+    graph = provider.load_graph(GraphFakosRequest(screen="provider_status"))
+
+    assert graph.provider_payload["service_status"] == service_status
+
+
 def test_pragmagraph_live_adapter_emits_structural_snapshot_patch() -> None:
     graphfakos_live = pytest.importorskip("graphfakos.live")
     graphfakos_assertions = pytest.importorskip("graphfakos.testing.assertions")

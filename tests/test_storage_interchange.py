@@ -22,6 +22,7 @@ from pragmagraph.storage import (
     load_snapshot,
     save_snapshot,
     stable_dumps,
+    verify_store_round_trip,
 )
 
 from .package_paths import build_fixture_repo
@@ -156,8 +157,14 @@ def test_sqlite_store_search_explanation_reports_strategy_and_candidates(
 
     assert explanation.strategy in {"direct_exact", "sqlite_fts5", "sqlite_scan"}
     assert explanation.hit_count >= 1
+    assert explanation.namespace == "store-fixture"
+    assert explanation.store_schema_version
+    assert explanation.snapshot_schema_version == snapshot.schema_version
+    assert explanation.store_path == str(store_path)
     assert explanation.reproducible_command[:2] == ("pragmagraph", "store-query")
     assert payload["strategy"] == explanation.strategy
+    assert payload["namespace"] == "store-fixture"
+    assert payload["store_path"] == str(store_path)
     assert payload["hit_count"] == explanation.hit_count
     assert payload["candidate_node_ids"]
 
@@ -188,6 +195,52 @@ def test_cli_store_import_query_export_and_health(tmp_path: Path) -> None:
     assert export_payload["ok"] is True
     assert load_snapshot(exported_path).namespace == "store-fixture"
     assert health_payload["capabilities"]["import_export_supported"] is True
+
+
+def test_store_round_trip_report_proves_canonical_export_and_search(
+    tmp_path: Path,
+) -> None:
+    snapshot = _snapshot(tmp_path)
+    store_path = tmp_path / "round-trip.sqlite"
+
+    report = verify_store_round_trip(
+        snapshot,
+        store_path,
+        query_text="RuntimeGraph",
+    )
+
+    assert report.ok is True
+    assert report.namespace == "store-fixture"
+    assert report.manifest.node_count == len(snapshot.nodes)
+    assert report.capabilities.import_export_supported is True
+    assert report.search_explanation is not None
+    assert report.search_explanation.hit_count >= 1
+    assert report.to_dict()["search_explanation"]["candidate_node_ids"]
+
+
+def test_cli_store_round_trip_exports_matching_snapshot(tmp_path: Path) -> None:
+    snapshot = _snapshot(tmp_path)
+    snapshot_path = tmp_path / "snapshot.json"
+    store_path = tmp_path / "round-trip.sqlite"
+    exported_path = tmp_path / "exported.json"
+    save_snapshot(snapshot, snapshot_path)
+
+    payload = _run_cli_json(
+        "store-round-trip",
+        str(snapshot_path),
+        "--store",
+        str(store_path),
+        "--query",
+        "RuntimeGraph",
+        "--export-out",
+        str(exported_path),
+    )
+
+    assert payload["ok"] is True
+    assert payload["namespace"] == "store-fixture"
+    assert payload["export_path"] == str(exported_path)
+    assert payload["search_explanation"]["hit_count"] >= 1
+    assert stable_dumps(load_snapshot(exported_path)) == stable_dumps(snapshot)
 
 
 def test_graphify_payload_round_trips_through_sqlite_store(tmp_path: Path) -> None:

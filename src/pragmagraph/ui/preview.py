@@ -16,6 +16,7 @@ from .preview_inputs import (
     graphfakos_request,
     project_health_context_for_request,
     render_server_preview_path,
+    service_status_context_for_request,
     snapshot_for_request,
 )
 from .preview_types import (
@@ -32,6 +33,7 @@ def write_ui_preview(request: UiPreviewRequest) -> UiPreviewResult:
     provider = PragmaGraphViewerProvider(
         snapshot,
         project_health_context=project_health_context_for_request(request),
+        service_status_context=service_status_context_for_request(request),
     )
     graph_request = graphfakos_request(request)
     payload = write_provider_preview_outputs(
@@ -69,6 +71,7 @@ def render_ui_preview(request: UiPreviewRequest) -> UiPreviewRender:
     provider = PragmaGraphViewerProvider(
         snapshot,
         project_health_context=project_health_context_for_request(request),
+        service_status_context=service_status_context_for_request(request),
     )
     graph_request = graphfakos_request(request)
     html = render_static_html(provider, graph_request)

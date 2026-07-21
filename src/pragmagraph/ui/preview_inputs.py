@@ -8,6 +8,7 @@ from graphfakos import GraphFakosRequest
 from graphfakos.ui import render_provider_path
 
 from pragmagraph.models import GraphEdge, GraphNode, GraphSnapshot, SourceRef
+from pragmagraph.service import LocalQueryService
 from pragmagraph.storage import load_snapshot
 from pragmagraph.storage.backends import SQLiteGraphStore
 from pragmagraph.workspace import load_workspace_metadata, load_workspace_status
@@ -27,6 +28,7 @@ def render_server_preview_path(
     provider = PragmaGraphViewerProvider(
         snapshot,
         project_health_context=project_health_context_for_request(next_request),
+        service_status_context=service_status_context_for_request(next_request),
     )
     return render_provider_path(
         provider,
@@ -159,6 +161,20 @@ def project_health_context_for_request(
     return context or None
 
 
+def service_status_context_for_request(
+    request: UiPreviewRequest,
+) -> dict[str, object] | None:
+    """Return read-only service readiness facts for visual provider payloads."""
+    service = None
+    if request.workspace:
+        service = LocalQueryService.from_workspace(request.workspace)
+    elif request.snapshot:
+        service = LocalQueryService.from_snapshot_path(request.snapshot)
+    elif request.store_path and Path(request.store_path).exists():
+        service = LocalQueryService.from_store_path(request.store_path)
+    return service.status().to_dict() if service is not None else None
+
+
 def demo_snapshot() -> GraphSnapshot:
     nodes = (
         GraphNode(
@@ -230,6 +246,7 @@ __all__ = [
     "project_health_context_for_request",
     "render_server_preview_path",
     "request_from_query",
+    "service_status_context_for_request",
     "screen_from_path",
     "snapshot_for_request",
 ]

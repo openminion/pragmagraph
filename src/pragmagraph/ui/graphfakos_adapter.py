@@ -50,9 +50,11 @@ class PragmaGraphViewerProvider(GraphFakosProvider):
         self,
         snapshot: GraphSnapshot,
         project_health_context: dict[str, object] | None = None,
+        service_status_context: dict[str, object] | None = None,
     ) -> None:
         self._snapshot = snapshot
         self._project_health_context = project_health_context
+        self._service_status_context = service_status_context
 
     def load_graph(self, request: GraphFakosRequest) -> GraphFakosGraph:
         return _snapshot_to_graphfakos(
@@ -63,6 +65,7 @@ class PragmaGraphViewerProvider(GraphFakosProvider):
             graph_role=self.graph_role,
             capabilities=self.capabilities,
             project_health_context=self._project_health_context,
+            service_status_context=self._service_status_context,
         )
 
 
@@ -192,6 +195,7 @@ def _snapshot_to_graphfakos(
     graph_role: str,
     capabilities: tuple[str, ...],
     project_health_context: dict[str, object] | None = None,
+    service_status_context: dict[str, object] | None = None,
 ) -> GraphFakosGraph:
     citations = tuple(_citation_for_node(node) for node in snapshot.nodes) + tuple(
         _citation_for_edge(edge) for edge in snapshot.edges
@@ -199,6 +203,25 @@ def _snapshot_to_graphfakos(
     provenance = tuple(_provenance_for_node(node) for node in snapshot.nodes)
     nodes = tuple(_node_to_graphfakos(node) for node in snapshot.nodes)
     edges = tuple(_edge_to_graphfakos(edge) for edge in snapshot.edges)
+    provider_payload: dict[str, object] = {
+        "namespace": snapshot.namespace,
+        "root_path": snapshot.root_path,
+        "schema_version": snapshot.schema_version,
+        "indexer_version": snapshot.indexer_version,
+        "project_health": _project_health_payload(
+            snapshot,
+            project_health_context=project_health_context,
+        ),
+        "snapshot_label": (
+            f"{snapshot.namespace} snapshot at {snapshot.created_at or 'unknown time'}"
+        ),
+        "integration_commands": (
+            "pragmagraph-ui --workspace .pragmagraph-workspace --screen search --serve --open",
+            "pragmagraph-ui --workspace .pragmagraph-workspace --screen provider_status --serve",
+        ),
+    }
+    if service_status_context:
+        provider_payload["service_status"] = dict(service_status_context)
     return GraphFakosGraph(
         graph_id=snapshot.namespace,
         label="PragmaGraph Observed Source Graph",
@@ -218,24 +241,7 @@ def _snapshot_to_graphfakos(
             **dict(snapshot.stats),
         },
         generated_at=snapshot.created_at,
-        provider_payload={
-            "namespace": snapshot.namespace,
-            "root_path": snapshot.root_path,
-            "schema_version": snapshot.schema_version,
-            "indexer_version": snapshot.indexer_version,
-            "project_health": _project_health_payload(
-                snapshot,
-                project_health_context=project_health_context,
-            ),
-            "snapshot_label": (
-                f"{snapshot.namespace} snapshot at "
-                f"{snapshot.created_at or 'unknown time'}"
-            ),
-            "integration_commands": (
-                "pragmagraph-ui --workspace .pragmagraph-workspace --screen search --serve --open",
-                "pragmagraph-ui --workspace .pragmagraph-workspace --screen provider_status --serve",
-            ),
-        },
+        provider_payload=provider_payload,
     )
 
 

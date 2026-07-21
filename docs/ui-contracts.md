@@ -48,6 +48,13 @@ present. The current local preview maps it onto the GraphFakos provider-status
 renderer and carries the PragmaGraph-specific health payload inside the graph
 artifact.
 
+Provider-status previews also carry a `service_status` payload when rendered
+from a snapshot, workspace, or store path. That payload is the same
+machine-readable readiness shape exposed by `LocalQueryService.status()` and
+`pragma://status`: startup mode, refresh readiness, artifact presence, graph
+counts, diagnostics, and last-refresh facts when available. Demo previews omit
+it rather than fabricating local service state.
+
 ## Local Visual UI
 
 Use the package-local browser preview to inspect one snapshot or workspace
