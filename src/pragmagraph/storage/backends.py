@@ -20,7 +20,7 @@ from pragmagraph.models import (
     QueryResult,
 )
 from pragmagraph.query import health, neighborhood, path, query, query_nodes
-from pragmagraph.storage import (
+from pragmagraph.storage.snapshots import (
     load_snapshot,
     save_snapshot,
     snapshot_from_dict,
@@ -29,15 +29,35 @@ from pragmagraph.storage import (
 )
 from pragmagraph.storage.sqlite_operations import (
     apply_edge_delta as _apply_edge_delta,
+)
+from pragmagraph.storage.sqlite_operations import (
     apply_node_delta as _apply_node_delta,
+)
+from pragmagraph.storage.sqlite_operations import (
     fail_if_requested as _fail_if_requested,
+)
+from pragmagraph.storage.sqlite_operations import (
     incident_edges as _incident_edges_sql,
+)
+from pragmagraph.storage.sqlite_operations import (
     node_from_payload as _node_from_payload,
+)
+from pragmagraph.storage.sqlite_operations import (
     node_search_text as _node_search_text,
+)
+from pragmagraph.storage.sqlite_operations import (
     replace_omitted as _replace_omitted,
-    sqlite_neighborhood as _sqlite_neighborhood,
-    sqlite_path as _sqlite_path,
+)
+from pragmagraph.storage.sqlite_operations import (
     source_ref_row as _source_ref_row,
+)
+from pragmagraph.storage.sqlite_operations import (
+    sqlite_neighborhood as _sqlite_neighborhood,
+)
+from pragmagraph.storage.sqlite_operations import (
+    sqlite_path as _sqlite_path,
+)
+from pragmagraph.storage.sqlite_operations import (
     table_exists as _table_exists,
 )
 
@@ -247,7 +267,7 @@ class JsonSnapshotStore:
         self.path = Path(path) if path is not None else None
 
     @classmethod
-    def from_path(cls, path: str | Path) -> "JsonSnapshotStore":
+    def from_path(cls, path: str | Path) -> JsonSnapshotStore:
         return cls(load_snapshot(path), path=path)
 
     def manifest(self) -> StoreManifest:
@@ -335,7 +355,7 @@ class SQLiteGraphStore:
     @classmethod
     def from_snapshot(
         cls, snapshot: GraphSnapshot, path: str | Path
-    ) -> "SQLiteGraphStore":
+    ) -> SQLiteGraphStore:
         store = cls(path)
         store.import_snapshot(snapshot)
         return store
@@ -955,15 +975,15 @@ def _dataclass_payload(value: Any) -> dict[str, Any]:
 
 
 __all__ = [
-    "GraphStore",
-    "JsonSnapshotStore",
     "SQLITE_STORE_SCHEMA_VERSION",
     "SQLITE_STORE_SCHEMA_VERSION_V1",
     "STORE_MANIFEST_SCHEMA_VERSION",
+    "GraphStore",
+    "JsonSnapshotStore",
     "SQLiteGraphStore",
     "StoreCapabilityReport",
-    "StoreSearchExplanation",
     "StoreManifest",
+    "StoreSearchExplanation",
     "StoreUpdateReport",
     "explain_store_query",
     "open_store",

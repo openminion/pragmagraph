@@ -9,6 +9,14 @@ from .contracts import (
     build_default_ui_boundary,
     build_ui_screen_manifest,
 )
+from .evidence import (
+    AGENT_CONTEXT_SCHEMA_VERSION,
+    EVIDENCE_SCHEMA_VERSION,
+    build_evidence_payload,
+    render_agent_context,
+    write_agent_context,
+    write_evidence_payload,
+)
 from .graphfakos_adapter import PragmaGraphLiveViewerProvider, PragmaGraphViewerProvider
 from .local_server import (
     LocalVisualHttpServer,
@@ -31,11 +39,13 @@ from .preview_types import (
 )
 
 __all__ = [
+    "AGENT_CONTEXT_SCHEMA_VERSION",
+    "EVIDENCE_SCHEMA_VERSION",
     "LocalVisualHttpServer",
     "LocalVisualServerResult",
-    "PreviewScreen",
     "PragmaGraphLiveViewerProvider",
     "PragmaGraphViewerProvider",
+    "PreviewScreen",
     "RenderPath",
     "UiPreviewRender",
     "UiPreviewRequest",
@@ -46,11 +56,15 @@ __all__ = [
     "UiTransportKind",
     "UiTransportStatus",
     "build_default_ui_boundary",
+    "build_evidence_payload",
     "build_ui_screen_manifest",
     "make_local_visual_server",
     "make_ui_preview_server",
+    "render_agent_context",
     "render_ui_preview",
     "serve_local_visual_server",
     "serve_ui_preview",
+    "write_agent_context",
+    "write_evidence_payload",
     "write_ui_preview",
 ]

@@ -12,6 +12,7 @@ PreviewScreen = Literal[
     "path",
     "provider_status",
     "project_health",
+    "evidence",
 ]
 
 
@@ -27,6 +28,8 @@ class UiPreviewRequest:
     embed_path: str = ""
     report_path: str = ""
     markdown_report_path: str = ""
+    evidence_path: str = ""
+    agent_context_path: str = ""
     store_path: str | None = None
     query: str = "RuntimeGraph"
     node_id: str | None = None
@@ -51,6 +54,8 @@ class UiPreviewResult:
     embed: dict[str, object] | None = None
     report: dict[str, object] | None = None
     markdown_report: dict[str, object] | None = None
+    evidence: dict[str, object] | None = None
+    agent_context: dict[str, object] | None = None
     opened: bool = False
 
     def to_dict(self) -> dict[str, object]:
@@ -73,6 +78,10 @@ class UiPreviewResult:
             payload["report"] = self.report
         if self.markdown_report is not None:
             payload["markdown_report"] = self.markdown_report
+        if self.evidence is not None:
+            payload["evidence"] = self.evidence
+        if self.agent_context is not None:
+            payload["agent_context"] = self.agent_context
         return payload
 
 

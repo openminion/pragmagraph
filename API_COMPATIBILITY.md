@@ -100,7 +100,9 @@ The following top-level exports are part of the current public contract:
 - store interchange helpers `StoreRoundTripReport` and
   `verify_store_round_trip` under `pragmagraph.storage`
 - typed UI boundary contracts such as `UiTransportBoundary`,
-  `UiScreenDefinition`, and `build_ui_screen_manifest`
+  `UiScreenDefinition`, `build_ui_screen_manifest`,
+  `build_evidence_payload`, `write_evidence_payload`, and
+  `write_agent_context`
 - parser/scope DTOs such as `ParserDiagnostic`, `ParserResult`,
   `RefreshManifest`, `RefreshResult`, `RefreshPathChange`,
   `SnapshotStructuralDelta`, and `QueryExplanation`
@@ -166,8 +168,8 @@ Public-contract confidence should be enforced by tests that cover:
 16. deterministic symbol/reference interchange, bounded native SCIP intake,
     topology, document-graph,
     query-plan, git-lineage, parser-support, store-search explainability,
-    explicit service status/readiness, store round-trip proof, and
-    certification behavior.
+    explicit service status/readiness, evidence workbench payloads, store
+    round-trip proof, and certification behavior.
 
 ## Non-goals
 

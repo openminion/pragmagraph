@@ -239,8 +239,25 @@ Use a persistent workspace as the preview source:
 ```bash
 pragmagraph-ui \
   --workspace <workspace-root> \
-  --screen provider_status \
+  --screen evidence \
   --serve
+```
+
+The evidence workbench screen combines service readiness, search explanation,
+read-only store proof when a store path is supplied, and a compact agent
+context handoff:
+
+```bash
+pragmagraph-ui \
+  --snapshot .pragmagraph/snapshot.json \
+  --store .pragmagraph/graph.sqlite \
+  --screen evidence \
+  --query RuntimeGraph \
+  --evidence-out .pragmagraph/evidence.json \
+  --agent-context-out .pragmagraph/agent-context.md \
+  --serve \
+  --open \
+  --json
 ```
 
 Use `--html-out` only when you want to export a standalone HTML snapshot. The
@@ -482,6 +499,18 @@ pragmagraph store-round-trip .pragmagraph/snapshot.json \
   --store .pragmagraph/graph.sqlite \
   --query RuntimeGraph \
   --export-out .pragmagraph/exported-snapshot.json \
+  --json
+```
+
+Run one compact local proof report for operators or agents:
+
+```bash
+pragmagraph doctor \
+  --snapshot .pragmagraph/snapshot.json \
+  --store .pragmagraph/graph.sqlite \
+  --query RuntimeGraph \
+  --evidence-out .pragmagraph/evidence.json \
+  --agent-context-out .pragmagraph/agent-context.md \
   --json
 ```
 
