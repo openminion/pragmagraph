@@ -8,6 +8,8 @@ from pragmagraph.models import PragmaGraphError, QueryRequest
 from pragmagraph.query import health
 from pragmagraph.storage import (
     SQLiteGraphStore,
+    backend_capabilities_for_path,
+    backend_catalog_payload,
     explain_store_query,
     load_snapshot,
     save_snapshot,
@@ -32,6 +34,7 @@ STORAGE_COMMANDS = frozenset(
         "store-migrate",
         "store-round-trip",
         "store-update",
+        "store-backends",
     }
 )
 
@@ -134,6 +137,8 @@ def register_storage_commands(subparsers: argparse._SubParsersAction) -> None:
     update_parser.add_argument("snapshot")
     _add_json_flag(update_parser)
 
+    _register_backend_catalog_command(subparsers)
+
 
 def run_storage_command(args: argparse.Namespace) -> object:
     """Execute one parsed materialized-store command."""
@@ -212,6 +217,18 @@ def run_storage_command(args: argparse.Namespace) -> object:
             load_snapshot(args.snapshot)
         )
         return report.to_dict()
+    if args.command == "store-backends":
+        if args.backend or args.path:
+            if not args.backend or not args.path:
+                raise PragmaGraphError(
+                    "store-backends requires both --backend and --path for inspection",
+                    code="INVALID_STORE_COMMAND",
+                )
+            return {
+                "catalog": backend_catalog_payload(),
+                "selected": backend_capabilities_for_path(args.backend, args.path),
+            }
+        return backend_catalog_payload()
     raise PragmaGraphError(
         "unsupported store command",
         code="UNSUPPORTED_STORE_COMMAND",
@@ -297,6 +314,18 @@ def _store_payload(store: SQLiteGraphStore) -> dict[str, object]:
 
 def _add_json_flag(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--json", action="store_true", help="emit JSON output")
+
+
+def _register_backend_catalog_command(
+    subparsers: argparse._SubParsersAction,
+) -> None:
+    parser = subparsers.add_parser(
+        "store-backends",
+        help="list storage/search backend capabilities and reserves",
+    )
+    parser.add_argument("--backend", choices=("json", "sqlite"))
+    parser.add_argument("--path")
+    _add_json_flag(parser)
 
 
 __all__ = [

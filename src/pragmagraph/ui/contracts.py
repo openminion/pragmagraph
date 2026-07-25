@@ -15,6 +15,7 @@ UiScreenId = Literal[
     "provider_status",
     "project_health",
     "evidence",
+    "delta_review",
 ]
 
 
@@ -136,6 +137,17 @@ def build_ui_screen_manifest() -> tuple[UiScreenDefinition, ...]:
                 "StoreSearchExplanation",
                 "StoreRoundTripReport",
                 "AgentContext",
+            ),
+            mvp=True,
+        ),
+        UiScreenDefinition(
+            screen_id="delta_review",
+            route="/third-brain/delta-review",
+            title="Delta Review",
+            primary_payloads=(
+                "CiDeltaReport",
+                "RefreshStatus",
+                "SnapshotStructuralDelta",
             ),
             mvp=True,
         ),

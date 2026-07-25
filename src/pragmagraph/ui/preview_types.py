@@ -13,6 +13,7 @@ PreviewScreen = Literal[
     "provider_status",
     "project_health",
     "evidence",
+    "delta_review",
 ]
 
 
@@ -23,6 +24,8 @@ class UiPreviewRequest:
     screen: PreviewScreen = "search"
     workspace: str | None = None
     snapshot: str | None = None
+    before_snapshot: str | None = None
+    after_snapshot: str | None = None
     output_path: str = "pragmagraph-ui-preview.html"
     artifact_path: str = ""
     embed_path: str = ""
@@ -55,6 +58,7 @@ class UiPreviewResult:
     report: dict[str, object] | None = None
     markdown_report: dict[str, object] | None = None
     evidence: dict[str, object] | None = None
+    delta_review: dict[str, object] | None = None
     agent_context: dict[str, object] | None = None
     opened: bool = False
 
@@ -80,6 +84,8 @@ class UiPreviewResult:
             payload["markdown_report"] = self.markdown_report
         if self.evidence is not None:
             payload["evidence"] = self.evidence
+        if self.delta_review is not None:
+            payload["delta_review"] = self.delta_review
         if self.agent_context is not None:
             payload["agent_context"] = self.agent_context
         return payload

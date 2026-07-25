@@ -63,6 +63,7 @@ pragmagraph store-import .pragmagraph/snapshot.json \
 Query, inspect, and export the store:
 
 ```bash
+pragmagraph store-backends --json
 pragmagraph store-query --config .pragmagraph/workspace.toml RuntimeGraph --json
 pragmagraph store-search-explain --config .pragmagraph/workspace.toml RuntimeGraph --json
 pragmagraph store-health --config .pragmagraph/workspace.toml --json
@@ -89,6 +90,11 @@ pragmagraph store-round-trip .pragmagraph/snapshot.json \
 candidate node IDs, omitted reasons, store identity/schema facts, and a
 reproducible `store-query` command.
 It is an explain surface over existing search, not a separate ranking engine.
+
+`store-backends` lists available and reserved storage/search backends without
+importing optional engines. JSON and SQLite are available today. Kuzu, DuckDB,
+remote stores, and vector sidecars remain reserved or boundary-gated until a
+future release accepts their scope.
 
 `store-round-trip` imports a canonical JSON snapshot into the materialized
 store, exports it back to canonical JSON, compares deterministic snapshot bytes,

@@ -13,6 +13,7 @@ from pragmagraph.storage import load_snapshot
 from pragmagraph.storage.backends import SQLiteGraphStore
 from pragmagraph.workspace import load_workspace_metadata, load_workspace_status
 
+from .delta_review import build_delta_review_payload
 from .evidence import build_evidence_payload
 from .graphfakos_adapter import PragmaGraphViewerProvider
 from .preview_types import PreviewScreen, UiPreviewRequest
@@ -31,6 +32,7 @@ def render_server_preview_path(
         project_health_context=project_health_context_for_request(next_request),
         service_status_context=service_status_context_for_request(next_request),
         evidence_context=evidence_context_for_request(next_request, snapshot),
+        delta_review_context=delta_review_context_for_request(next_request, snapshot),
     )
     return render_provider_path(
         provider,
@@ -50,6 +52,12 @@ def request_from_query(
         screen=screen,
         workspace=first_query_value(query, "workspace") or request.workspace,
         snapshot=first_query_value(query, "snapshot") or request.snapshot,
+        before_snapshot=(
+            first_query_value(query, "before_snapshot") or request.before_snapshot
+        ),
+        after_snapshot=(
+            first_query_value(query, "after_snapshot") or request.after_snapshot
+        ),
         output_path=request.output_path,
         artifact_path=request.artifact_path,
         embed_path=request.embed_path,
@@ -83,6 +91,9 @@ def screen_from_path(path: str) -> PreviewScreen | None:
         "project-health": "project_health",
         "evidence-workbench": "evidence",
         "workbench": "evidence",
+        "delta": "delta_review",
+        "delta-review": "delta_review",
+        "refresh-review": "delta_review",
     }
     value = aliases.get(value, value)
     if value in {
@@ -93,6 +104,7 @@ def screen_from_path(path: str) -> PreviewScreen | None:
         "provider_status",
         "project_health",
         "evidence",
+        "delta_review",
     }:
         return value  # type: ignore[return-value]
     return None
@@ -107,6 +119,7 @@ def graphfakos_request(request: UiPreviewRequest) -> GraphFakosRequest:
         "provider_status": "provider_status",
         "project_health": "provider_status",
         "evidence": "provider_status",
+        "delta_review": "provider_status",
     }
     return GraphFakosRequest(
         screen=screen_map[request.screen],  # type: ignore[arg-type]
@@ -195,6 +208,18 @@ def evidence_context_for_request(
     return build_evidence_payload(snapshot or snapshot_for_request(request), request)
 
 
+def delta_review_context_for_request(
+    request: UiPreviewRequest,
+    snapshot: GraphSnapshot | None = None,
+) -> dict[str, object] | None:
+    """Return observed delta facts for the delta-review workbench screen."""
+    if request.screen != "delta_review":
+        return None
+    return build_delta_review_payload(
+        snapshot or snapshot_for_request(request), request
+    )
+
+
 def demo_snapshot() -> GraphSnapshot:
     nodes = (
         GraphNode(
@@ -261,6 +286,7 @@ def demo_snapshot() -> GraphSnapshot:
 
 __all__ = [
     "demo_snapshot",
+    "delta_review_context_for_request",
     "evidence_context_for_request",
     "first_query_value",
     "graphfakos_request",

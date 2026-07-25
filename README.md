@@ -45,9 +45,12 @@ for observed-fact graph work.
 2. Use [Install](#install) for package setup.
 3. Use [CLI Quickstart](#cli-quickstart) for indexing, query, and local UI
    commands.
-4. Use [What PragmaGraph does not provide](#what-pragmagraph-does-not-provide)
+4. Use
+   [`docs/standalone-product-cycle.md`](docs/standalone-product-cycle.md) for
+   the workbench, delta-review, graph-pack, storage, and MCP setup loop.
+5. Use [What PragmaGraph does not provide](#what-pragmagraph-does-not-provide)
    before expecting orchestration, hosted services, or semantic inference.
-5. Use the UI sections when you want GraphFakos-backed local graph inspection.
+6. Use the UI sections when you want GraphFakos-backed local graph inspection.
 
 ## Trust and Brand Safety
 
@@ -198,6 +201,7 @@ You can run the package-local visual UI today:
 
 ```bash
 pragmagraph demo-ui --serve --open --json
+pragmagraph workbench --root . --screen evidence --serve --open --json
 ```
 
 For a repeatable local project demo, write a workspace config and let
@@ -262,6 +266,10 @@ pragmagraph-ui \
 
 Use `--html-out` only when you want to export a standalone HTML snapshot. The
 equivalent module form is `python3.11 -m pragmagraph ui-preview`.
+
+For the full standalone product cycle, including delta review, graph-pack
+export/import, backend inspection, and MCP client snippets, see
+[`docs/standalone-product-cycle.md`](docs/standalone-product-cycle.md).
 
 ## CLI Quickstart
 

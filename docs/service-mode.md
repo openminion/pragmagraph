@@ -101,6 +101,8 @@ refresh can run:
 evidence, materialized-store search explanation when a store is supplied, and a
 read-only store export comparison. It can also write the same evidence JSON and
 a compact Markdown agent-context handoff used by the local evidence workbench.
+It also includes the current storage-backend catalog and MCP client setup facts
+so operators can see how the loaded graph can be handed to other tools.
 
 ## MCP resources
 
@@ -110,6 +112,15 @@ a compact Markdown agent-context handoff used by the local evidence workbench.
 service `status` payload alongside capabilities and snapshot statistics.
 Listing and reading resources reuse the already-loaded service state and never
 trigger refresh or semantic inference.
+
+Generate portable MCP client snippets:
+
+```bash
+pragmagraph mcp-config --snapshot .pragmagraph/snapshot.json --json
+```
+
+The snippet uses `pragmagraph-server serve-stdio`; replace placeholder paths
+before sharing it with a client config file.
 
 ## Boundary
 
