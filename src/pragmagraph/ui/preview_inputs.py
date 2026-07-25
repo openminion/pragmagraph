@@ -13,6 +13,7 @@ from pragmagraph.storage import load_snapshot
 from pragmagraph.storage.backends import SQLiteGraphStore
 from pragmagraph.workspace import load_workspace_metadata, load_workspace_status
 
+from .evidence import build_evidence_payload
 from .graphfakos_adapter import PragmaGraphViewerProvider
 from .preview_types import PreviewScreen, UiPreviewRequest
 
@@ -29,6 +30,7 @@ def render_server_preview_path(
         snapshot,
         project_health_context=project_health_context_for_request(next_request),
         service_status_context=service_status_context_for_request(next_request),
+        evidence_context=evidence_context_for_request(next_request, snapshot),
     )
     return render_provider_path(
         provider,
@@ -53,7 +55,9 @@ def request_from_query(
         embed_path=request.embed_path,
         report_path=request.report_path,
         markdown_report_path=request.markdown_report_path,
-        store_path=request.store_path,
+        evidence_path=request.evidence_path,
+        agent_context_path=request.agent_context_path,
+        store_path=first_query_value(query, "store") or request.store_path,
         query=first_query_value(query, "query") or request.query,
         node_id=first_query_value(query, "node_id") or request.node_id,
         source_id=first_query_value(query, "source_id") or request.source_id,
@@ -77,6 +81,8 @@ def screen_from_path(path: str) -> PreviewScreen | None:
         "status": "provider_status",
         "health": "project_health",
         "project-health": "project_health",
+        "evidence-workbench": "evidence",
+        "workbench": "evidence",
     }
     value = aliases.get(value, value)
     if value in {
@@ -86,6 +92,7 @@ def screen_from_path(path: str) -> PreviewScreen | None:
         "path",
         "provider_status",
         "project_health",
+        "evidence",
     }:
         return value  # type: ignore[return-value]
     return None
@@ -99,6 +106,7 @@ def graphfakos_request(request: UiPreviewRequest) -> GraphFakosRequest:
         "path": "path",
         "provider_status": "provider_status",
         "project_health": "provider_status",
+        "evidence": "provider_status",
     }
     return GraphFakosRequest(
         screen=screen_map[request.screen],  # type: ignore[arg-type]
@@ -116,6 +124,8 @@ def snapshot_for_request(request: UiPreviewRequest) -> GraphSnapshot:
         return load_snapshot(metadata.paths.snapshot_path)
     if request.snapshot:
         return load_snapshot(request.snapshot)
+    if request.store_path and Path(request.store_path).exists():
+        return SQLiteGraphStore(request.store_path).export_snapshot()
     return demo_snapshot()
 
 
@@ -173,6 +183,16 @@ def service_status_context_for_request(
     elif request.store_path and Path(request.store_path).exists():
         service = LocalQueryService.from_store_path(request.store_path)
     return service.status().to_dict() if service is not None else None
+
+
+def evidence_context_for_request(
+    request: UiPreviewRequest,
+    snapshot: GraphSnapshot | None = None,
+) -> dict[str, object] | None:
+    """Return the observed-fact workbench payload for evidence screens."""
+    if request.screen != "evidence":
+        return None
+    return build_evidence_payload(snapshot or snapshot_for_request(request), request)
 
 
 def demo_snapshot() -> GraphSnapshot:
@@ -241,12 +261,13 @@ def demo_snapshot() -> GraphSnapshot:
 
 __all__ = [
     "demo_snapshot",
+    "evidence_context_for_request",
     "first_query_value",
     "graphfakos_request",
     "project_health_context_for_request",
     "render_server_preview_path",
     "request_from_query",
-    "service_status_context_for_request",
     "screen_from_path",
+    "service_status_context_for_request",
     "snapshot_for_request",
 ]

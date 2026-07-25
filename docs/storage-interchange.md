@@ -96,6 +96,12 @@ and optionally includes the same search explanation facts for a query. It is a
 local interchange proof for operators and CI jobs; it does not create a new
 canonical store authority.
 
+The visual evidence workbench and `doctor` command use a read-only companion
+proof against an existing store: export the already-materialized store, compare
+it against the supplied snapshot, and report the same manifest, capability, and
+search explanation facts. That read-only proof is intentionally separate from
+`store-round-trip`, which is explicit about importing into the target store.
+
 Older v1 stores remain readable without mutation. Migrate explicitly before
 delta application:
 

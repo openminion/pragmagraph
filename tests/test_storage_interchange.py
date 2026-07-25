@@ -22,6 +22,7 @@ from pragmagraph.storage import (
     load_snapshot,
     save_snapshot,
     stable_dumps,
+    verify_existing_store_round_trip,
     verify_store_round_trip,
 )
 
@@ -216,6 +217,27 @@ def test_store_round_trip_report_proves_canonical_export_and_search(
     assert report.search_explanation is not None
     assert report.search_explanation.hit_count >= 1
     assert report.to_dict()["search_explanation"]["candidate_node_ids"]
+
+
+def test_existing_store_round_trip_is_read_only_export_compare(tmp_path: Path) -> None:
+    snapshot = _snapshot(tmp_path)
+    store_path = tmp_path / "existing.sqlite"
+    SQLiteGraphStore.from_snapshot(snapshot, store_path)
+
+    report = verify_existing_store_round_trip(
+        snapshot,
+        store_path,
+        query_text="RuntimeGraph",
+    )
+
+    assert report.ok is True
+    assert report.mode == "existing_store_export_compare"
+    assert report.search_explanation is not None
+    assert report.search_explanation.strategy in {
+        "direct_exact",
+        "sqlite_fts5",
+        "sqlite_scan",
+    }
 
 
 def test_cli_store_round_trip_exports_matching_snapshot(tmp_path: Path) -> None:

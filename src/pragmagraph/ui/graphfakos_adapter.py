@@ -51,10 +51,12 @@ class PragmaGraphViewerProvider(GraphFakosProvider):
         snapshot: GraphSnapshot,
         project_health_context: dict[str, object] | None = None,
         service_status_context: dict[str, object] | None = None,
+        evidence_context: dict[str, object] | None = None,
     ) -> None:
         self._snapshot = snapshot
         self._project_health_context = project_health_context
         self._service_status_context = service_status_context
+        self._evidence_context = evidence_context
 
     def load_graph(self, request: GraphFakosRequest) -> GraphFakosGraph:
         return _snapshot_to_graphfakos(
@@ -66,6 +68,7 @@ class PragmaGraphViewerProvider(GraphFakosProvider):
             capabilities=self.capabilities,
             project_health_context=self._project_health_context,
             service_status_context=self._service_status_context,
+            evidence_context=self._evidence_context,
         )
 
 
@@ -196,6 +199,7 @@ def _snapshot_to_graphfakos(
     capabilities: tuple[str, ...],
     project_health_context: dict[str, object] | None = None,
     service_status_context: dict[str, object] | None = None,
+    evidence_context: dict[str, object] | None = None,
 ) -> GraphFakosGraph:
     citations = tuple(_citation_for_node(node) for node in snapshot.nodes) + tuple(
         _citation_for_edge(edge) for edge in snapshot.edges
@@ -222,6 +226,8 @@ def _snapshot_to_graphfakos(
     }
     if service_status_context:
         provider_payload["service_status"] = dict(service_status_context)
+    if evidence_context:
+        provider_payload["evidence_workbench"] = dict(evidence_context)
     return GraphFakosGraph(
         graph_id=snapshot.namespace,
         label="PragmaGraph Observed Source Graph",

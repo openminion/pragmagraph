@@ -38,6 +38,17 @@ Graphify-shaped interop, loss-aware SCIP JSON and native protobuf intake,
 exact cross-repository symbol resolution, benchmark helpers, and CLI commands
 for observed-fact graph work.
 
+## Read This First
+
+1. Use [At a glance](#at-a-glance) to confirm whether you need observed source
+   facts rather than durable memory.
+2. Use [Install](#install) for package setup.
+3. Use [CLI Quickstart](#cli-quickstart) for indexing, query, and local UI
+   commands.
+4. Use [What PragmaGraph does not provide](#what-pragmagraph-does-not-provide)
+   before expecting orchestration, hosted services, or semantic inference.
+5. Use the UI sections when you want GraphFakos-backed local graph inspection.
+
 ## Trust and Brand Safety
 
 - Official GitHub: `https://github.com/openminion/pragmagraph`
@@ -62,6 +73,14 @@ and should be treated as a scam.
   implicit runtime-side inference lives here
 - Preferred package validation gate: `make check`, with `make release-check`
   for release proof
+
+## Common Commands
+
+```bash
+python3.11 -m pip install pragmagraph
+pragmagraph-smoke
+pragmagraph-ui --serve --open --json
+```
 
 ## What PragmaGraph provides
 
@@ -220,8 +239,25 @@ Use a persistent workspace as the preview source:
 ```bash
 pragmagraph-ui \
   --workspace <workspace-root> \
-  --screen provider_status \
+  --screen evidence \
   --serve
+```
+
+The evidence workbench screen combines service readiness, search explanation,
+read-only store proof when a store path is supplied, and a compact agent
+context handoff:
+
+```bash
+pragmagraph-ui \
+  --snapshot .pragmagraph/snapshot.json \
+  --store .pragmagraph/graph.sqlite \
+  --screen evidence \
+  --query RuntimeGraph \
+  --evidence-out .pragmagraph/evidence.json \
+  --agent-context-out .pragmagraph/agent-context.md \
+  --serve \
+  --open \
+  --json
 ```
 
 Use `--html-out` only when you want to export a standalone HTML snapshot. The
@@ -463,6 +499,18 @@ pragmagraph store-round-trip .pragmagraph/snapshot.json \
   --store .pragmagraph/graph.sqlite \
   --query RuntimeGraph \
   --export-out .pragmagraph/exported-snapshot.json \
+  --json
+```
+
+Run one compact local proof report for operators or agents:
+
+```bash
+pragmagraph doctor \
+  --snapshot .pragmagraph/snapshot.json \
+  --store .pragmagraph/graph.sqlite \
+  --query RuntimeGraph \
+  --evidence-out .pragmagraph/evidence.json \
+  --agent-context-out .pragmagraph/agent-context.md \
   --json
 ```
 

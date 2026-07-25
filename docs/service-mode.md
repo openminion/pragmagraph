@@ -97,6 +97,11 @@ refresh can run:
   `store_backed_refresh_unsupported`
 - last refresh ledger facts when available
 
+`pragmagraph doctor` combines this status payload with deterministic query
+evidence, materialized-store search explanation when a store is supplied, and a
+read-only store export comparison. It can also write the same evidence JSON and
+a compact Markdown agent-context handoff used by the local evidence workbench.
+
 ## MCP resources
 
 `pragmagraph-server serve-stdio` exposes the existing tools plus read-only

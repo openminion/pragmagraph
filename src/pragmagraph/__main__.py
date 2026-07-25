@@ -25,12 +25,12 @@ from pragmagraph.graphify import (
     snapshot_from_graphify_payload,
     to_graphify_payload,
 )
+from pragmagraph.incremental import load_extraction_cache, save_extraction_cache
 from pragmagraph.interchange import (
     build_symbol_reference_bundle,
     load_native_scip,
     merge_precise_snapshot,
 )
-from pragmagraph.incremental import load_extraction_cache, save_extraction_cache
 from pragmagraph.lineage import build_git_lineage
 from pragmagraph.models import PragmaGraphError, QueryRequest
 from pragmagraph.navigation import (
@@ -57,7 +57,6 @@ from pragmagraph.query import (
     query,
     recent_commits_for_path,
 )
-from pragmagraph.report import build_report, render_markdown_report
 from pragmagraph.refresh import (
     build_ci_delta,
     load_manifest,
@@ -65,6 +64,7 @@ from pragmagraph.refresh import (
     refresh_snapshot_incremental,
     save_manifest,
 )
+from pragmagraph.report import build_report, render_markdown_report
 from pragmagraph.service import LocalQueryService, run_stdio_service
 from pragmagraph.storage import load_snapshot, save_snapshot
 from pragmagraph.storage.cli import (
@@ -477,6 +477,9 @@ def main(argv: list[str] | None = None) -> int:
     ui_parser.add_argument("--embed-out", default="")
     ui_parser.add_argument("--report-out", default="")
     ui_parser.add_argument("--markdown-report-out", default="")
+    ui_parser.add_argument("--evidence-out", default="")
+    ui_parser.add_argument("--agent-context-out", default="")
+    ui_parser.add_argument("--store")
     ui_parser.add_argument("--query", default="RuntimeGraph")
     ui_parser.add_argument("--node-id")
     ui_parser.add_argument("--source-id")
@@ -506,11 +509,28 @@ def main(argv: list[str] | None = None) -> int:
     demo_parser.add_argument("--html-out", default="pragmagraph-demo.html")
     demo_parser.add_argument("--artifact-out", default="")
     demo_parser.add_argument("--report-out", default="")
+    demo_parser.add_argument("--evidence-out", default="")
+    demo_parser.add_argument("--agent-context-out", default="")
     demo_parser.add_argument("--open", action="store_true")
     demo_parser.add_argument("--serve", action="store_true")
     demo_parser.add_argument("--host", default="127.0.0.1")
     demo_parser.add_argument("--port", type=int, default=8766)
     _add_json_flag(demo_parser)
+
+    doctor_parser = subparsers.add_parser(
+        "doctor",
+        help="inspect status, search evidence, and storage proof for one graph",
+    )
+    doctor_source = doctor_parser.add_mutually_exclusive_group()
+    doctor_source.add_argument("--config")
+    doctor_source.add_argument("--workspace")
+    doctor_source.add_argument("--snapshot")
+    doctor_source.add_argument("--store-only")
+    doctor_parser.add_argument("--store")
+    doctor_parser.add_argument("--query", default="")
+    doctor_parser.add_argument("--evidence-out", default="")
+    doctor_parser.add_argument("--agent-context-out", default="")
+    _add_json_flag(doctor_parser)
 
     register_storage_commands(subparsers)
     register_workspace_commands(subparsers)
@@ -842,6 +862,9 @@ def main(argv: list[str] | None = None) -> int:
             embed_path=args.embed_out,
             report_path=args.report_out,
             markdown_report_path=args.markdown_report_out,
+            evidence_path=args.evidence_out,
+            agent_context_path=args.agent_context_out,
+            store_path=args.store,
             query=args.query,
             node_id=args.node_id,
             source_id=args.source_id,
@@ -877,6 +900,8 @@ def main(argv: list[str] | None = None) -> int:
             output_path=args.html_out,
             artifact_path=args.artifact_out,
             report_path=args.report_out,
+            evidence_path=args.evidence_out,
+            agent_context_path=args.agent_context_out,
             store_path=store_path,
             query=query_text,
             open_browser=args.open,
@@ -886,6 +911,27 @@ def main(argv: list[str] | None = None) -> int:
         else:
             result = write_ui_preview(request)
         _print_payload(result.to_dict(), as_json=args.json)
+    elif args.command == "doctor":
+        from pragmagraph.ui import (
+            UiPreviewRequest,
+            build_evidence_payload,
+            write_agent_context,
+            write_evidence_payload,
+        )
+        from pragmagraph.ui.preview_inputs import snapshot_for_request
+
+        request = _doctor_request(args)
+        payload = build_evidence_payload(snapshot_for_request(request), request)
+        output: dict[str, object] = {"evidence": payload}
+        if args.evidence_out:
+            output["evidence_output_path"] = str(
+                write_evidence_payload(payload, args.evidence_out)
+            )
+        if args.agent_context_out:
+            output["agent_context_output_path"] = str(
+                write_agent_context(payload, args.agent_context_out)
+            )
+        _print_payload(output, as_json=args.json)
     elif args.command in VIEWER_COMMANDS:
         _print_payload(run_viewer_command(args), as_json=True)
     elif args.json:
@@ -893,6 +939,54 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(f"pragmagraph semantic alpha OK: {smoke_payload()}")
     return 0
+
+
+def _doctor_request(args: argparse.Namespace):
+    from pragmagraph.ui import UiPreviewRequest
+
+    if args.config:
+        resolved = resolve_workspace_config_paths(args.config)
+        workspace = _ensure_config_workspace(args.config)
+        return UiPreviewRequest(
+            screen="evidence",
+            workspace=str(workspace),
+            store_path=str(resolved.store_path),
+            query=args.query or resolved.config.ui_query or "RuntimeGraph",
+            evidence_path=args.evidence_out,
+            agent_context_path=args.agent_context_out,
+        )
+    if args.workspace:
+        return UiPreviewRequest(
+            screen="evidence",
+            workspace=args.workspace,
+            store_path=args.store,
+            query=args.query or "RuntimeGraph",
+            evidence_path=args.evidence_out,
+            agent_context_path=args.agent_context_out,
+        )
+    if args.snapshot:
+        return UiPreviewRequest(
+            screen="evidence",
+            snapshot=args.snapshot,
+            store_path=args.store,
+            query=args.query or "RuntimeGraph",
+            evidence_path=args.evidence_out,
+            agent_context_path=args.agent_context_out,
+        )
+    if args.store_only:
+        return UiPreviewRequest(
+            screen="evidence",
+            store_path=args.store_only,
+            query=args.query or "RuntimeGraph",
+            evidence_path=args.evidence_out,
+            agent_context_path=args.agent_context_out,
+        )
+    return UiPreviewRequest(
+        screen="evidence",
+        query=args.query or "RuntimeGraph",
+        evidence_path=args.evidence_out,
+        agent_context_path=args.agent_context_out,
+    )
 
 
 def ui_preview_main(argv: list[str] | None = None) -> int:

@@ -7,7 +7,7 @@ import pytest
 
 
 def test_ui_import_root_and_boundary_contract_are_stable() -> None:
-    import pragmagraph.ui as ui
+    from pragmagraph import ui
 
     boundary = ui.build_default_ui_boundary()
     assert boundary.owner_import_root == "pragmagraph.ui"
@@ -31,6 +31,7 @@ def test_ui_screen_manifest_covers_workbench_mvp_routes() -> None:
         "path",
         "provider_status",
         "project_health",
+        "evidence",
     ]
     assert [screen.screen_id for screen in screens if screen.mvp] == [
         "search",
@@ -39,6 +40,7 @@ def test_ui_screen_manifest_covers_workbench_mvp_routes() -> None:
         "path",
         "provider_status",
         "project_health",
+        "evidence",
     ]
     assert [screen.screen_id for screen in screens if screen.mutating] == [
         "provider_status"
@@ -94,6 +96,7 @@ def test_ui_preview_includes_snapshot_service_status(tmp_path) -> None:
     from pragmagraph.adapters import index_path
     from pragmagraph.storage import save_snapshot
     from pragmagraph.ui import UiPreviewRequest, render_ui_preview
+
     from .package_paths import build_fixture_repo
 
     root = build_fixture_repo(
@@ -109,3 +112,52 @@ def test_ui_preview_includes_snapshot_service_status(tmp_path) -> None:
 
     assert "PragmaGraph Observed Source Graph" in rendered.html
     assert "snapshot_backed_refresh_unsupported" in rendered.html
+
+
+def test_ui_evidence_preview_exports_store_proof_and_agent_context(tmp_path) -> None:
+    from pragmagraph.adapters import index_path
+    from pragmagraph.storage import SQLiteGraphStore, save_snapshot
+    from pragmagraph.ui import UiPreviewRequest, write_ui_preview
+
+    from .package_paths import build_fixture_repo
+
+    root = build_fixture_repo(
+        tmp_path,
+        files={"src/app.py": "class RuntimeGraph:\n    pass\n"},
+    )
+    snapshot = index_path(root, namespace="ui-evidence")
+    snapshot_path = tmp_path / "snapshot.json"
+    store_path = tmp_path / "graph.sqlite"
+    evidence_path = tmp_path / "evidence.json"
+    context_path = tmp_path / "agent-context.md"
+    save_snapshot(snapshot, snapshot_path)
+    SQLiteGraphStore.from_snapshot(snapshot, store_path)
+
+    result = write_ui_preview(
+        UiPreviewRequest(
+            screen="evidence",
+            snapshot=str(snapshot_path),
+            store_path=str(store_path),
+            query="RuntimeGraph",
+            output_path=str(tmp_path / "evidence.html"),
+            artifact_path=str(tmp_path / "artifact.json"),
+            evidence_path=str(evidence_path),
+            agent_context_path=str(context_path),
+        )
+    )
+
+    assert result.evidence == {
+        "evidence": True,
+        "output_path": str(evidence_path),
+    }
+    assert result.agent_context == {
+        "agent_context": True,
+        "output_path": str(context_path),
+    }
+    evidence = evidence_path.read_text(encoding="utf-8")
+    context = context_path.read_text(encoding="utf-8")
+    assert "pragmagraph.evidence_workbench.v1alpha1" in evidence
+    assert "existing_store_export_compare" in evidence
+    assert "materialized_store" in evidence
+    assert "PragmaGraph Agent Context" in context
+    assert "RuntimeGraph" in context

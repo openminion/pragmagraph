@@ -20,7 +20,7 @@ from pragmagraph.models import (
     QueryResult,
 )
 from pragmagraph.query import health, neighborhood, path, query, query_nodes
-from pragmagraph.storage import (
+from pragmagraph.storage.snapshots import (
     load_snapshot,
     save_snapshot,
     snapshot_from_dict,

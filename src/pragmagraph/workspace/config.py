@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import tomllib
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
-import tomllib
+from typing import Any
 
 from pragmagraph.adapters.git_history import (
     DEFAULT_GIT_IDENTITY_MODE,
@@ -28,6 +29,7 @@ SUPPORTED_UI_SCREENS = frozenset(
         "path",
         "provider_status",
         "project_health",
+        "evidence",
     }
 )
 
@@ -93,7 +95,7 @@ class WorkspaceConfig:
         }
 
     @classmethod
-    def from_dict(cls, payload: Mapping[str, Any]) -> "WorkspaceConfig":
+    def from_dict(cls, payload: Mapping[str, Any]) -> WorkspaceConfig:
         ui = payload.get("ui", {})
         if not isinstance(ui, Mapping):
             raise PragmaGraphError(

@@ -14,6 +14,7 @@ UiScreenId = Literal[
     "path",
     "provider_status",
     "project_health",
+    "evidence",
 ]
 
 
@@ -123,6 +124,18 @@ def build_ui_screen_manifest() -> tuple[UiScreenDefinition, ...]:
                 "GraphRefreshResult",
                 "GraphOmittedItem",
                 "ParserDiagnostic",
+            ),
+            mvp=True,
+        ),
+        UiScreenDefinition(
+            screen_id="evidence",
+            route="/third-brain/evidence",
+            title="Evidence Workbench",
+            primary_payloads=(
+                "ServiceStatus",
+                "StoreSearchExplanation",
+                "StoreRoundTripReport",
+                "AgentContext",
             ),
             mvp=True,
         ),

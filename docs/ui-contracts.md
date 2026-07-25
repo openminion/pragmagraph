@@ -39,6 +39,7 @@ The first screen manifest is intentionally small and matches the workbench MVP:
 4. path
 5. provider status
 6. project health
+7. evidence
 
 `project_health` is a PragmaGraph-owned screen id for observed workspace facts
 such as node counts, edge counts, omitted reasons, parser set, source path
@@ -54,6 +55,21 @@ machine-readable readiness shape exposed by `LocalQueryService.status()` and
 `pragma://status`: startup mode, refresh readiness, artifact presence, graph
 counts, diagnostics, and last-refresh facts when available. Demo previews omit
 it rather than fabricating local service state.
+
+`evidence` is the package-local workbench screen for proving what an agent or
+operator is about to consume. It maps onto the same GraphFakos provider-status
+renderer but carries a PragmaGraph-owned `evidence_workbench` payload:
+
+- service status/readiness
+- deterministic query result
+- materialized-store search explanation when a readable store is supplied
+- read-only existing-store export comparison when a readable store is supplied
+- compact agent context with top hits, source refs, search evidence, store
+  proof, and reproducible commands
+
+The evidence screen never mutates a store. Use `store-round-trip` when an
+operator explicitly wants to rebuild a store from a snapshot and compare the
+export.
 
 ## Local Visual UI
 
@@ -74,7 +90,20 @@ Workspace-backed preview uses the deterministic workspace layout:
 ```bash
 pragmagraph-ui \
   --workspace ./pragmagraph-workspace \
-  --screen project_health \
+  --screen evidence \
+  --serve
+```
+
+Export evidence and copyable agent context:
+
+```bash
+pragmagraph-ui \
+  --snapshot ./snapshot.json \
+  --store ./graph.sqlite \
+  --screen evidence \
+  --query RuntimeGraph \
+  --evidence-out ./evidence.json \
+  --agent-context-out ./agent-context.md \
   --serve
 ```
 
