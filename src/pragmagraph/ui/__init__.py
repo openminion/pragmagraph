@@ -17,6 +17,7 @@ from .evidence import (
     write_agent_context,
     write_evidence_payload,
 )
+from .delta_review import DELTA_REVIEW_SCHEMA_VERSION, build_delta_review_payload
 from .graphfakos_adapter import PragmaGraphLiveViewerProvider, PragmaGraphViewerProvider
 from .local_server import (
     LocalVisualHttpServer,
@@ -40,6 +41,7 @@ from .preview_types import (
 
 __all__ = [
     "AGENT_CONTEXT_SCHEMA_VERSION",
+    "DELTA_REVIEW_SCHEMA_VERSION",
     "EVIDENCE_SCHEMA_VERSION",
     "LocalVisualHttpServer",
     "LocalVisualServerResult",
@@ -56,6 +58,7 @@ __all__ = [
     "UiTransportKind",
     "UiTransportStatus",
     "build_default_ui_boundary",
+    "build_delta_review_payload",
     "build_evidence_payload",
     "build_ui_screen_manifest",
     "make_local_visual_server",

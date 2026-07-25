@@ -5,6 +5,19 @@ from __future__ import annotations
 from pathlib import Path
 from urllib.parse import quote
 
+from pragmagraph.portability.graph_pack import (
+    GRAPH_PACK_EVIDENCE,
+    GRAPH_PACK_MANIFEST,
+    GRAPH_PACK_SCHEMA_VERSION,
+    GRAPH_PACK_SNAPSHOT,
+    GRAPH_PACK_STORE,
+    GraphPackManifest,
+    import_graph_pack,
+    inspect_graph_pack,
+    load_graph_pack_snapshot,
+    write_graph_pack,
+)
+
 
 def normalize_relative_path(path: str | Path) -> str:
     """Return a stable slash-separated relative path."""
@@ -34,8 +47,18 @@ def edge_id(namespace: str, source_id: str, kind: str, target_id: str) -> str:
 
 
 __all__ = [
+    "GRAPH_PACK_EVIDENCE",
+    "GRAPH_PACK_MANIFEST",
+    "GRAPH_PACK_SCHEMA_VERSION",
+    "GRAPH_PACK_SNAPSHOT",
+    "GRAPH_PACK_STORE",
+    "GraphPackManifest",
     "edge_id",
+    "import_graph_pack",
+    "inspect_graph_pack",
+    "load_graph_pack_snapshot",
     "node_id",
     "normalize_relative_path",
     "pragma_uri",
+    "write_graph_pack",
 ]

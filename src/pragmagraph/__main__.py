@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
 import sys
 from dataclasses import replace
@@ -48,6 +49,11 @@ from pragmagraph.operations import (
 )
 from pragmagraph.parser_support import build_parser_support_matrix
 from pragmagraph.planner import explain_query_plan
+from pragmagraph.portability.cli import (
+    GRAPH_PACK_COMMANDS,
+    register_graph_pack_commands,
+    run_graph_pack_command,
+)
 from pragmagraph.query import (
     commits_touching_symbol_file,
     files_touched_by_commit,
@@ -66,22 +72,22 @@ from pragmagraph.refresh import (
 )
 from pragmagraph.report import build_report, render_markdown_report
 from pragmagraph.service import LocalQueryService, run_stdio_service
-from pragmagraph.storage import load_snapshot, save_snapshot
+from pragmagraph.storage import backend_catalog_payload, load_snapshot, save_snapshot
 from pragmagraph.storage.cli import (
     STORAGE_COMMANDS,
     register_storage_commands,
     run_storage_command,
 )
 from pragmagraph.topology import build_topology_summary, render_markdown_topology
+from pragmagraph.ui.cli import UI_COMMANDS, register_ui_commands, run_ui_command
+from pragmagraph.ui.workbench import register_workbench_commands, run_workbench_command
 from pragmagraph.viewer.cli import (
     VIEWER_COMMANDS,
     register_viewer_commands,
     run_viewer_command,
 )
 from pragmagraph.workspace import (
-    SUPPORTED_UI_SCREENS,
     initialize_workspace,
-    load_workspace_config,
     load_workspace_metadata,
     resolve_workspace_config_paths,
 )
@@ -126,6 +132,32 @@ def _add_git_identity_mode_argument(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def _server_client_cli():
+    return importlib.import_module("pragmagraph.server.client_cli")
+
+
+def _server_client_config():
+    return importlib.import_module("pragmagraph.server.client_config")
+
+
+def _register_mcp_client_commands(subparsers: argparse._SubParsersAction) -> None:
+    _server_client_cli().register_mcp_client_commands(subparsers)
+
+
+def _run_mcp_client_command(args: argparse.Namespace) -> object:
+    return _server_client_cli().run_mcp_client_command(args)
+
+
+def _mcp_doctor_payload(
+    *, snapshot: str, root: str, namespace: str
+) -> dict[str, object]:
+    return _server_client_config().build_mcp_doctor_payload(
+        snapshot=snapshot,
+        root=root,
+        namespace=namespace,
+    )
+
+
 def _service_from_args(args: argparse.Namespace) -> LocalQueryService:
     if args.workspace:
         return LocalQueryService.from_workspace(args.workspace)
@@ -156,27 +188,6 @@ def _ensure_config_workspace(config_path: str | Path) -> Path:
             git_identity_mode=resolved.config.git_identity_mode,
         )
     return resolved.workspace_path
-
-
-def _ensure_demo_workspace(args: argparse.Namespace) -> Path | None:
-    if args.config:
-        return _ensure_config_workspace(args.config)
-    if not args.root and not args.workspace:
-        return None
-    workspace_path = (
-        Path(args.workspace)
-        if args.workspace
-        else Path(args.root) / ".pragmagraph" / "workspace"
-    )
-    if not (workspace_path / "workspace.json").exists():
-        initialize_workspace(
-            label=args.label,
-            root_path=args.root or ".",
-            workspace_path=workspace_path,
-            namespace=args.namespace,
-            git_identity_mode=args.git_identity_mode,
-        )
-    return workspace_path
 
 
 def _query_args(
@@ -461,62 +472,7 @@ def main(argv: list[str] | None = None) -> int:
     serve_parser.add_argument("--cache")
     _add_git_identity_mode_argument(serve_parser)
 
-    ui_parser = subparsers.add_parser(
-        "ui-preview",
-        help="open the package-local visual graph preview",
-    )
-    ui_parser.add_argument("--workspace")
-    ui_parser.add_argument("--snapshot")
-    ui_parser.add_argument(
-        "--screen",
-        choices=tuple(sorted(SUPPORTED_UI_SCREENS)),
-        default="search",
-    )
-    ui_parser.add_argument("--html-out", default="pragmagraph-ui-preview.html")
-    ui_parser.add_argument("--artifact-out", default="")
-    ui_parser.add_argument("--embed-out", default="")
-    ui_parser.add_argument("--report-out", default="")
-    ui_parser.add_argument("--markdown-report-out", default="")
-    ui_parser.add_argument("--evidence-out", default="")
-    ui_parser.add_argument("--agent-context-out", default="")
-    ui_parser.add_argument("--store")
-    ui_parser.add_argument("--query", default="RuntimeGraph")
-    ui_parser.add_argument("--node-id")
-    ui_parser.add_argument("--source-id")
-    ui_parser.add_argument("--target-id")
-    ui_parser.add_argument("--open", action="store_true")
-    ui_parser.add_argument("--serve", action="store_true")
-    ui_parser.add_argument("--host", default="127.0.0.1")
-    ui_parser.add_argument("--port", type=int, default=8766)
-    _add_json_flag(ui_parser)
-
-    demo_parser = subparsers.add_parser(
-        "demo-ui",
-        help="open or write the quickest visual PragmaGraph demo",
-    )
-    demo_parser.add_argument("--config")
-    demo_parser.add_argument("--root")
-    demo_parser.add_argument("--workspace")
-    demo_parser.add_argument("--label", default="default")
-    demo_parser.add_argument("--namespace", default="default")
-    _add_git_identity_mode_argument(demo_parser)
-    demo_parser.add_argument(
-        "--screen",
-        choices=tuple(sorted(SUPPORTED_UI_SCREENS)),
-        default="search",
-    )
-    demo_parser.add_argument("--query", default="RuntimeGraph")
-    demo_parser.add_argument("--html-out", default="pragmagraph-demo.html")
-    demo_parser.add_argument("--artifact-out", default="")
-    demo_parser.add_argument("--report-out", default="")
-    demo_parser.add_argument("--evidence-out", default="")
-    demo_parser.add_argument("--agent-context-out", default="")
-    demo_parser.add_argument("--open", action="store_true")
-    demo_parser.add_argument("--serve", action="store_true")
-    demo_parser.add_argument("--host", default="127.0.0.1")
-    demo_parser.add_argument("--port", type=int, default=8766)
-    _add_json_flag(demo_parser)
-
+    register_ui_commands(subparsers)
     doctor_parser = subparsers.add_parser(
         "doctor",
         help="inspect status, search evidence, and storage proof for one graph",
@@ -532,6 +488,9 @@ def main(argv: list[str] | None = None) -> int:
     doctor_parser.add_argument("--agent-context-out", default="")
     _add_json_flag(doctor_parser)
 
+    register_workbench_commands(subparsers)
+    register_graph_pack_commands(subparsers)
+    _register_mcp_client_commands(subparsers)
     register_storage_commands(subparsers)
     register_workspace_commands(subparsers)
     register_viewer_commands(subparsers)
@@ -850,70 +809,12 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "serve":
         service = _service_from_args(args)
         return run_stdio_service(service)
-    elif args.command == "ui-preview":
-        from pragmagraph.ui import UiPreviewRequest, serve_ui_preview, write_ui_preview
-
-        request = UiPreviewRequest(
-            screen=args.screen,
-            workspace=args.workspace,
-            snapshot=args.snapshot,
-            output_path=args.html_out,
-            artifact_path=args.artifact_out,
-            embed_path=args.embed_out,
-            report_path=args.report_out,
-            markdown_report_path=args.markdown_report_out,
-            evidence_path=args.evidence_out,
-            agent_context_path=args.agent_context_out,
-            store_path=args.store,
-            query=args.query,
-            node_id=args.node_id,
-            source_id=args.source_id,
-            target_id=args.target_id,
-            open_browser=args.open,
-        )
-        if args.serve:
-            result = serve_ui_preview(
-                request,
-                host=args.host,
-                port=args.port,
-            )
-            _print_payload(result.to_dict(), as_json=args.json)
-            return 0
-        result = write_ui_preview(request)
-        _print_payload(result.to_dict(), as_json=args.json)
-    elif args.command == "demo-ui":
-        from pragmagraph.ui import UiPreviewRequest, serve_ui_preview, write_ui_preview
-
-        workspace = _ensure_demo_workspace(args)
-        store_path = None
-        if args.config:
-            config = load_workspace_config(args.config)
-            store_path = str(resolve_workspace_config_paths(args.config).store_path)
-            screen = config.ui_screen
-            query_text = config.ui_query
-        else:
-            screen = args.screen
-            query_text = args.query
-        request = UiPreviewRequest(
-            screen=screen,
-            workspace=str(workspace) if workspace is not None else "",
-            output_path=args.html_out,
-            artifact_path=args.artifact_out,
-            report_path=args.report_out,
-            evidence_path=args.evidence_out,
-            agent_context_path=args.agent_context_out,
-            store_path=store_path,
-            query=query_text,
-            open_browser=args.open,
-        )
-        if args.serve:
-            result = serve_ui_preview(request, host=args.host, port=args.port)
-        else:
-            result = write_ui_preview(request)
-        _print_payload(result.to_dict(), as_json=args.json)
+    elif args.command in UI_COMMANDS:
+        _print_payload(run_ui_command(args), as_json=args.json)
+    elif args.command == "workbench":
+        _print_payload(run_workbench_command(args), as_json=args.json)
     elif args.command == "doctor":
         from pragmagraph.ui import (
-            UiPreviewRequest,
             build_evidence_payload,
             write_agent_context,
             write_evidence_payload,
@@ -931,7 +832,17 @@ def main(argv: list[str] | None = None) -> int:
             output["agent_context_output_path"] = str(
                 write_agent_context(payload, args.agent_context_out)
             )
+        output["storage_backends"] = backend_catalog_payload()
+        output["mcp"] = _mcp_doctor_payload(
+            snapshot=request.snapshot or "",
+            root="",
+            namespace="default",
+        )
         _print_payload(output, as_json=args.json)
+    elif args.command in GRAPH_PACK_COMMANDS:
+        _print_payload(run_graph_pack_command(args), as_json=args.json)
+    elif args.command == "mcp-config":
+        _print_payload(_run_mcp_client_command(args), as_json=args.json)
     elif args.command in VIEWER_COMMANDS:
         _print_payload(run_viewer_command(args), as_json=True)
     elif args.json:

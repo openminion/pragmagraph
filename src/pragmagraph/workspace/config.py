@@ -30,6 +30,7 @@ SUPPORTED_UI_SCREENS = frozenset(
         "provider_status",
         "project_health",
         "evidence",
+        "delta_review",
     }
 )
 

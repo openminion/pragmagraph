@@ -18,6 +18,12 @@ from pragmagraph.storage.roundtrip import (
     verify_existing_store_round_trip,
     verify_store_round_trip,
 )
+from pragmagraph.storage.registry import (
+    BackendCatalogEntry,
+    backend_capabilities_for_path,
+    backend_catalog_payload,
+    build_backend_catalog,
+)
 from pragmagraph.storage.snapshots import (
     SnapshotRepository,
     load_snapshot,
@@ -32,11 +38,15 @@ __all__ = [
     "JsonSnapshotStore",
     "SQLiteGraphStore",
     "SnapshotRepository",
+    "BackendCatalogEntry",
     "StoreCapabilityReport",
     "StoreManifest",
     "StoreRoundTripReport",
     "StoreSearchExplanation",
     "StoreUpdateReport",
+    "backend_capabilities_for_path",
+    "backend_catalog_payload",
+    "build_backend_catalog",
     "explain_store_query",
     "load_snapshot",
     "open_store",

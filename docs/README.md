@@ -12,6 +12,9 @@ This directory holds the public package documentation for standalone
 - [`ten-minute-tour.md`](ten-minute-tour.md) gives the shortest public
   standalone path through workspace config, visual preview, store explain, and
   certification output.
+- [`standalone-product-cycle.md`](standalone-product-cycle.md) gives the
+  public package loop for workbench navigation, delta review, graph packs,
+  storage/search backend inspection, and MCP client snippets.
 - [`engineering-patterns.md`](engineering-patterns.md)
   summarizes the package-local engineering and boundary rules for contributors.
 - [`code-quality-enforcement.md`](code-quality-enforcement.md)

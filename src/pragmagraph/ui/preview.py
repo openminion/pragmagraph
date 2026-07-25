@@ -5,11 +5,7 @@ from __future__ import annotations
 from graphfakos import GraphPreviewOutputPaths, write_provider_preview_outputs
 from graphfakos.server import (
     LocalViewerHttpServer as LocalVisualHttpServer,
-)
-from graphfakos.server import (
     LocalViewerServerResult as LocalVisualServerResult,
-)
-from graphfakos.server import (
     make_local_viewer_server,
     serve_local_viewer,
 )
@@ -18,6 +14,7 @@ from graphfakos.static import render_static_html
 from .evidence import write_agent_context, write_evidence_payload
 from .graphfakos_adapter import PragmaGraphViewerProvider
 from .preview_inputs import (
+    delta_review_context_for_request,
     evidence_context_for_request,
     graphfakos_request,
     project_health_context_for_request,
@@ -37,11 +34,13 @@ def write_ui_preview(request: UiPreviewRequest) -> UiPreviewResult:
     """Write one local visual UI preview to an HTML file."""
     snapshot = snapshot_for_request(request)
     evidence_context = evidence_context_for_request(request, snapshot)
+    delta_review_context = delta_review_context_for_request(request, snapshot)
     provider = PragmaGraphViewerProvider(
         snapshot,
         project_health_context=project_health_context_for_request(request),
         service_status_context=service_status_context_for_request(request),
         evidence_context=evidence_context,
+        delta_review_context=delta_review_context,
     )
     graph_request = graphfakos_request(request)
     payload = write_provider_preview_outputs(
@@ -70,6 +69,7 @@ def write_ui_preview(request: UiPreviewRequest) -> UiPreviewResult:
         report=payload.get("report"),
         markdown_report=payload.get("markdown_report"),
         evidence=_write_evidence_if_requested(request, evidence_context),
+        delta_review=delta_review_context,
         agent_context=_write_agent_context_if_requested(request, evidence_context),
         opened=bool(payload["opened"]),
     )
@@ -79,11 +79,13 @@ def render_ui_preview(request: UiPreviewRequest) -> UiPreviewRender:
     """Render the local visual UI preview for a snapshot, workspace, or demo graph."""
     snapshot = snapshot_for_request(request)
     evidence_context = evidence_context_for_request(request, snapshot)
+    delta_review_context = delta_review_context_for_request(request, snapshot)
     provider = PragmaGraphViewerProvider(
         snapshot,
         project_health_context=project_health_context_for_request(request),
         service_status_context=service_status_context_for_request(request),
         evidence_context=evidence_context,
+        delta_review_context=delta_review_context,
     )
     graph_request = graphfakos_request(request)
     html = render_static_html(provider, graph_request)
