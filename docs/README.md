@@ -88,7 +88,7 @@ This directory holds the public package documentation for standalone
 
 ## Public package stance
 
-The `0.0.6` semantic alpha defines the current public package contract:
+The `0.0.7` semantic alpha defines the current public package contract:
 immutable DTOs, JSON snapshots, local indexing, deterministic
 query/traversal/report/export helpers, JSON and SQLite-backed store contracts,
 compact navigation maps,
