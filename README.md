@@ -23,10 +23,10 @@
   <img alt="Status" src="https://img.shields.io/badge/status-alpha-6B7280">
 </p>
 
-PragmaGraph `v0.0.7` is a standalone semantic-alpha package for facts that can
-be reproduced from source. It indexes local code, documents, artifacts, and
-Git history into deterministic graph snapshots without asking an LLM to decide
-what is true.
+PragmaGraph `v0.0.7` is a standalone public alpha package for facts that can be
+reproduced from source. It indexes local code, documents, artifacts, and Git
+history into deterministic graph snapshots without asking an LLM to decide what
+is true.
 
 ## Read This First
 
@@ -54,7 +54,7 @@ and should be treated as a scam.
 | | |
 | --- | --- |
 | Package | `pragmagraph` |
-| Current line | `v0.0.7` semantic alpha |
+| Current line | `v0.0.7` public alpha |
 | Python | 3.11+ |
 | Best fit | Reproducible source, document, artifact, and Git facts |
 | Primary artifact | Deterministic JSON graph snapshot |
