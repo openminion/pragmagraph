@@ -16,8 +16,8 @@ The public alpha surface is documented in:
 The preferred entrypoint is `pragmagraph`, with additional stable import roots
 for contracts, models, query, storage, adapters, bench, portability, parsers,
 export, graphify, report, refresh, navigation, interchange, topology, docgraph,
-planner, certification, lineage, parser_support, security, service, workspace,
-and `pragmagraph.ui`.
+planner, certification, lineage, parser_support, investigate, security,
+service, workspace, and `pragmagraph.ui`.
 
 ## Source-tree owner map
 
@@ -37,20 +37,23 @@ and `pragmagraph.ui`.
    persisted status ledgers, and repeatable local ingest runs.
 9. `navigation/` owns compact repo-map and handoff views over observed
    snapshots.
-10. `interchange/`, `topology/`, `docgraph/`, `planner/`,
+10. `investigate/` owns guided graph-inspection bundles that compose query,
+   neighborhood, path, freshness, and next-command facts without owning new
+   indexing, storage, or semantic ranking.
+11. `interchange/`, `topology/`, `docgraph/`, `planner/`,
    `certification/`, `lineage/`, and `parser_support/` own advanced
    structural views over observed snapshots. `interchange/` also owns the SCIP
    JSON subset, optional native SCIP protobuf intake, and caller-fed exact
    compiler/LSP fact bridge. `interchange/scip_symbols.py` owns grammar-aware
    complete SCIP identity validation; query-time code must not reimplement it.
-11. `workspace/` owns the persistent local workspace directory contract,
+12. `workspace/` owns the persistent local workspace directory contract,
    explicit workspace lifecycle helpers, deterministic multi-root overlays,
    named canonical-snapshot composition, and exact cross-root resolution.
    `workspace/cli.py` owns both multi-root command registrations so the root CLI
    remains an orchestrator.
-12. `service/` owns the local repeated-query service boundary. `server/` owns
+13. `service/` owns the local repeated-query service boundary. `server/` owns
    the bounded MCP transport, tool registry, and read-only resource registry.
-13. `ui/` owns typed UI contracts, the PragmaGraph-to-GraphFakos adapter, and
+14. `ui/` owns typed UI contracts, the PragmaGraph-to-GraphFakos adapter, and
    package CLI preview wiring. `ui/__init__.py` remains the stable UI import
    seam, `ui/contracts.py` owns typed route and transport-boundary contracts,
    `ui/local_server.py` remains the stable local-viewer compatibility seam,

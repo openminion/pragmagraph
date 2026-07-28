@@ -23,6 +23,7 @@ SUPPORTED_TOOL_NAMES: tuple[str, ...] = (
     "pragmagraph_report",
     "pragmagraph_export",
     "pragmagraph_graphify_export",
+    "pragmagraph_investigate",
     "pragmagraph_refresh",
 )
 
@@ -226,6 +227,37 @@ _TOOL_SCHEMAS: tuple[ToolSchema, ...] = (
             "type": "object",
             "required": ["graphify_export"],
             "properties": {"graphify_export": {"type": "object"}},
+            "additionalProperties": False,
+        },
+    ),
+    ToolSchema(
+        name="pragmagraph_investigate",
+        description="Build a guided observed-fact investigation bundle.",
+        input_schema={
+            "type": "object",
+            "required": ["text"],
+            "properties": {
+                "text": {"type": "string"},
+                "preset": {
+                    "type": "string",
+                    "enum": [
+                        "search",
+                        "file_map",
+                        "symbol_map",
+                        "doc_links",
+                        "changed_recently",
+                        "orphans",
+                        "high_degree",
+                    ],
+                },
+                "max_results": {"type": "integer", "minimum": 1},
+            },
+            "additionalProperties": False,
+        },
+        output_schema={
+            "type": "object",
+            "required": ["investigation"],
+            "properties": {"investigation": {"type": "object"}},
             "additionalProperties": False,
         },
     ),

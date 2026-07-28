@@ -16,7 +16,7 @@ from pragmagraph.server.tools import (
 )
 
 
-def test_supported_tool_set_is_exactly_the_bounded_ten() -> None:
+def test_supported_tool_set_is_exactly_the_bounded_tools() -> None:
     assert SUPPORTED_TOOL_NAMES == (
         "pragmagraph_capabilities",
         "pragmagraph_health",
@@ -27,11 +27,12 @@ def test_supported_tool_set_is_exactly_the_bounded_ten() -> None:
         "pragmagraph_report",
         "pragmagraph_export",
         "pragmagraph_graphify_export",
+        "pragmagraph_investigate",
         "pragmagraph_refresh",
     )
 
 
-def test_default_registry_registers_exactly_the_supported_ten() -> None:
+def test_default_registry_registers_exactly_the_supported_tools() -> None:
     registry = ToolRegistry.default()
     assert registry.names() == tuple(sorted(SUPPORTED_TOOL_NAMES))
 

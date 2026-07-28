@@ -45,6 +45,7 @@ def test_python_m_pragmagraph_smoke() -> None:
             "pragmagraph.workspace",
             "pragmagraph.navigation",
             "pragmagraph.interchange",
+            "pragmagraph.investigate",
             "pragmagraph.topology",
             "pragmagraph.docgraph",
             "pragmagraph.planner",

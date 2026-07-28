@@ -225,10 +225,10 @@ def run_storage_command(args: argparse.Namespace) -> object:
                     code="INVALID_STORE_COMMAND",
                 )
             return {
-                "catalog": backend_catalog_payload(),
+                "catalog": backend_catalog_payload(probe_optional=args.probe_optional),
                 "selected": backend_capabilities_for_path(args.backend, args.path),
             }
-        return backend_catalog_payload()
+        return backend_catalog_payload(probe_optional=args.probe_optional)
     raise PragmaGraphError(
         "unsupported store command",
         code="UNSUPPORTED_STORE_COMMAND",
@@ -325,6 +325,11 @@ def _register_backend_catalog_command(
     )
     parser.add_argument("--backend", choices=("json", "sqlite"))
     parser.add_argument("--path")
+    parser.add_argument(
+        "--probe-optional",
+        action="store_true",
+        help="check whether reserved optional backend packages are installed",
+    )
     _add_json_flag(parser)
 
 

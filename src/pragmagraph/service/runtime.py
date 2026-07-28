@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, cast
 
 from pragmagraph.adapters.git_history import DEFAULT_GIT_IDENTITY_MODE
 from pragmagraph.contracts import INDEXER_VERSION, SCHEMA_VERSION
@@ -18,6 +18,11 @@ from pragmagraph.export import (
 from pragmagraph.graphify import GRAPHIFY_INTEROP_FORMAT, to_graphify_payload
 from pragmagraph.incremental import load_extraction_cache, save_extraction_cache
 from pragmagraph.incremental.models import ExtractionCacheBundle
+from pragmagraph.investigate import (
+    INVESTIGATION_PRESETS,
+    InvestigationPreset,
+    build_investigation_bundle,
+)
 from pragmagraph.models import (
     GraphSnapshot,
     PragmaGraphError,
@@ -49,6 +54,7 @@ from pragmagraph.service.constants import (
     METHOD_EXPORT,
     METHOD_GRAPHIFY_EXPORT,
     METHOD_HEALTH,
+    METHOD_INVESTIGATE,
     METHOD_NEIGHBORHOOD,
     METHOD_PATH,
     METHOD_QUERY,
@@ -440,6 +446,8 @@ class LocalQueryService:
             return self.status().to_dict()
         if method in {METHOD_QUERY, METHOD_EXPLAIN}:
             return self._query_result(request.params).to_dict()
+        if method == METHOD_INVESTIGATE:
+            return self._investigation_result(request.params)
         if method == METHOD_NEIGHBORHOOD:
             node_id = self._required_str(request.params, "node_id")
             self._require_snapshot_node(node_id, detail_key="node_id")
@@ -543,6 +551,23 @@ class LocalQueryService:
         if self._store is not None:
             return self._store.query(request)
         return query(self._snapshot, request)
+
+    def _investigation_result(self, params: Mapping[str, Any]) -> dict[str, Any]:
+        preset = self._str_param(params, "preset", default="search")
+        if preset not in INVESTIGATION_PRESETS:
+            raise self._error(
+                ERROR_INVALID_PARAMS,
+                "preset must be a supported investigation preset",
+                {"preset": preset, "supported": list(INVESTIGATION_PRESETS)},
+            )
+        return build_investigation_bundle(
+            self._snapshot,
+            self._str_param(params, "text", default=""),
+            snapshot_path=self._startup.snapshot_path
+            or self._startup.snapshot_out_path,
+            preset=cast(InvestigationPreset, preset),
+            max_results=self._int_param(params, "max_results", default=5, minimum=1),
+        ).to_dict()
 
     def _store_health(self) -> Any:
         return (

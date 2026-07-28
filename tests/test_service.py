@@ -15,6 +15,7 @@ from pragmagraph.service import (
     ERROR_REFRESH_UNSUPPORTED,
     ERROR_UNSUPPORTED_METHOD,
     METHOD_CAPABILITIES,
+    METHOD_INVESTIGATE,
     METHOD_QUERY,
     METHOD_REFRESH,
     METHOD_SHUTDOWN,
@@ -323,3 +324,35 @@ def test_service_health_and_export_surface_richer_metadata(tmp_path: Path) -> No
     assert export_response.to_dict()["result"]["export_schema_version"].startswith(
         "pragmagraph.export."
     )
+
+
+def test_service_investigate_returns_guided_observed_fact_bundle(
+    tmp_path: Path,
+) -> None:
+    root = _repo_root(tmp_path)
+    snapshot_path = tmp_path / "snapshot.json"
+    save_snapshot(index_path(root, namespace="fixture"), snapshot_path)
+    service = LocalQueryService.from_snapshot_path(snapshot_path)
+
+    response = service.handle_request(
+        ServiceRequest(
+            id="i1",
+            method=METHOD_INVESTIGATE,
+            params={
+                "text": "RuntimeGraph",
+                "preset": "symbol_map",
+                "max_results": 3,
+            },
+        )
+    )[0]
+
+    assert response.ok is True
+    payload = response.to_dict()["result"]
+    assert payload["schema_version"] == "pragmagraph.investigation.v1alpha1"
+    assert payload["boundary"] == "observed_facts_only"
+    assert payload["matches"][0]["why"]
+    assert payload["next_commands"]["explain"][:3] == [
+        "pragmagraph",
+        "explain",
+        str(snapshot_path),
+    ]

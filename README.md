@@ -23,10 +23,10 @@
   <img alt="Status" src="https://img.shields.io/badge/status-alpha-6B7280">
 </p>
 
-PragmaGraph `v0.0.7` is a standalone semantic-alpha package for facts that can
-be reproduced from source. It indexes local code, documents, artifacts, and
-Git history into deterministic graph snapshots without asking an LLM to decide
-what is true.
+PragmaGraph `v0.0.7` is a standalone public alpha package for facts that can be
+reproduced from source. It indexes local code, documents, artifacts, and Git
+history into deterministic graph snapshots without asking an LLM to decide what
+is true.
 
 ## Read This First
 
@@ -54,7 +54,7 @@ and should be treated as a scam.
 | | |
 | --- | --- |
 | Package | `pragmagraph` |
-| Current line | `v0.0.7` semantic alpha |
+| Current line | `v0.0.7` public alpha |
 | Python | 3.11+ |
 | Best fit | Reproducible source, document, artifact, and Git facts |
 | Primary artifact | Deterministic JSON graph snapshot |
@@ -116,6 +116,7 @@ Query the snapshot:
 
 ```bash
 pragmagraph query .pragmagraph/snapshot.json "RuntimeGraph" --json
+pragmagraph investigate .pragmagraph/snapshot.json "RuntimeGraph" --json
 ```
 
 Refresh it explicitly:
@@ -149,8 +150,26 @@ Inspect, export, and benchmark a snapshot:
 pragmagraph report .pragmagraph/snapshot.json --json
 pragmagraph export .pragmagraph/snapshot.json --format mermaid
 pragmagraph graphify-export .pragmagraph/snapshot.json > graphify.json
+pragmagraph graph-pack-verify .pragmagraph/graph-pack --json
+pragmagraph graph-pack-review .pragmagraph/graph-pack \
+  --snapshot-out .pragmagraph/imported-snapshot.json \
+  --store-out .pragmagraph/imported.sqlite \
+  --json
 pragmagraph benchmark .
 ```
+
+`graph-pack-verify` is the receiver-side trust check for a portable pack: it
+validates manifest counts, file checksums, optional store parity, and optional
+evidence JSON before import.
+`graph-pack-review` adds a receive-side summary and copyable import command
+without mutating files.
+
+Use `investigate` when you want a compact navigation bundle for one static
+question. It returns matched nodes, structural match reasons, direct
+neighborhood facts, path facts when two matches exist, freshness facts, and
+copyable next commands. Presets include `file_map`, `symbol_map`, `doc_links`,
+`changed_recently`, `orphans`, and `high_degree`; all remain lexical or
+structural, with no LLM ranking or intent inference.
 
 Follow observed Git provenance:
 
@@ -176,6 +195,7 @@ pragmagraph workspace-init . \
 pragmagraph workspace-query .pragmagraph/workspace RuntimeGraph --json
 pragmagraph store-search-explain \
   .pragmagraph/graph.sqlite RuntimeGraph --json
+pragmagraph store-backends --probe-optional --json
 pragmagraph certify .pragmagraph/snapshot.json --json
 pragmagraph serve --snapshot .pragmagraph/snapshot.json
 ```

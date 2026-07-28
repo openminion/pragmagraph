@@ -344,6 +344,7 @@ class QueryExplanation:
             "exact_match": self.exact_match,
             "score_parts": dict(self.score_parts),
             "omitted_reasons": list(self.omitted_reasons),
+            "match_summary": _query_match_summary(self),
         }
 
 
@@ -706,6 +707,17 @@ def _require_text(value: str, *, field_name: str, code: str) -> str:
             details={"field": field_name},
         )
     return text
+
+
+def _query_match_summary(explanation: QueryExplanation) -> list[str]:
+    summary: list[str] = []
+    if explanation.exact_match:
+        summary.append(f"exact:{explanation.exact_match}")
+    summary.extend(f"field:{field}" for field in explanation.matched_fields)
+    summary.extend(f"token:{token}" for token in explanation.matched_tokens)
+    summary.extend(f"score:{key}" for key in sorted(explanation.score_parts))
+    summary.extend(f"omitted:{reason}" for reason in explanation.omitted_reasons)
+    return list(dict.fromkeys(summary))
 
 
 @dataclass(frozen=True)
