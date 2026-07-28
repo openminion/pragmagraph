@@ -65,6 +65,7 @@ Failure:
 - `status`
 - `query`
 - `explain`
+- `investigate`
 - `neighborhood`
 - `path`
 - `report`
@@ -78,6 +79,10 @@ Root-backed and workspace-backed `refresh` responses include deterministic
 summaries. `neighborhood` and `path` accept optional `edge_kinds` and
 `node_kinds` arrays; omitted filters preserve the original behavior.
 `query` and `explain` accept optional `cursor` and `max_examined` values.
+`investigate` accepts `text`, `preset`, and `max_results`, then returns a
+guided observed-fact bundle with matches, structural match reasons, related
+nodes, first-hop neighborhood facts, path facts when two matches are present,
+freshness facts, and copyable next commands.
 `export` accepts `profile` with `full`, `no_content`, `no_identities`, or
 `portable`.
 
@@ -123,6 +128,15 @@ The payload names supported clients, includes the exact
 `pragmagraph-server serve-stdio` command, and carries setup next steps. Replace
 placeholder paths before sharing it with a client config file. The command does
 not start a server or probe a client install.
+
+Validate the generated snippets without starting a client:
+
+```bash
+pragmagraph mcp-config-smoke --snapshot .pragmagraph/snapshot.json --json
+```
+
+The smoke payload checks the generated stdio command shape and client config
+objects only. It does not launch Claude, Cursor, or any other MCP client.
 
 ## Boundary
 

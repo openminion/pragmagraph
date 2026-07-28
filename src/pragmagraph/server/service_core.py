@@ -44,6 +44,7 @@ REQUEST_PAYLOAD_KEYS: Mapping[str, tuple[str, ...]] = {
     "pragmagraph_report": ("top_n", "format"),
     "pragmagraph_export": ("format", "profile"),
     "pragmagraph_graphify_export": (),
+    "pragmagraph_investigate": ("text", "preset", "max_results"),
     "pragmagraph_refresh": (),
 }
 
@@ -64,6 +65,7 @@ RESPONSE_PAYLOAD_KEYS: Mapping[str, tuple[str, ...]] = {
     "pragmagraph_report": ("report",),
     "pragmagraph_export": ("export",),
     "pragmagraph_graphify_export": ("graphify_export",),
+    "pragmagraph_investigate": ("investigation",),
     "pragmagraph_refresh": ("refresh",),
 }
 

@@ -17,6 +17,7 @@ from pragmagraph.service import (
     METHOD_EXPORT,
     METHOD_GRAPHIFY_EXPORT,
     METHOD_HEALTH,
+    METHOD_INVESTIGATE,
     METHOD_NEIGHBORHOOD,
     METHOD_PATH,
     METHOD_QUERY,
@@ -75,6 +76,7 @@ _SERVICE_TOOL_BINDINGS = {
     "pragmagraph_report": (METHOD_REPORT, "report"),
     "pragmagraph_export": (METHOD_EXPORT, "export"),
     "pragmagraph_graphify_export": (METHOD_GRAPHIFY_EXPORT, "graphify_export"),
+    "pragmagraph_investigate": (METHOD_INVESTIGATE, "investigation"),
     "pragmagraph_refresh": (METHOD_REFRESH, "refresh"),
 }
 

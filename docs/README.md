@@ -39,6 +39,9 @@ This directory holds the public package documentation for standalone
   the package-owned explicit refresh/profile/status surface.
 - [`navigation-mode.md`](navigation-mode.md) records the
   compact repo-map and handoff surfaces for fast local graph orientation.
+- The public `investigate` command and `pragmagraph.investigate` import root
+  compose query, neighborhood, path, freshness, and next-command facts for
+  guided local graph inspection without semantic ranking.
 - [`ui-contracts.md`](ui-contracts.md) records the
   package-owned `pragmagraph.ui` boundary for the future OpenMinion workbench
   surface.

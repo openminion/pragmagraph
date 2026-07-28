@@ -41,6 +41,7 @@ def test_pragmagraph_package_imports() -> None:
     assert "pragmagraph.certification" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.docgraph" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.interchange" in pragmagraph.STABLE_IMPORT_ROOTS
+    assert "pragmagraph.investigate" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.lineage" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.models" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.navigation" in pragmagraph.STABLE_IMPORT_ROOTS
@@ -102,7 +103,10 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "GitLineageEntry",
         "HealthSummary",
         "INDEXER_VERSION",
+        "INVESTIGATION_PRESETS",
+        "INVESTIGATION_SCHEMA_VERSION",
         "INTERCHANGE_FORMAT",
+        "InvestigationBundle",
         "InterchangeBundle",
         "OmittedDiagnostic",
         "PathResult",
@@ -144,6 +148,7 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "build_certification_pack",
         "build_doc_graph_summary",
         "build_git_lineage",
+        "build_investigation_bundle",
         "build_parser_support_matrix",
         "build_privacy_profile",
         "build_repo_map",
@@ -177,6 +182,7 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
         "render_compact_handoff",
         "render_markdown_benchmark",
         "render_markdown_doc_graph",
+        "render_markdown_investigation",
         "render_markdown_repo_map",
         "render_markdown_topology",
         "render_mermaid",

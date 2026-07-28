@@ -25,7 +25,7 @@ def _seed_repo(root: Path) -> None:
     )
 
 
-def test_wired_registry_registers_exactly_the_supported_ten(tmp_path: Path):
+def test_wired_registry_registers_exactly_the_supported_tools(tmp_path: Path):
     root = tmp_path / "repo"
     _seed_repo(root)
     registry = build_wired_registry(ServiceConfig(root_path=str(root)))
@@ -51,6 +51,21 @@ def test_wired_query_and_report_delegate_to_package_service(tmp_path: Path):
 
     assert query["query_result"]["hits"][0]["node"]["label"] == "RuntimeGraph"
     assert report["report"]["format"] == "json"
+
+
+def test_wired_investigate_delegates_to_package_service(tmp_path: Path):
+    root = tmp_path / "repo"
+    _seed_repo(root)
+    registry = build_wired_registry(ServiceConfig(root_path=str(root)))
+
+    payload = registry.get_handler("pragmagraph_investigate")(
+        text="RuntimeGraph",
+        preset="symbol_map",
+        max_results=3,
+    )
+
+    assert payload["investigation"]["boundary"] == "observed_facts_only"
+    assert payload["investigation"]["matches"][0]["why"]
 
 
 def test_snapshot_config_rejects_refresh_with_typed_unsupported_capability(

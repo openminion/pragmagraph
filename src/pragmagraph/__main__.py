@@ -27,6 +27,11 @@ from pragmagraph.graphify import (
     to_graphify_payload,
 )
 from pragmagraph.incremental import load_extraction_cache, save_extraction_cache
+from pragmagraph.investigate import (
+    INVESTIGATION_PRESETS,
+    build_investigation_bundle,
+    render_markdown_investigation,
+)
 from pragmagraph.interchange import (
     build_symbol_reference_bundle,
     load_native_scip,
@@ -206,6 +211,45 @@ def _query_args(
     return args.snapshot, args.query
 
 
+def _snapshot_freshness_payload(
+    snapshot,
+    *,
+    snapshot_path: str,
+    before_path: str | None,
+) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "schema_version": "pragmagraph.freshness.v1alpha1",
+        "boundary": "observed_facts_only",
+        "snapshot_path": snapshot_path,
+        "created_at": snapshot.created_at,
+        "indexer_version": snapshot.indexer_version,
+        "health": health(snapshot).to_dict(),
+        "git_overlay": {
+            "enabled": bool(snapshot.stats.get("git_overlay_enabled", False)),
+            "commit_count": int(snapshot.stats.get("git_commit_count", 0) or 0),
+            "changed_path_count": int(
+                snapshot.stats.get("git_changed_path_count", 0) or 0
+            ),
+            "identity_mode": str(snapshot.stats.get("git_identity_mode", "") or ""),
+        },
+        "next_commands": {
+            "refresh_plan": [
+                "pragmagraph",
+                "refresh-plan",
+                snapshot.root_path or "<repo-root>",
+                "--json",
+            ],
+            "health": ["pragmagraph", "health", snapshot_path, "--json"],
+        },
+    }
+    if before_path:
+        payload["delta"] = build_ci_delta(
+            load_snapshot(before_path),
+            snapshot,
+        ).to_dict()
+    return payload
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="pragmagraph package smoke")
     _add_json_flag(parser)
@@ -245,6 +289,20 @@ def main(argv: list[str] | None = None) -> int:
     explain_parser.add_argument("--cursor", default="")
     explain_parser.add_argument("--max-examined", type=int)
     _add_json_flag(explain_parser)
+
+    investigate_parser = subparsers.add_parser(
+        "investigate",
+        help="build a guided observed-fact investigation bundle",
+    )
+    investigate_parser.add_argument("snapshot")
+    investigate_parser.add_argument("query")
+    investigate_parser.add_argument(
+        "--preset",
+        choices=INVESTIGATION_PRESETS,
+        default="search",
+    )
+    investigate_parser.add_argument("--max-results", type=int, default=5)
+    _add_json_flag(investigate_parser)
 
     git_path_parser = subparsers.add_parser(
         "git-commits-for-path",
@@ -456,6 +514,14 @@ def main(argv: list[str] | None = None) -> int:
     health_parser.add_argument("snapshot")
     _add_json_flag(health_parser)
 
+    freshness_parser = subparsers.add_parser(
+        "freshness",
+        help="show snapshot freshness and optional structural delta facts",
+    )
+    freshness_parser.add_argument("snapshot")
+    freshness_parser.add_argument("--before")
+    _add_json_flag(freshness_parser)
+
     serve_parser = subparsers.add_parser(
         "serve", help="run the local newline-delimited JSON service"
     )
@@ -545,6 +611,19 @@ def main(argv: list[str] | None = None) -> int:
             ),
         )
         _print_payload(result.to_dict(), as_json=True)
+    elif args.command == "investigate":
+        snapshot = load_snapshot(args.snapshot)
+        bundle = build_investigation_bundle(
+            snapshot,
+            args.query,
+            snapshot_path=args.snapshot,
+            preset=args.preset,
+            max_results=args.max_results,
+        )
+        if args.json:
+            _print_payload(bundle.to_dict(), as_json=True)
+        else:
+            print(render_markdown_investigation(bundle), end="")
     elif args.command == "git-commits-for-path":
         snapshot = load_snapshot(args.snapshot)
         _print_payload(
@@ -806,6 +885,16 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "health":
         snapshot = load_snapshot(args.snapshot)
         _print_payload(health(snapshot), as_json=True)
+    elif args.command == "freshness":
+        snapshot = load_snapshot(args.snapshot)
+        _print_payload(
+            _snapshot_freshness_payload(
+                snapshot,
+                snapshot_path=args.snapshot,
+                before_path=args.before,
+            ),
+            as_json=True,
+        )
     elif args.command == "serve":
         service = _service_from_args(args)
         return run_stdio_service(service)
@@ -841,7 +930,7 @@ def main(argv: list[str] | None = None) -> int:
         _print_payload(output, as_json=args.json)
     elif args.command in GRAPH_PACK_COMMANDS:
         _print_payload(run_graph_pack_command(args), as_json=args.json)
-    elif args.command == "mcp-config":
+    elif args.command in _server_client_cli().MCP_CLIENT_COMMANDS:
         _print_payload(_run_mcp_client_command(args), as_json=args.json)
     elif args.command in VIEWER_COMMANDS:
         _print_payload(run_viewer_command(args), as_json=True)

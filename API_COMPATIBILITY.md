@@ -32,6 +32,7 @@ External consumers should treat these import roots as the supported public API:
 - `pragmagraph.interchange`
 - `pragmagraph.topology`
 - `pragmagraph.docgraph`
+- `pragmagraph.investigate`
 - `pragmagraph.planner`
 - `pragmagraph.certification`
 - `pragmagraph.lineage`
@@ -74,6 +75,8 @@ The following top-level exports are part of the current public contract:
   `require_cross_repository_symbol` under `pragmagraph.interchange`
 - topology and document-graph helpers `build_topology_summary` and
   `build_doc_graph_summary`
+- guided investigation helpers `build_investigation_bundle` and
+  `render_markdown_investigation`
 - query-plan evidence helper `explain_query_plan`
 - certification/privacy helpers `build_certification_pack`,
   `build_privacy_profile`, and `render_markdown_certification_pack`
@@ -167,9 +170,9 @@ Public-contract confidence should be enforced by tests that cover:
 15. deterministic compact repo-map and handoff rendering,
 16. deterministic symbol/reference interchange, bounded native SCIP intake,
     topology, document-graph,
-    query-plan, git-lineage, parser-support, store-search explainability,
-    explicit service status/readiness, evidence workbench payloads, store
-    round-trip proof, and certification behavior.
+    guided investigation, query-plan, git-lineage, parser-support,
+    store-search explainability, explicit service status/readiness, evidence
+    workbench payloads, store round-trip proof, and certification behavior.
 
 ## Non-goals
 

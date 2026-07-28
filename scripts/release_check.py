@@ -103,6 +103,7 @@ def _assert_smoke_payload(stdout: str) -> None:
         "pragmagraph.workspace",
         "pragmagraph.navigation",
         "pragmagraph.interchange",
+        "pragmagraph.investigate",
         "pragmagraph.topology",
         "pragmagraph.docgraph",
         "pragmagraph.planner",

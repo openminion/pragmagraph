@@ -104,6 +104,28 @@ class GraphPackVerification:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class GraphPackReview:
+    """Receiver-side review facts for a graph pack before import."""
+
+    schema_version: str
+    pack_path: str
+    verification: GraphPackVerification
+    receive_summary: Mapping[str, Any]
+    next_commands: Mapping[str, tuple[str, ...]]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "pack_path": self.pack_path,
+            "verification": self.verification.to_dict(),
+            "receive_summary": dict(self.receive_summary),
+            "next_commands": {
+                key: list(command) for key, command in self.next_commands.items()
+            },
+        }
+
+
 def write_graph_pack(
     snapshot: GraphSnapshot,
     pack_dir: str | Path,
@@ -276,6 +298,47 @@ def verify_graph_pack(pack_dir: str | Path) -> GraphPackVerification:
     )
 
 
+def review_graph_pack(
+    pack_dir: str | Path,
+    *,
+    snapshot_out: str | Path | None = None,
+    store_out: str | Path | None = None,
+) -> GraphPackReview:
+    """Review graph-pack receive posture without importing or mutating files."""
+    root = Path(pack_dir)
+    verification = verify_graph_pack(root)
+    manifest = verification.manifest
+    summary = {
+        "namespace": manifest.namespace,
+        "node_count": manifest.node_count,
+        "edge_count": manifest.edge_count,
+        "omitted_count": manifest.omitted_count,
+        "includes_store": manifest.includes_store,
+        "includes_evidence": manifest.includes_evidence,
+        "redaction_profile": manifest.redaction_profile,
+        "ready_to_import": verification.ok,
+    }
+    commands: dict[str, tuple[str, ...]] = {
+        "verify": ("pragmagraph", "graph-pack-verify", str(root), "--json"),
+        "inspect": ("pragmagraph", "graph-pack-inspect", str(root), "--json"),
+    }
+    if snapshot_out or store_out:
+        command = ["pragmagraph", "graph-pack-import", str(root)]
+        if snapshot_out:
+            command.extend(["--snapshot-out", str(snapshot_out)])
+        if store_out:
+            command.extend(["--store-out", str(store_out)])
+        command.append("--json")
+        commands["import"] = tuple(command)
+    return GraphPackReview(
+        schema_version="pragmagraph.graph_pack_review.v1alpha1",
+        pack_path=str(root),
+        verification=verification,
+        receive_summary=summary,
+        next_commands=commands,
+    )
+
+
 def _snapshot_counts_match(
     snapshot: GraphSnapshot,
     manifest: GraphPackManifest,
@@ -389,10 +452,12 @@ __all__ = [
     "GRAPH_PACK_SNAPSHOT",
     "GRAPH_PACK_STORE",
     "GraphPackManifest",
+    "GraphPackReview",
     "GraphPackVerification",
     "import_graph_pack",
     "inspect_graph_pack",
     "load_graph_pack_snapshot",
+    "review_graph_pack",
     "verify_graph_pack",
     "write_graph_pack",
 ]

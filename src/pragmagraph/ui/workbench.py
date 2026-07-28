@@ -138,6 +138,14 @@ def _workbench_next_commands(request: UiPreviewRequest) -> dict[str, list[str]]:
     commands: dict[str, list[str]] = {
         "query": ["pragmagraph", "query", snapshot_path, request.query, "--json"],
         "report": ["pragmagraph", "report", snapshot_path, "--json"],
+        "investigate": [
+            "pragmagraph",
+            "investigate",
+            snapshot_path,
+            request.query,
+            "--json",
+        ],
+        "freshness": ["pragmagraph", "freshness", snapshot_path, "--json"],
         "backend_probe": [
             "pragmagraph",
             "store-backends",
@@ -147,6 +155,13 @@ def _workbench_next_commands(request: UiPreviewRequest) -> dict[str, list[str]]:
         "mcp_config": [
             "pragmagraph",
             "mcp-config",
+            "--snapshot",
+            snapshot_path,
+            "--json",
+        ],
+        "mcp_config_smoke": [
+            "pragmagraph",
+            "mcp-config-smoke",
             "--snapshot",
             snapshot_path,
             "--json",
@@ -176,6 +191,16 @@ def _workbench_next_commands(request: UiPreviewRequest) -> dict[str, list[str]]:
             pack_path,
             "--json",
         ]
+        commands["graph_pack_review"] = [
+            "pragmagraph",
+            "graph-pack-review",
+            pack_path,
+            "--snapshot-out",
+            _default_imported_snapshot_path(request),
+            "--store-out",
+            _default_imported_store_path(request),
+            "--json",
+        ]
     return commands
 
 
@@ -185,6 +210,22 @@ def _default_graph_pack_path(request: UiPreviewRequest) -> str:
     if request.store_path:
         return str(Path(request.store_path).with_suffix("")) + "-pack"
     return ".pragmagraph/graph-pack"
+
+
+def _default_imported_snapshot_path(request: UiPreviewRequest) -> str:
+    if request.workspace:
+        return str(Path(request.workspace) / "imported-snapshot.json")
+    if request.store_path:
+        return str(Path(request.store_path).with_name("imported-snapshot.json"))
+    return ".pragmagraph/imported-snapshot.json"
+
+
+def _default_imported_store_path(request: UiPreviewRequest) -> str:
+    if request.workspace:
+        return str(Path(request.workspace) / "imported.sqlite")
+    if request.store_path:
+        return str(Path(request.store_path).with_name("imported.sqlite"))
+    return ".pragmagraph/imported.sqlite"
 
 
 __all__ = ["WORKBENCH_COMMANDS", "register_workbench_commands", "run_workbench_command"]

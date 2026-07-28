@@ -24,8 +24,29 @@ The command initializes an explicit local workspace when needed, writes a
 canonical snapshot, materializes a local SQLite store, and renders the
 GraphFakos-backed local visual shell. It does not start a background watcher,
 schedule refresh, or call a hosted service. JSON output includes
-`next_commands` with copyable query, report, backend-probe, graph-pack,
-MCP-config, and store-health commands for the files that were just created.
+`next_commands` with copyable query, investigation, freshness, report,
+backend-probe, graph-pack, MCP-config, MCP-smoke, and store-health commands for
+the files that were just created.
+
+## Guided investigation
+
+Use `investigate` when you want the smallest useful answer to "what should I
+inspect next?" for one static graph question:
+
+```bash
+pragmagraph investigate \
+  .pragmagraph/snapshot.json \
+  RuntimeGraph \
+  --preset symbol_map \
+  --json
+```
+
+The payload contains matched nodes, structural match reasons, direct
+neighborhood facts for the first match, a path when two matches are present,
+freshness facts, and copyable next commands. Presets are `search`, `file_map`,
+`symbol_map`, `doc_links`, `changed_recently`, `orphans`, and `high_degree`.
+They filter observed facts only; they do not infer intent, risk, priority, or
+architectural meaning.
 
 For static HTML output instead of serving:
 
@@ -103,6 +124,19 @@ artifact remains `snapshot.json`; materialized stores remain rebuildable.
 optional store export parity, and optional evidence JSON before a receiver
 imports the pack.
 
+Review the receive posture before importing:
+
+```bash
+pragmagraph graph-pack-review \
+  .pragmagraph/graph-pack \
+  --snapshot-out .pragmagraph/imported-snapshot.json \
+  --store-out .pragmagraph/imported.sqlite \
+  --json
+```
+
+`graph-pack-review` is read-only. It reports whether the pack is ready to
+import and emits copyable import commands only for caller-selected output paths.
+
 ## Storage and search backends
 
 List current and reserved backend capabilities:
@@ -135,6 +169,10 @@ Generate portable stdio snippets for MCP-capable clients:
 pragmagraph mcp-config \
   --snapshot .pragmagraph/snapshot.json \
   --json
+
+pragmagraph mcp-config-smoke \
+  --snapshot .pragmagraph/snapshot.json \
+  --json
 ```
 
 The generated snippets point clients at `pragmagraph-server serve-stdio`. The
@@ -143,3 +181,5 @@ resources over one loaded snapshot or explicit root. It does not expose
 summarization, intent inference, or memory-writing tools. The JSON payload also
 lists supported clients and setup next steps so a receiver can paste the right
 stdio config without reading server internals.
+`mcp-config-smoke` validates the generated stdio command and client snippets
+without starting a client or probing a user machine.

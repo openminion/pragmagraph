@@ -79,6 +79,19 @@ def test_workbench_writes_static_html_artifact_and_store_from_root(
         "--probe-optional",
         "--json",
     ]
+    assert payload["next_commands"]["investigate"] == [
+        "pragmagraph",
+        "investigate",
+        str(workspace / "snapshot.json"),
+        "RuntimeGraph",
+        "--json",
+    ]
+    assert payload["next_commands"]["freshness"] == [
+        "pragmagraph",
+        "freshness",
+        str(workspace / "snapshot.json"),
+        "--json",
+    ]
     assert payload["next_commands"]["graph_pack_export"] == [
         "pragmagraph",
         "graph-pack-export",
@@ -93,6 +106,23 @@ def test_workbench_writes_static_html_artifact_and_store_from_root(
         "pragmagraph",
         "graph-pack-verify",
         str(workspace / "graph-pack"),
+        "--json",
+    ]
+    assert payload["next_commands"]["graph_pack_review"] == [
+        "pragmagraph",
+        "graph-pack-review",
+        str(workspace / "graph-pack"),
+        "--snapshot-out",
+        str(workspace / "imported-snapshot.json"),
+        "--store-out",
+        str(workspace / "imported.sqlite"),
+        "--json",
+    ]
+    assert payload["next_commands"]["mcp_config_smoke"] == [
+        "pragmagraph",
+        "mcp-config-smoke",
+        "--snapshot",
+        str(workspace / "snapshot.json"),
         "--json",
     ]
     assert artifact["provider_payload"]["evidence_workbench"]["boundary"] == (
@@ -168,6 +198,14 @@ def test_graph_pack_exports_imports_snapshot_and_materialized_store(
         imported_store,
     )
     verify_payload = _run_cli_json("graph-pack-verify", pack_dir)
+    review_payload = _run_cli_json(
+        "graph-pack-review",
+        pack_dir,
+        "--snapshot-out",
+        imported_snapshot,
+        "--store-out",
+        imported_store,
+    )
 
     manifest = inspect_graph_pack(pack_dir)
     assert export_payload["manifest"]["includes_store"] is True
@@ -177,6 +215,17 @@ def test_graph_pack_exports_imports_snapshot_and_materialized_store(
     assert verify_payload["ok"] is True
     assert verify_payload["checksums_match"] is True
     assert verify_payload["store_ok"] is True
+    assert review_payload["receive_summary"]["ready_to_import"] is True
+    assert review_payload["next_commands"]["import"] == [
+        "pragmagraph",
+        "graph-pack-import",
+        str(pack_dir),
+        "--snapshot-out",
+        str(imported_snapshot),
+        "--store-out",
+        str(imported_store),
+        "--json",
+    ]
     assert manifest.namespace == "pack"
     assert load_snapshot(imported_snapshot).namespace == "pack"
     assert SQLiteGraphStore(imported_store).manifest().namespace == "pack"
@@ -220,6 +269,7 @@ def test_storage_backend_catalog_and_mcp_config_are_public_cli_surfaces(
         "store-backends", "--backend", "json", "--path", snapshot_path
     )
     mcp = _run_cli_json("mcp-config", "--snapshot", snapshot_path)
+    mcp_smoke = _run_cli_json("mcp-config-smoke", "--snapshot", snapshot_path)
 
     entries = {entry["backend"]: entry for entry in backends["entries"]}
     assert entries["json"]["canonical"] is True
@@ -233,6 +283,40 @@ def test_storage_backend_catalog_and_mcp_config_are_public_cli_surfaces(
     assert mcp["transport"] == "stdio"
     assert mcp["supported_clients"] == ["claude_desktop", "cursor"]
     assert "paste the matching stdio config" in " ".join(mcp["next_steps"])
+    assert mcp_smoke["ok"] is True
+    assert mcp_smoke["source"] == "snapshot"
     assert mcp["clients"][0]["config"]["mcpServers"]["pragmagraph"]["command"] == (
         "pragmagraph-server"
     )
+
+
+def test_investigation_and_freshness_cli_are_observed_fact_guides(
+    tmp_path: Path,
+) -> None:
+    before = index_path(_repo(tmp_path), namespace="guide")
+    after = index_path(
+        _repo(tmp_path, extra="\nclass OperatorGraph:\n    pass\n"),
+        namespace="guide",
+    )
+    before_path = tmp_path / "before.json"
+    after_path = tmp_path / "after.json"
+    save_snapshot(before, before_path)
+    save_snapshot(after, after_path)
+
+    investigation = _run_cli_json(
+        "investigate",
+        after_path,
+        "RuntimeGraph",
+        "--preset",
+        "symbol_map",
+    )
+    freshness = _run_cli_json("freshness", after_path, "--before", before_path)
+    explain = _run_cli_json("explain", after_path, "RuntimeGraph")
+
+    assert investigation["schema_version"] == "pragmagraph.investigation.v1alpha1"
+    assert investigation["boundary"] == "observed_facts_only"
+    assert investigation["matches"][0]["why"]
+    assert "workbench" in investigation["next_commands"]
+    assert freshness["schema_version"] == "pragmagraph.freshness.v1alpha1"
+    assert freshness["delta"]["has_changes"] is True
+    assert explain["hits"][0]["explanation"]["match_summary"]

@@ -116,6 +116,7 @@ Query the snapshot:
 
 ```bash
 pragmagraph query .pragmagraph/snapshot.json "RuntimeGraph" --json
+pragmagraph investigate .pragmagraph/snapshot.json "RuntimeGraph" --json
 ```
 
 Refresh it explicitly:
@@ -150,12 +151,25 @@ pragmagraph report .pragmagraph/snapshot.json --json
 pragmagraph export .pragmagraph/snapshot.json --format mermaid
 pragmagraph graphify-export .pragmagraph/snapshot.json > graphify.json
 pragmagraph graph-pack-verify .pragmagraph/graph-pack --json
+pragmagraph graph-pack-review .pragmagraph/graph-pack \
+  --snapshot-out .pragmagraph/imported-snapshot.json \
+  --store-out .pragmagraph/imported.sqlite \
+  --json
 pragmagraph benchmark .
 ```
 
 `graph-pack-verify` is the receiver-side trust check for a portable pack: it
 validates manifest counts, file checksums, optional store parity, and optional
 evidence JSON before import.
+`graph-pack-review` adds a receive-side summary and copyable import command
+without mutating files.
+
+Use `investigate` when you want a compact navigation bundle for one static
+question. It returns matched nodes, structural match reasons, direct
+neighborhood facts, path facts when two matches exist, freshness facts, and
+copyable next commands. Presets include `file_map`, `symbol_map`, `doc_links`,
+`changed_recently`, `orphans`, and `high_degree`; all remain lexical or
+structural, with no LLM ranking or intent inference.
 
 Follow observed Git provenance:
 

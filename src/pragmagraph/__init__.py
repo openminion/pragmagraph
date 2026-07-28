@@ -38,6 +38,13 @@ from pragmagraph.graphify import (
     snapshot_from_graphify_payload,
     to_graphify_payload,
 )
+from pragmagraph.investigate import (
+    INVESTIGATION_PRESETS,
+    INVESTIGATION_SCHEMA_VERSION,
+    InvestigationBundle,
+    build_investigation_bundle,
+    render_markdown_investigation,
+)
 from pragmagraph.interchange import (
     INTERCHANGE_FORMAT,
     InterchangeBundle,
@@ -187,6 +194,7 @@ STABLE_IMPORT_ROOTS = (
     "pragmagraph.workspace",
     "pragmagraph.navigation",
     "pragmagraph.interchange",
+    "pragmagraph.investigate",
     "pragmagraph.topology",
     "pragmagraph.docgraph",
     "pragmagraph.planner",
@@ -219,7 +227,10 @@ __all__ = [
     "GitLineageEntry",
     "HealthSummary",
     "INDEXER_VERSION",
+    "INVESTIGATION_PRESETS",
+    "INVESTIGATION_SCHEMA_VERSION",
     "INTERCHANGE_FORMAT",
+    "InvestigationBundle",
     "InterchangeBundle",
     "MemoryEvidenceBundle",
     "MemoryEvidenceRef",
@@ -268,6 +279,7 @@ __all__ = [
     "build_certification_pack",
     "build_doc_graph_summary",
     "build_git_lineage",
+    "build_investigation_bundle",
     "build_parser_support_matrix",
     "build_privacy_profile",
     "build_report",
@@ -295,6 +307,7 @@ __all__ = [
     "render_compact_handoff",
     "render_markdown_benchmark",
     "render_markdown_doc_graph",
+    "render_markdown_investigation",
     "render_markdown_certification_pack",
     "render_markdown_repo_map",
     "render_markdown_topology",
