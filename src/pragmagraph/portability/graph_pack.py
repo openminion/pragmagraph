@@ -9,7 +9,12 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from pragmagraph.models import GraphSnapshot, PragmaGraphError
-from pragmagraph.storage import SQLiteGraphStore, load_snapshot, save_snapshot
+from pragmagraph.storage import (
+    SQLiteGraphStore,
+    load_snapshot,
+    save_snapshot,
+    stable_dumps,
+)
 from pragmagraph.storage.snapshots import snapshot_to_dict
 
 GRAPH_PACK_SCHEMA_VERSION = "pragmagraph.graph_pack.v1alpha1"
@@ -64,6 +69,30 @@ class GraphPackManifest:
             evidence_file=str(payload.get("evidence_file", "") or ""),
             redaction_profile=str(payload.get("redaction_profile", "") or "none"),
         )
+
+
+@dataclass(frozen=True, slots=True)
+class GraphPackVerification:
+    """Observed consistency facts for one graph pack."""
+
+    ok: bool
+    manifest: GraphPackManifest
+    snapshot_ok: bool
+    counts_match: bool
+    store_ok: bool
+    evidence_ok: bool
+    diagnostics: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "ok": self.ok,
+            "manifest": self.manifest.to_dict(),
+            "snapshot_ok": self.snapshot_ok,
+            "counts_match": self.counts_match,
+            "store_ok": self.store_ok,
+            "evidence_ok": self.evidence_ok,
+            "diagnostics": list(self.diagnostics),
+        }
 
 
 def write_graph_pack(
@@ -184,6 +213,100 @@ def import_graph_pack(
     return payload
 
 
+def verify_graph_pack(pack_dir: str | Path) -> GraphPackVerification:
+    """Verify graph-pack consistency without mutating its contents."""
+    root = Path(pack_dir)
+    manifest = inspect_graph_pack(root)
+    diagnostics: list[str] = []
+
+    snapshot_ok = False
+    counts_match = False
+    store_ok = not manifest.includes_store
+    evidence_ok = not manifest.includes_evidence
+
+    try:
+        snapshot = load_snapshot(root / manifest.snapshot_file)
+        snapshot_ok = True
+        counts_match = _snapshot_counts_match(snapshot, manifest)
+        if not counts_match:
+            diagnostics.append("manifest_counts_do_not_match_snapshot")
+        if manifest.includes_store:
+            store_ok = _store_matches_snapshot(root, manifest, snapshot, diagnostics)
+    except PragmaGraphError as exc:
+        diagnostics.append(exc.code.lower())
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        diagnostics.append(type(exc).__name__.lower())
+
+    if manifest.includes_evidence:
+        evidence_ok = _evidence_json_is_readable(root, manifest, diagnostics)
+
+    return GraphPackVerification(
+        ok=snapshot_ok and counts_match and store_ok and evidence_ok,
+        manifest=manifest,
+        snapshot_ok=snapshot_ok,
+        counts_match=counts_match,
+        store_ok=store_ok,
+        evidence_ok=evidence_ok,
+        diagnostics=tuple(diagnostics),
+    )
+
+
+def _snapshot_counts_match(
+    snapshot: GraphSnapshot,
+    manifest: GraphPackManifest,
+) -> bool:
+    return (
+        len(snapshot.nodes) == manifest.node_count
+        and len(snapshot.edges) == manifest.edge_count
+        and len(snapshot.omitted) == manifest.omitted_count
+        and snapshot.namespace == manifest.namespace
+    )
+
+
+def _store_matches_snapshot(
+    root: Path,
+    manifest: GraphPackManifest,
+    snapshot: GraphSnapshot,
+    diagnostics: list[str],
+) -> bool:
+    if not manifest.store_file:
+        diagnostics.append("manifest_missing_store_file")
+        return False
+    store_path = root / manifest.store_file
+    if not store_path.exists():
+        diagnostics.append("store_file_not_found")
+        return False
+    try:
+        exported = SQLiteGraphStore(store_path).export_snapshot()
+    except PragmaGraphError as exc:
+        diagnostics.append(exc.code.lower())
+        return False
+    if stable_dumps(exported) != stable_dumps(snapshot):
+        diagnostics.append("store_export_does_not_match_snapshot")
+        return False
+    return True
+
+
+def _evidence_json_is_readable(
+    root: Path,
+    manifest: GraphPackManifest,
+    diagnostics: list[str],
+) -> bool:
+    if not manifest.evidence_file:
+        diagnostics.append("manifest_missing_evidence_file")
+        return False
+    evidence_path = root / manifest.evidence_file
+    if not evidence_path.exists():
+        diagnostics.append("evidence_file_not_found")
+        return False
+    try:
+        json.loads(evidence_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        diagnostics.append(type(exc).__name__.lower())
+        return False
+    return True
+
+
 def _copy_json_stably(source: Path, destination: Path) -> None:
     payload = json.loads(source.read_text(encoding="utf-8"))
     _write_json(destination, payload)
@@ -209,8 +332,10 @@ __all__ = [
     "GRAPH_PACK_SNAPSHOT",
     "GRAPH_PACK_STORE",
     "GraphPackManifest",
+    "GraphPackVerification",
     "import_graph_pack",
     "inspect_graph_pack",
     "load_graph_pack_snapshot",
+    "verify_graph_pack",
     "write_graph_pack",
 ]

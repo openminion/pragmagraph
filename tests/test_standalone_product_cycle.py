@@ -62,6 +62,17 @@ def test_workbench_writes_static_html_artifact_and_store_from_root(
     assert (workspace / "workspace.json").is_file()
     assert (workspace / "graph.sqlite").is_file()
     assert "PragmaGraph" in html_path.read_text(encoding="utf-8")
+    assert payload["next_commands"]["query"][:3] == [
+        "pragmagraph",
+        "query",
+        str(workspace / "snapshot.json"),
+    ]
+    assert payload["next_commands"]["store_health"] == [
+        "pragmagraph",
+        "store-health",
+        str(workspace / "graph.sqlite"),
+        "--json",
+    ]
     assert artifact["provider_payload"]["evidence_workbench"]["boundary"] == (
         "observed_facts_only"
     )
@@ -134,14 +145,39 @@ def test_graph_pack_exports_imports_snapshot_and_materialized_store(
         "--store-out",
         imported_store,
     )
+    verify_payload = _run_cli_json("graph-pack-verify", pack_dir)
 
     manifest = inspect_graph_pack(pack_dir)
     assert export_payload["manifest"]["includes_store"] is True
     assert inspect_payload["schema_version"] == "pragmagraph.graph_pack.v1alpha1"
+    assert verify_payload["ok"] is True
+    assert verify_payload["store_ok"] is True
     assert manifest.namespace == "pack"
     assert load_snapshot(imported_snapshot).namespace == "pack"
     assert SQLiteGraphStore(imported_store).manifest().namespace == "pack"
     assert import_payload["manifest"]["includes_store"] is True
+
+
+def test_graph_pack_verify_reports_tampered_snapshot_counts(tmp_path: Path) -> None:
+    snapshot = index_path(_repo(tmp_path), namespace="pack")
+    snapshot_path = tmp_path / "snapshot.json"
+    pack_dir = tmp_path / "graph-pack"
+    save_snapshot(snapshot, snapshot_path)
+
+    _run_cli_json("graph-pack-export", snapshot_path, pack_dir)
+    snapshot_payload = json.loads((pack_dir / "snapshot.json").read_text())
+    snapshot_payload["nodes"] = []
+    (pack_dir / "snapshot.json").write_text(
+        json.dumps(snapshot_payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    verify_payload = _run_cli_json("graph-pack-verify", pack_dir)
+
+    assert verify_payload["ok"] is False
+    assert verify_payload["snapshot_ok"] is True
+    assert verify_payload["counts_match"] is False
+    assert "manifest_counts_do_not_match_snapshot" in verify_payload["diagnostics"]
 
 
 def test_storage_backend_catalog_and_mcp_config_are_public_cli_surfaces(
@@ -152,6 +188,7 @@ def test_storage_backend_catalog_and_mcp_config_are_public_cli_surfaces(
     save_snapshot(snapshot, snapshot_path)
 
     backends = _run_cli_json("store-backends")
+    probed_backends = _run_cli_json("store-backends", "--probe-optional")
     selected = _run_cli_json(
         "store-backends", "--backend", "json", "--path", snapshot_path
     )
@@ -161,6 +198,10 @@ def test_storage_backend_catalog_and_mcp_config_are_public_cli_surfaces(
     assert entries["json"]["canonical"] is True
     assert entries["sqlite"]["materialized"] is True
     assert entries["vector_sidecar"]["status"] == "boundary_reserve"
+    assert backends["optional_dependencies_probed"] is False
+    assert probed_backends["optional_dependencies_probed"] is True
+    probed_entries = {entry["backend"]: entry for entry in probed_backends["entries"]}
+    assert probed_entries["duckdb"]["optional_dependency_available"] in {True, False}
     assert selected["selected"]["backend"] == "json"
     assert mcp["transport"] == "stdio"
     assert mcp["clients"][0]["config"]["mcpServers"]["pragmagraph"]["command"] == (

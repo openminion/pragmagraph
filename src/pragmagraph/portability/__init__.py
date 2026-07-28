@@ -12,9 +12,11 @@ from pragmagraph.portability.graph_pack import (
     GRAPH_PACK_SNAPSHOT,
     GRAPH_PACK_STORE,
     GraphPackManifest,
+    GraphPackVerification,
     import_graph_pack,
     inspect_graph_pack,
     load_graph_pack_snapshot,
+    verify_graph_pack,
     write_graph_pack,
 )
 
@@ -53,6 +55,7 @@ __all__ = [
     "GRAPH_PACK_SNAPSHOT",
     "GRAPH_PACK_STORE",
     "GraphPackManifest",
+    "GraphPackVerification",
     "edge_id",
     "import_graph_pack",
     "inspect_graph_pack",
@@ -60,5 +63,6 @@ __all__ = [
     "node_id",
     "normalize_relative_path",
     "pragma_uri",
+    "verify_graph_pack",
     "write_graph_pack",
 ]

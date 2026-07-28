@@ -69,7 +69,9 @@ def run_workbench_command(args: argparse.Namespace) -> object:
     request = _workbench_request(args)
     if args.serve:
         return serve_ui_preview(request, host=args.host, port=args.port)
-    return write_ui_preview(request)
+    result = write_ui_preview(request).to_dict()
+    result["next_commands"] = _workbench_next_commands(request)
+    return result
 
 
 def _workbench_request(args: argparse.Namespace) -> UiPreviewRequest:
@@ -124,6 +126,34 @@ def _ensure_workbench_store(workspace: str, store_path: str) -> None:
         return
     metadata = load_workspace_metadata(workspace)
     SQLiteGraphStore.from_snapshot(load_snapshot(metadata.paths.snapshot_path), target)
+
+
+def _workbench_next_commands(request: UiPreviewRequest) -> dict[str, list[str]]:
+    snapshot_path = request.snapshot
+    if request.workspace:
+        metadata = load_workspace_metadata(request.workspace)
+        snapshot_path = metadata.paths.snapshot_path
+    if not snapshot_path:
+        return {}
+    commands: dict[str, list[str]] = {
+        "query": ["pragmagraph", "query", snapshot_path, request.query, "--json"],
+        "report": ["pragmagraph", "report", snapshot_path, "--json"],
+        "mcp_config": [
+            "pragmagraph",
+            "mcp-config",
+            "--snapshot",
+            snapshot_path,
+            "--json",
+        ],
+    }
+    if request.store_path:
+        commands["store_health"] = [
+            "pragmagraph",
+            "store-health",
+            request.store_path,
+            "--json",
+        ]
+    return commands
 
 
 __all__ = ["WORKBENCH_COMMANDS", "register_workbench_commands", "run_workbench_command"]

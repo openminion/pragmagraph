@@ -7,12 +7,18 @@ import argparse
 from pragmagraph.portability.graph_pack import (
     import_graph_pack,
     inspect_graph_pack,
+    verify_graph_pack,
     write_graph_pack,
 )
 from pragmagraph.storage import load_snapshot
 
 GRAPH_PACK_COMMANDS = frozenset(
-    {"graph-pack-export", "graph-pack-import", "graph-pack-inspect"}
+    {
+        "graph-pack-export",
+        "graph-pack-import",
+        "graph-pack-inspect",
+        "graph-pack-verify",
+    }
 )
 
 
@@ -46,6 +52,13 @@ def register_graph_pack_commands(subparsers: argparse._SubParsersAction) -> None
     inspect_parser.add_argument("pack")
     _add_json_flag(inspect_parser)
 
+    verify_parser = subparsers.add_parser(
+        "graph-pack-verify",
+        help="verify graph pack manifest, snapshot, store, and evidence consistency",
+    )
+    verify_parser.add_argument("pack")
+    _add_json_flag(verify_parser)
+
 
 def run_graph_pack_command(args: argparse.Namespace) -> object:
     """Execute one parsed graph-pack command."""
@@ -65,6 +78,8 @@ def run_graph_pack_command(args: argparse.Namespace) -> object:
             snapshot_out=args.snapshot_out,
             store_out=args.store_out,
         )
+    if args.command == "graph-pack-verify":
+        return verify_graph_pack(args.pack).to_dict()
     return inspect_graph_pack(args.pack).to_dict()
 
 

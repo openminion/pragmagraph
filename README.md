@@ -149,6 +149,7 @@ Inspect, export, and benchmark a snapshot:
 pragmagraph report .pragmagraph/snapshot.json --json
 pragmagraph export .pragmagraph/snapshot.json --format mermaid
 pragmagraph graphify-export .pragmagraph/snapshot.json > graphify.json
+pragmagraph graph-pack-verify .pragmagraph/graph-pack --json
 pragmagraph benchmark .
 ```
 
@@ -176,6 +177,7 @@ pragmagraph workspace-init . \
 pragmagraph workspace-query .pragmagraph/workspace RuntimeGraph --json
 pragmagraph store-search-explain \
   .pragmagraph/graph.sqlite RuntimeGraph --json
+pragmagraph store-backends --probe-optional --json
 pragmagraph certify .pragmagraph/snapshot.json --json
 pragmagraph serve --snapshot .pragmagraph/snapshot.json
 ```

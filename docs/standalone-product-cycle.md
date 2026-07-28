@@ -23,7 +23,9 @@ pragmagraph workbench \
 The command initializes an explicit local workspace when needed, writes a
 canonical snapshot, materializes a local SQLite store, and renders the
 GraphFakos-backed local visual shell. It does not start a background watcher,
-schedule refresh, or call a hosted service.
+schedule refresh, or call a hosted service. JSON output includes
+`next_commands` with copyable query, report, MCP-config, and store-health
+commands for the files that were just created.
 
 For static HTML output instead of serving:
 
@@ -86,6 +88,7 @@ pragmagraph graph-pack-export \
   --json
 
 pragmagraph graph-pack-inspect .pragmagraph/graph-pack --json
+pragmagraph graph-pack-verify .pragmagraph/graph-pack --json
 
 pragmagraph graph-pack-import \
   .pragmagraph/graph-pack \
@@ -96,6 +99,8 @@ pragmagraph graph-pack-import \
 
 The pack is a handoff bundle, not a new canonical format. The canonical fact
 artifact remains `snapshot.json`; materialized stores remain rebuildable.
+`graph-pack-verify` checks the manifest, snapshot counts, optional store export
+parity, and optional evidence JSON before a receiver imports the pack.
 
 ## Storage and search backends
 
@@ -103,6 +108,7 @@ List current and reserved backend capabilities:
 
 ```bash
 pragmagraph store-backends --json
+pragmagraph store-backends --probe-optional --json
 ```
 
 Inspect one concrete backend path:
@@ -116,7 +122,9 @@ pragmagraph store-backends \
 
 Current available backends are the canonical JSON snapshot store and the local
 SQLite materialized store. Kuzu, DuckDB, remote stores, and vector sidecars are
-reserved or boundary-gated until a future release accepts their scope.
+reserved or boundary-gated until a future release accepts their scope. Optional
+backend probing reports whether a reserved Python package is installed without
+making that backend active or canonical.
 
 ## MCP client setup
 

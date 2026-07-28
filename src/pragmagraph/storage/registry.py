@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -21,6 +22,7 @@ class BackendCatalogEntry:
     lexical_search_supported: bool
     import_export_supported: bool
     optional_dependency: str = ""
+    optional_dependency_available: bool | None = None
     diagnostics: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, object]:
@@ -29,7 +31,10 @@ class BackendCatalogEntry:
         return payload
 
 
-def build_backend_catalog() -> tuple[BackendCatalogEntry, ...]:
+def build_backend_catalog(
+    *,
+    probe_optional: bool = False,
+) -> tuple[BackendCatalogEntry, ...]:
     """Return the package-level backend catalog without importing optional stores."""
     return (
         BackendCatalogEntry(
@@ -61,7 +66,14 @@ def build_backend_catalog() -> tuple[BackendCatalogEntry, ...]:
             lexical_search_supported=False,
             import_export_supported=False,
             optional_dependency="kuzu",
-            diagnostics=("deferred_backend_requires_separate_scope_acceptance",),
+            optional_dependency_available=_optional_available(
+                "kuzu", probe_optional=probe_optional
+            ),
+            diagnostics=_optional_backend_diagnostics(
+                "kuzu",
+                probe_optional=probe_optional,
+                base=("deferred_backend_requires_separate_scope_acceptance",),
+            ),
         ),
         BackendCatalogEntry(
             backend="duckdb",
@@ -72,7 +84,14 @@ def build_backend_catalog() -> tuple[BackendCatalogEntry, ...]:
             lexical_search_supported=False,
             import_export_supported=False,
             optional_dependency="duckdb",
-            diagnostics=("deferred_backend_requires_separate_scope_acceptance",),
+            optional_dependency_available=_optional_available(
+                "duckdb", probe_optional=probe_optional
+            ),
+            diagnostics=_optional_backend_diagnostics(
+                "duckdb",
+                probe_optional=probe_optional,
+                base=("deferred_backend_requires_separate_scope_acceptance",),
+            ),
         ),
         BackendCatalogEntry(
             backend="vector_sidecar",
@@ -87,13 +106,17 @@ def build_backend_catalog() -> tuple[BackendCatalogEntry, ...]:
     )
 
 
-def backend_catalog_payload() -> dict[str, object]:
+def backend_catalog_payload(
+    *,
+    probe_optional: bool = False,
+) -> dict[str, object]:
     """Return a stable JSON payload for CLI and doctor surfaces."""
-    entries = build_backend_catalog()
+    entries = build_backend_catalog(probe_optional=probe_optional)
     return {
         "schema_version": "pragmagraph.storage_backend_catalog.v1alpha1",
         "canonical_backend": "json",
         "default_materialized_backend": "sqlite",
+        "optional_dependencies_probed": probe_optional,
         "entries": [entry.to_dict() for entry in entries],
     }
 
@@ -115,6 +138,32 @@ def backend_capabilities_for_path(
             "supported": [entry.backend for entry in build_backend_catalog()],
         },
     )
+
+
+def _optional_available(
+    dependency: str,
+    *,
+    probe_optional: bool,
+) -> bool | None:
+    if not probe_optional:
+        return None
+    return importlib.util.find_spec(dependency) is not None
+
+
+def _optional_backend_diagnostics(
+    dependency: str,
+    *,
+    probe_optional: bool,
+    base: tuple[str, ...],
+) -> tuple[str, ...]:
+    if not probe_optional:
+        return base
+    availability = (
+        "optional_dependency_installed"
+        if _optional_available(dependency, probe_optional=True)
+        else "optional_dependency_not_installed"
+    )
+    return (*base, availability)
 
 
 __all__ = [
