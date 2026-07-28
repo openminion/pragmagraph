@@ -119,8 +119,10 @@ Generate portable MCP client snippets:
 pragmagraph mcp-config --snapshot .pragmagraph/snapshot.json --json
 ```
 
-The snippet uses `pragmagraph-server serve-stdio`; replace placeholder paths
-before sharing it with a client config file.
+The payload names supported clients, includes the exact
+`pragmagraph-server serve-stdio` command, and carries setup next steps. Replace
+placeholder paths before sharing it with a client config file. The command does
+not start a server or probe a client install.
 
 ## Boundary
 

@@ -153,6 +153,10 @@ pragmagraph graph-pack-verify .pragmagraph/graph-pack --json
 pragmagraph benchmark .
 ```
 
+`graph-pack-verify` is the receiver-side trust check for a portable pack: it
+validates manifest counts, file checksums, optional store parity, and optional
+evidence JSON before import.
+
 Follow observed Git provenance:
 
 ```bash

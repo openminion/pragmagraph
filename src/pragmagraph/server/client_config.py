@@ -77,6 +77,7 @@ def build_mcp_doctor_payload(
         "server": "pragmagraph-server",
         "transport": "stdio",
         "boundary": "observed_facts_only",
+        "supported_clients": list(clients),
         "command": [
             "pragmagraph-server",
             *_server_args(
@@ -100,6 +101,11 @@ def build_mcp_doctor_payload(
             "pragma://report",
             "pragma://precise-ingestion",
             "pragma://node/{node_id}",
+        ],
+        "next_steps": [
+            "replace placeholder paths when present",
+            "install pragmagraph in the same Python environment used by the client",
+            "paste the matching stdio config into the MCP client settings",
         ],
     }
 

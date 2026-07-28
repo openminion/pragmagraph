@@ -24,8 +24,8 @@ The command initializes an explicit local workspace when needed, writes a
 canonical snapshot, materializes a local SQLite store, and renders the
 GraphFakos-backed local visual shell. It does not start a background watcher,
 schedule refresh, or call a hosted service. JSON output includes
-`next_commands` with copyable query, report, MCP-config, and store-health
-commands for the files that were just created.
+`next_commands` with copyable query, report, backend-probe, graph-pack,
+MCP-config, and store-health commands for the files that were just created.
 
 For static HTML output instead of serving:
 
@@ -99,8 +99,9 @@ pragmagraph graph-pack-import \
 
 The pack is a handoff bundle, not a new canonical format. The canonical fact
 artifact remains `snapshot.json`; materialized stores remain rebuildable.
-`graph-pack-verify` checks the manifest, snapshot counts, optional store export
-parity, and optional evidence JSON before a receiver imports the pack.
+`graph-pack-verify` checks the manifest, snapshot counts, file checksums,
+optional store export parity, and optional evidence JSON before a receiver
+imports the pack.
 
 ## Storage and search backends
 
@@ -139,4 +140,6 @@ pragmagraph mcp-config \
 The generated snippets point clients at `pragmagraph-server serve-stdio`. The
 server exposes deterministic structural tools and read-only `pragma://...`
 resources over one loaded snapshot or explicit root. It does not expose
-summarization, intent inference, or memory-writing tools.
+summarization, intent inference, or memory-writing tools. The JSON payload also
+lists supported clients and setup next steps so a receiver can paste the right
+stdio config without reading server internals.

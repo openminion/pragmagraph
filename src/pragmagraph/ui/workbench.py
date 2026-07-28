@@ -138,6 +138,12 @@ def _workbench_next_commands(request: UiPreviewRequest) -> dict[str, list[str]]:
     commands: dict[str, list[str]] = {
         "query": ["pragmagraph", "query", snapshot_path, request.query, "--json"],
         "report": ["pragmagraph", "report", snapshot_path, "--json"],
+        "backend_probe": [
+            "pragmagraph",
+            "store-backends",
+            "--probe-optional",
+            "--json",
+        ],
         "mcp_config": [
             "pragmagraph",
             "mcp-config",
@@ -153,7 +159,32 @@ def _workbench_next_commands(request: UiPreviewRequest) -> dict[str, list[str]]:
             request.store_path,
             "--json",
         ]
+        pack_path = _default_graph_pack_path(request)
+        commands["graph_pack_export"] = [
+            "pragmagraph",
+            "graph-pack-export",
+            snapshot_path,
+            pack_path,
+            "--include-store",
+            "--store",
+            request.store_path,
+            "--json",
+        ]
+        commands["graph_pack_verify"] = [
+            "pragmagraph",
+            "graph-pack-verify",
+            pack_path,
+            "--json",
+        ]
     return commands
+
+
+def _default_graph_pack_path(request: UiPreviewRequest) -> str:
+    if request.workspace:
+        return str(Path(request.workspace) / "graph-pack")
+    if request.store_path:
+        return str(Path(request.store_path).with_suffix("")) + "-pack"
+    return ".pragmagraph/graph-pack"
 
 
 __all__ = ["WORKBENCH_COMMANDS", "register_workbench_commands", "run_workbench_command"]

@@ -73,6 +73,28 @@ def test_workbench_writes_static_html_artifact_and_store_from_root(
         str(workspace / "graph.sqlite"),
         "--json",
     ]
+    assert payload["next_commands"]["backend_probe"] == [
+        "pragmagraph",
+        "store-backends",
+        "--probe-optional",
+        "--json",
+    ]
+    assert payload["next_commands"]["graph_pack_export"] == [
+        "pragmagraph",
+        "graph-pack-export",
+        str(workspace / "snapshot.json"),
+        str(workspace / "graph-pack"),
+        "--include-store",
+        "--store",
+        str(workspace / "graph.sqlite"),
+        "--json",
+    ]
+    assert payload["next_commands"]["graph_pack_verify"] == [
+        "pragmagraph",
+        "graph-pack-verify",
+        str(workspace / "graph-pack"),
+        "--json",
+    ]
     assert artifact["provider_payload"]["evidence_workbench"]["boundary"] == (
         "observed_facts_only"
     )
@@ -149,8 +171,11 @@ def test_graph_pack_exports_imports_snapshot_and_materialized_store(
 
     manifest = inspect_graph_pack(pack_dir)
     assert export_payload["manifest"]["includes_store"] is True
+    assert export_payload["manifest"]["snapshot_sha256"]
+    assert export_payload["manifest"]["store_sha256"]
     assert inspect_payload["schema_version"] == "pragmagraph.graph_pack.v1alpha1"
     assert verify_payload["ok"] is True
+    assert verify_payload["checksums_match"] is True
     assert verify_payload["store_ok"] is True
     assert manifest.namespace == "pack"
     assert load_snapshot(imported_snapshot).namespace == "pack"
@@ -177,7 +202,9 @@ def test_graph_pack_verify_reports_tampered_snapshot_counts(tmp_path: Path) -> N
     assert verify_payload["ok"] is False
     assert verify_payload["snapshot_ok"] is True
     assert verify_payload["counts_match"] is False
+    assert verify_payload["checksums_match"] is False
     assert "manifest_counts_do_not_match_snapshot" in verify_payload["diagnostics"]
+    assert "snapshot.json_checksum_mismatch" in verify_payload["diagnostics"]
 
 
 def test_storage_backend_catalog_and_mcp_config_are_public_cli_surfaces(
@@ -204,6 +231,8 @@ def test_storage_backend_catalog_and_mcp_config_are_public_cli_surfaces(
     assert probed_entries["duckdb"]["optional_dependency_available"] in {True, False}
     assert selected["selected"]["backend"] == "json"
     assert mcp["transport"] == "stdio"
+    assert mcp["supported_clients"] == ["claude_desktop", "cursor"]
+    assert "paste the matching stdio config" in " ".join(mcp["next_steps"])
     assert mcp["clients"][0]["config"]["mcpServers"]["pragmagraph"]["command"] == (
         "pragmagraph-server"
     )

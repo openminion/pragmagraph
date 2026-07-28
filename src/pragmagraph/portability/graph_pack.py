@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import shutil
 from dataclasses import asdict, dataclass
+from hashlib import sha256
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -40,6 +41,9 @@ class GraphPackManifest:
     store_file: str = ""
     includes_evidence: bool = False
     evidence_file: str = ""
+    snapshot_sha256: str = ""
+    store_sha256: str = ""
+    evidence_sha256: str = ""
     redaction_profile: str = "none"
 
     def to_dict(self) -> dict[str, Any]:
@@ -67,6 +71,9 @@ class GraphPackManifest:
             store_file=str(payload.get("store_file", "") or ""),
             includes_evidence=bool(payload.get("includes_evidence", False)),
             evidence_file=str(payload.get("evidence_file", "") or ""),
+            snapshot_sha256=str(payload.get("snapshot_sha256", "") or ""),
+            store_sha256=str(payload.get("store_sha256", "") or ""),
+            evidence_sha256=str(payload.get("evidence_sha256", "") or ""),
             redaction_profile=str(payload.get("redaction_profile", "") or "none"),
         )
 
@@ -79,6 +86,7 @@ class GraphPackVerification:
     manifest: GraphPackManifest
     snapshot_ok: bool
     counts_match: bool
+    checksums_match: bool
     store_ok: bool
     evidence_ok: bool
     diagnostics: tuple[str, ...] = ()
@@ -89,6 +97,7 @@ class GraphPackVerification:
             "manifest": self.manifest.to_dict(),
             "snapshot_ok": self.snapshot_ok,
             "counts_match": self.counts_match,
+            "checksums_match": self.checksums_match,
             "store_ok": self.store_ok,
             "evidence_ok": self.evidence_ok,
             "diagnostics": list(self.diagnostics),
@@ -111,6 +120,7 @@ def write_graph_pack(
     save_snapshot(snapshot, snapshot_file)
 
     store_file = ""
+    store_hash = ""
     if include_store:
         store_file = GRAPH_PACK_STORE
         destination = target / store_file
@@ -125,8 +135,10 @@ def write_graph_pack(
             shutil.copyfile(source, destination)
         else:
             SQLiteGraphStore.from_snapshot(snapshot, destination)
+        store_hash = _file_sha256(destination)
 
     evidence_file = ""
+    evidence_hash = ""
     if evidence_path:
         source = Path(evidence_path)
         if not source.exists():
@@ -136,7 +148,9 @@ def write_graph_pack(
                 details={"path": str(source)},
             )
         evidence_file = GRAPH_PACK_EVIDENCE
-        _copy_json_stably(source, target / evidence_file)
+        evidence_destination = target / evidence_file
+        _copy_json_stably(source, evidence_destination)
+        evidence_hash = _file_sha256(evidence_destination)
 
     manifest = GraphPackManifest(
         package_version=_package_version(),
@@ -148,6 +162,9 @@ def write_graph_pack(
         store_file=store_file,
         includes_evidence=bool(evidence_file),
         evidence_file=evidence_file,
+        snapshot_sha256=_file_sha256(snapshot_file),
+        store_sha256=store_hash,
+        evidence_sha256=evidence_hash,
         redaction_profile=redaction_profile,
     )
     _write_json(target / GRAPH_PACK_MANIFEST, manifest.to_dict())
@@ -221,15 +238,18 @@ def verify_graph_pack(pack_dir: str | Path) -> GraphPackVerification:
 
     snapshot_ok = False
     counts_match = False
+    checksums_match = False
     store_ok = not manifest.includes_store
     evidence_ok = not manifest.includes_evidence
 
     try:
-        snapshot = load_snapshot(root / manifest.snapshot_file)
+        snapshot_path = root / manifest.snapshot_file
+        snapshot = load_snapshot(snapshot_path)
         snapshot_ok = True
         counts_match = _snapshot_counts_match(snapshot, manifest)
         if not counts_match:
             diagnostics.append("manifest_counts_do_not_match_snapshot")
+        checksums_match = _checksums_match(root, manifest, diagnostics)
         if manifest.includes_store:
             store_ok = _store_matches_snapshot(root, manifest, snapshot, diagnostics)
     except PragmaGraphError as exc:
@@ -241,10 +261,15 @@ def verify_graph_pack(pack_dir: str | Path) -> GraphPackVerification:
         evidence_ok = _evidence_json_is_readable(root, manifest, diagnostics)
 
     return GraphPackVerification(
-        ok=snapshot_ok and counts_match and store_ok and evidence_ok,
+        ok=snapshot_ok
+        and counts_match
+        and checksums_match
+        and store_ok
+        and evidence_ok,
         manifest=manifest,
         snapshot_ok=snapshot_ok,
         counts_match=counts_match,
+        checksums_match=checksums_match,
         store_ok=store_ok,
         evidence_ok=evidence_ok,
         diagnostics=tuple(diagnostics),
@@ -287,6 +312,30 @@ def _store_matches_snapshot(
     return True
 
 
+def _checksums_match(
+    root: Path,
+    manifest: GraphPackManifest,
+    diagnostics: list[str],
+) -> bool:
+    expected = {
+        manifest.snapshot_file: manifest.snapshot_sha256,
+        manifest.store_file: manifest.store_sha256,
+        manifest.evidence_file: manifest.evidence_sha256,
+    }
+    ok = True
+    for relative_path, expected_hash in expected.items():
+        if not relative_path or not expected_hash:
+            continue
+        path = root / relative_path
+        if not path.exists():
+            diagnostics.append(f"{relative_path}_checksum_file_not_found")
+            ok = False
+        elif _file_sha256(path) != expected_hash:
+            diagnostics.append(f"{relative_path}_checksum_mismatch")
+            ok = False
+    return ok
+
+
 def _evidence_json_is_readable(
     root: Path,
     manifest: GraphPackManifest,
@@ -317,6 +366,14 @@ def _write_json(path: Path, payload: object) -> None:
         json.dumps(payload, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+
+
+def _file_sha256(path: Path) -> str:
+    digest = sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _package_version() -> str:
