@@ -9,6 +9,7 @@ from pragmagraph.adapters.git_history import (
     DEFAULT_GIT_IDENTITY_MODE,
     SUPPORTED_GIT_IDENTITY_MODES,
 )
+from pragmagraph.investigate import INVESTIGATION_PRESETS
 from pragmagraph.storage import SQLiteGraphStore, load_snapshot
 from pragmagraph.ui.preview import serve_ui_preview, write_ui_preview
 from pragmagraph.ui.preview_types import UiPreviewRequest
@@ -49,9 +50,14 @@ def register_workbench_commands(subparsers: argparse._SubParsersAction) -> None:
     parser.add_argument("--evidence-out", default="")
     parser.add_argument("--agent-context-out", default="")
     parser.add_argument("--store")
+    parser.add_argument("--graph-pack")
+    parser.add_argument("--snapshot-out")
+    parser.add_argument("--store-out")
     parser.add_argument("--node-id")
     parser.add_argument("--source-id")
     parser.add_argument("--target-id")
+    parser.add_argument("--preset", choices=INVESTIGATION_PRESETS, default="search")
+    parser.add_argument("--max-results", type=int, default=5)
     parser.add_argument("--open", action="store_true")
     parser.add_argument("--serve", action="store_true")
     parser.add_argument("--host", default="127.0.0.1")
@@ -112,7 +118,12 @@ def _workbench_request(args: argparse.Namespace) -> UiPreviewRequest:
         evidence_path=args.evidence_out,
         agent_context_path=args.agent_context_out,
         store_path=store_path,
+        graph_pack_path=args.graph_pack,
+        snapshot_out=args.snapshot_out,
+        store_out=args.store_out,
         query=query_text or "RuntimeGraph",
+        investigation_preset=args.preset,
+        max_results=args.max_results,
         node_id=args.node_id,
         source_id=args.source_id,
         target_id=args.target_id,
@@ -135,7 +146,18 @@ def _workbench_next_commands(request: UiPreviewRequest) -> dict[str, list[str]]:
         snapshot_path = metadata.paths.snapshot_path
     if not snapshot_path:
         return {}
-    commands: dict[str, list[str]] = {
+    commands = _base_next_commands(request, snapshot_path)
+    if request.store_path:
+        commands.update(_graph_pack_next_commands(request, snapshot_path))
+    commands["investigation_ui"] = _investigation_ui_command(request, snapshot_path)
+    return commands
+
+
+def _base_next_commands(
+    request: UiPreviewRequest,
+    snapshot_path: str,
+) -> dict[str, list[str]]:
+    return {
         "query": ["pragmagraph", "query", snapshot_path, request.query, "--json"],
         "report": ["pragmagraph", "report", snapshot_path, "--json"],
         "investigate": [
@@ -143,6 +165,8 @@ def _workbench_next_commands(request: UiPreviewRequest) -> dict[str, list[str]]:
             "investigate",
             snapshot_path,
             request.query,
+            "--preset",
+            request.investigation_preset,
             "--json",
         ],
         "freshness": ["pragmagraph", "freshness", snapshot_path, "--json"],
@@ -167,15 +191,25 @@ def _workbench_next_commands(request: UiPreviewRequest) -> dict[str, list[str]]:
             "--json",
         ],
     }
-    if request.store_path:
-        commands["store_health"] = [
+
+
+def _graph_pack_next_commands(
+    request: UiPreviewRequest,
+    snapshot_path: str,
+) -> dict[str, list[str]]:
+    if not request.store_path:
+        return {}
+    pack_path = _default_graph_pack_path(request)
+    imported_snapshot = _default_imported_snapshot_path(request)
+    imported_store = _default_imported_store_path(request)
+    return {
+        "store_health": [
             "pragmagraph",
             "store-health",
             request.store_path,
             "--json",
-        ]
-        pack_path = _default_graph_pack_path(request)
-        commands["graph_pack_export"] = [
+        ],
+        "graph_pack_export": [
             "pragmagraph",
             "graph-pack-export",
             snapshot_path,
@@ -184,24 +218,56 @@ def _workbench_next_commands(request: UiPreviewRequest) -> dict[str, list[str]]:
             "--store",
             request.store_path,
             "--json",
-        ]
-        commands["graph_pack_verify"] = [
+        ],
+        "graph_pack_verify": [
             "pragmagraph",
             "graph-pack-verify",
             pack_path,
             "--json",
-        ]
-        commands["graph_pack_review"] = [
+        ],
+        "graph_pack_review": [
             "pragmagraph",
             "graph-pack-review",
             pack_path,
             "--snapshot-out",
-            _default_imported_snapshot_path(request),
+            imported_snapshot,
             "--store-out",
-            _default_imported_store_path(request),
+            imported_store,
             "--json",
-        ]
-    return commands
+        ],
+        "graph_pack_ui": [
+            "pragmagraph",
+            "ui-preview",
+            "--screen",
+            "graph_pack_review",
+            "--graph-pack",
+            pack_path,
+            "--snapshot-out",
+            imported_snapshot,
+            "--store-out",
+            imported_store,
+            "--json",
+        ],
+    }
+
+
+def _investigation_ui_command(
+    request: UiPreviewRequest,
+    snapshot_path: str,
+) -> list[str]:
+    return [
+        "pragmagraph",
+        "ui-preview",
+        "--screen",
+        "investigation",
+        "--snapshot",
+        snapshot_path,
+        "--query",
+        request.query,
+        "--preset",
+        request.investigation_preset,
+        "--json",
+    ]
 
 
 def _default_graph_pack_path(request: UiPreviewRequest) -> str:

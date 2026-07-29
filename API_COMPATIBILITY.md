@@ -104,7 +104,8 @@ The following top-level exports are part of the current public contract:
   `verify_store_round_trip` under `pragmagraph.storage`
 - typed UI boundary contracts such as `UiTransportBoundary`,
   `UiScreenDefinition`, `build_ui_screen_manifest`,
-  `build_evidence_payload`, `write_evidence_payload`, and
+  `build_evidence_payload`, `build_investigation_payload`,
+  `build_graph_pack_review_payload`, `write_evidence_payload`, and
   `write_agent_context`
 - parser/scope DTOs such as `ParserDiagnostic`, `ParserResult`,
   `RefreshManifest`, `RefreshResult`, `RefreshPathChange`,

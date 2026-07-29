@@ -92,14 +92,18 @@ from pragmagraph.viewer.cli import (
     run_viewer_command,
 )
 from pragmagraph.workspace import (
-    initialize_workspace,
-    load_workspace_metadata,
     resolve_workspace_config_paths,
 )
 from pragmagraph.workspace.cli import (
     WORKSPACE_COMMANDS,
     register_workspace_commands,
     run_workspace_command,
+)
+from pragmagraph.workspace.cli_resolution import (
+    ensure_config_workspace,
+    freshness_snapshot_arg,
+    investigation_args,
+    query_args,
 )
 
 
@@ -180,35 +184,6 @@ def _service_from_args(args: argparse.Namespace) -> LocalQueryService:
         cache_path=args.cache,
         git_identity_mode=args.git_identity_mode,
     )
-
-
-def _ensure_config_workspace(config_path: str | Path) -> Path:
-    resolved = resolve_workspace_config_paths(config_path)
-    if not (resolved.workspace_path / "workspace.json").exists():
-        initialize_workspace(
-            label=resolved.config.label,
-            root_path=resolved.root_path,
-            workspace_path=resolved.workspace_path,
-            namespace=resolved.config.namespace,
-            git_identity_mode=resolved.config.git_identity_mode,
-        )
-    return resolved.workspace_path
-
-
-def _query_args(
-    args: argparse.Namespace, parser: argparse.ArgumentParser
-) -> tuple[str, str]:
-    if args.config:
-        workspace_path = _ensure_config_workspace(args.config)
-        metadata = load_workspace_metadata(workspace_path)
-        if args.query is None:
-            if args.snapshot is None:
-                parser.error("query requires query text when --config is used")
-            return metadata.paths.snapshot_path, args.snapshot
-        return metadata.paths.snapshot_path, args.query
-    if args.snapshot is None or args.query is None:
-        parser.error("query requires SNAPSHOT QUERY or --config QUERY")
-    return args.snapshot, args.query
 
 
 def _snapshot_freshness_payload(
@@ -294,8 +269,9 @@ def main(argv: list[str] | None = None) -> int:
         "investigate",
         help="build a guided observed-fact investigation bundle",
     )
-    investigate_parser.add_argument("snapshot")
-    investigate_parser.add_argument("query")
+    investigate_parser.add_argument("snapshot", nargs="?")
+    investigate_parser.add_argument("query", nargs="?")
+    investigate_parser.add_argument("--config")
     investigate_parser.add_argument(
         "--preset",
         choices=INVESTIGATION_PRESETS,
@@ -518,7 +494,8 @@ def main(argv: list[str] | None = None) -> int:
         "freshness",
         help="show snapshot freshness and optional structural delta facts",
     )
-    freshness_parser.add_argument("snapshot")
+    freshness_parser.add_argument("snapshot", nargs="?")
+    freshness_parser.add_argument("--config")
     freshness_parser.add_argument("--before")
     _add_json_flag(freshness_parser)
 
@@ -572,7 +549,7 @@ def main(argv: list[str] | None = None) -> int:
         save_snapshot(snapshot, args.out)
         _print_payload(health(snapshot), as_json=args.json)
     elif args.command == "query":
-        snapshot_path, query_text = _query_args(args, parser)
+        snapshot_path, query_text = query_args(args, parser)
         snapshot = load_snapshot(snapshot_path)
         _print_payload(
             query(
@@ -612,11 +589,12 @@ def main(argv: list[str] | None = None) -> int:
         )
         _print_payload(result.to_dict(), as_json=True)
     elif args.command == "investigate":
-        snapshot = load_snapshot(args.snapshot)
+        snapshot_path, query_text = investigation_args(args, parser)
+        snapshot = load_snapshot(snapshot_path)
         bundle = build_investigation_bundle(
             snapshot,
-            args.query,
-            snapshot_path=args.snapshot,
+            query_text,
+            snapshot_path=snapshot_path,
             preset=args.preset,
             max_results=args.max_results,
         )
@@ -886,11 +864,12 @@ def main(argv: list[str] | None = None) -> int:
         snapshot = load_snapshot(args.snapshot)
         _print_payload(health(snapshot), as_json=True)
     elif args.command == "freshness":
-        snapshot = load_snapshot(args.snapshot)
+        snapshot_path = freshness_snapshot_arg(args, parser)
+        snapshot = load_snapshot(snapshot_path)
         _print_payload(
             _snapshot_freshness_payload(
                 snapshot,
-                snapshot_path=args.snapshot,
+                snapshot_path=snapshot_path,
                 before_path=args.before,
             ),
             as_json=True,
@@ -946,7 +925,7 @@ def _doctor_request(args: argparse.Namespace):
 
     if args.config:
         resolved = resolve_workspace_config_paths(args.config)
-        workspace = _ensure_config_workspace(args.config)
+        workspace = ensure_config_workspace(args.config)
         return UiPreviewRequest(
             screen="evidence",
             workspace=str(workspace),

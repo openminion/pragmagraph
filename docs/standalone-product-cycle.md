@@ -48,6 +48,30 @@ freshness facts, and copyable next commands. Presets are `search`, `file_map`,
 They filter observed facts only; they do not infer intent, risk, priority, or
 architectural meaning.
 
+The same guide can be opened in the visual workbench:
+
+```bash
+pragmagraph workbench \
+  --workspace .pragmagraph/workspace \
+  --screen investigation \
+  --query RuntimeGraph \
+  --preset symbol_map \
+  --serve \
+  --open \
+  --json
+```
+
+Workspace configs are supported directly:
+
+```bash
+pragmagraph investigate \
+  --config .pragmagraph/workspace.toml \
+  RuntimeGraph \
+  --json
+
+pragmagraph freshness --config .pragmagraph/workspace.toml --json
+```
+
 For static HTML output instead of serving:
 
 ```bash
@@ -137,6 +161,19 @@ pragmagraph graph-pack-review \
 `graph-pack-review` is read-only. It reports whether the pack is ready to
 import and emits copyable import commands only for caller-selected output paths.
 
+Preview the same receive posture in the local visual workbench:
+
+```bash
+pragmagraph ui-preview \
+  --screen graph_pack_review \
+  --graph-pack .pragmagraph/graph-pack \
+  --snapshot-out .pragmagraph/imported-snapshot.json \
+  --store-out .pragmagraph/imported.sqlite \
+  --serve \
+  --open \
+  --json
+```
+
 ## Storage and search backends
 
 List current and reserved backend capabilities:
@@ -183,3 +220,13 @@ lists supported clients and setup next steps so a receiver can paste the right
 stdio config without reading server internals.
 `mcp-config-smoke` validates the generated stdio command and client snippets
 without starting a client or probing a user machine.
+
+Run a short-lived MCP consumer smoke when you want a real protocol check:
+
+```bash
+pragmagraph mcp-smoke --snapshot .pragmagraph/snapshot.json --json
+```
+
+`mcp-smoke` starts `pragmagraph-server` locally, sends `initialize`, lists
+tools, calls `pragmagraph_investigate`, and exits. It does not launch Claude,
+Cursor, or any other user client.

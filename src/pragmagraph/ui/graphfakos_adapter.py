@@ -38,6 +38,8 @@ class PragmaGraphViewerProvider(GraphFakosProvider):
         "provider_status",
         "project_health",
         "context_preview",
+        "investigation",
+        "graph_pack_review",
         "source_graph",
         "document_graph",
         "code_graph",
@@ -53,12 +55,16 @@ class PragmaGraphViewerProvider(GraphFakosProvider):
         service_status_context: dict[str, object] | None = None,
         evidence_context: dict[str, object] | None = None,
         delta_review_context: dict[str, object] | None = None,
+        investigation_context: dict[str, object] | None = None,
+        graph_pack_review_context: dict[str, object] | None = None,
     ) -> None:
         self._snapshot = snapshot
         self._project_health_context = project_health_context
         self._service_status_context = service_status_context
         self._evidence_context = evidence_context
         self._delta_review_context = delta_review_context
+        self._investigation_context = investigation_context
+        self._graph_pack_review_context = graph_pack_review_context
 
     def load_graph(self, request: GraphFakosRequest) -> GraphFakosGraph:
         return _snapshot_to_graphfakos(
@@ -72,6 +78,8 @@ class PragmaGraphViewerProvider(GraphFakosProvider):
             service_status_context=self._service_status_context,
             evidence_context=self._evidence_context,
             delta_review_context=self._delta_review_context,
+            investigation_context=self._investigation_context,
+            graph_pack_review_context=self._graph_pack_review_context,
         )
 
 
@@ -204,6 +212,8 @@ def _snapshot_to_graphfakos(
     service_status_context: dict[str, object] | None = None,
     evidence_context: dict[str, object] | None = None,
     delta_review_context: dict[str, object] | None = None,
+    investigation_context: dict[str, object] | None = None,
+    graph_pack_review_context: dict[str, object] | None = None,
 ) -> GraphFakosGraph:
     citations = tuple(_citation_for_node(node) for node in snapshot.nodes) + tuple(
         _citation_for_edge(edge) for edge in snapshot.edges
@@ -234,6 +244,10 @@ def _snapshot_to_graphfakos(
         provider_payload["evidence_workbench"] = dict(evidence_context)
     if delta_review_context:
         provider_payload["delta_review"] = dict(delta_review_context)
+    if investigation_context:
+        provider_payload["investigation"] = dict(investigation_context)
+    if graph_pack_review_context:
+        provider_payload["graph_pack_review"] = dict(graph_pack_review_context)
     return GraphFakosGraph(
         graph_id=snapshot.namespace,
         label="PragmaGraph Observed Source Graph",

@@ -84,6 +84,8 @@ def test_workbench_writes_static_html_artifact_and_store_from_root(
         "investigate",
         str(workspace / "snapshot.json"),
         "RuntimeGraph",
+        "--preset",
+        "search",
         "--json",
     ]
     assert payload["next_commands"]["freshness"] == [
@@ -116,6 +118,32 @@ def test_workbench_writes_static_html_artifact_and_store_from_root(
         str(workspace / "imported-snapshot.json"),
         "--store-out",
         str(workspace / "imported.sqlite"),
+        "--json",
+    ]
+    assert payload["next_commands"]["graph_pack_ui"] == [
+        "pragmagraph",
+        "ui-preview",
+        "--screen",
+        "graph_pack_review",
+        "--graph-pack",
+        str(workspace / "graph-pack"),
+        "--snapshot-out",
+        str(workspace / "imported-snapshot.json"),
+        "--store-out",
+        str(workspace / "imported.sqlite"),
+        "--json",
+    ]
+    assert payload["next_commands"]["investigation_ui"] == [
+        "pragmagraph",
+        "ui-preview",
+        "--screen",
+        "investigation",
+        "--snapshot",
+        str(workspace / "snapshot.json"),
+        "--query",
+        "RuntimeGraph",
+        "--preset",
+        "search",
         "--json",
     ]
     assert payload["next_commands"]["mcp_config_smoke"] == [
@@ -302,6 +330,22 @@ def test_investigation_and_freshness_cli_are_observed_fact_guides(
     after_path = tmp_path / "after.json"
     save_snapshot(before, before_path)
     save_snapshot(after, after_path)
+    root = _repo(tmp_path)
+    workspace = tmp_path / "workspace"
+    config_path = tmp_path / "workspace.toml"
+
+    _run_cli_json(
+        "workspace-config-init",
+        root,
+        "--out",
+        config_path,
+        "--workspace",
+        workspace,
+        "--label",
+        "guide",
+        "--namespace",
+        "guide",
+    )
 
     investigation = _run_cli_json(
         "investigate",
@@ -311,12 +355,30 @@ def test_investigation_and_freshness_cli_are_observed_fact_guides(
         "symbol_map",
     )
     freshness = _run_cli_json("freshness", after_path, "--before", before_path)
+    config_investigation = _run_cli_json(
+        "investigate",
+        "--config",
+        config_path,
+        "RuntimeGraph",
+        "--preset",
+        "symbol_map",
+    )
+    config_freshness = _run_cli_json("freshness", "--config", config_path)
     explain = _run_cli_json("explain", after_path, "RuntimeGraph")
+    mcp_smoke = _run_cli_json("mcp-smoke", "--snapshot", after_path)
 
     assert investigation["schema_version"] == "pragmagraph.investigation.v1alpha1"
     assert investigation["boundary"] == "observed_facts_only"
     assert investigation["matches"][0]["why"]
     assert "workbench" in investigation["next_commands"]
+    assert config_investigation["next_commands"]["query"][2] == str(
+        workspace / "snapshot.json"
+    )
+    assert config_investigation["matches"][0]["label"] == "RuntimeGraph"
     assert freshness["schema_version"] == "pragmagraph.freshness.v1alpha1"
     assert freshness["delta"]["has_changes"] is True
+    assert config_freshness["snapshot_path"] == str(workspace / "snapshot.json")
+    assert mcp_smoke["ok"] is True
+    assert "pragmagraph_investigate" in mcp_smoke["tool_names"]
+    assert mcp_smoke["investigation"]["boundary"] == "observed_facts_only"
     assert explain["hits"][0]["explanation"]["match_summary"]

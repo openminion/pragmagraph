@@ -40,6 +40,9 @@ The first screen manifest is intentionally small and matches the workbench MVP:
 5. provider status
 6. project health
 7. evidence
+8. delta review
+9. investigation
+10. graph-pack receive review
 
 `project_health` is a PragmaGraph-owned screen id for observed workspace facts
 such as node counts, edge counts, omitted reasons, parser set, source path
@@ -70,6 +73,29 @@ renderer but carries a PragmaGraph-owned `evidence_workbench` payload:
 The evidence screen never mutates a store. Use `store-round-trip` when an
 operator explicitly wants to rebuild a store from a snapshot and compare the
 export.
+
+`investigation` is the package-local screen for guided source-graph
+navigation. It maps onto the GraphFakos provider-status renderer and carries a
+PragmaGraph-owned `investigation` payload:
+
+- deterministic query matches and match reasons
+- related files, symbols, docs, and other neighboring facts
+- one-hop neighborhood facts
+- bounded path facts when two matches are present
+- snapshot freshness facts
+- copyable follow-up commands
+
+`graph_pack_review` is the package-local receive screen for portable graph
+packs. It maps onto the same local visual shell and carries a
+PragmaGraph-owned `graph_pack_review` payload:
+
+- manifest counts and package/version facts
+- checksum, snapshot, store, and evidence verification facts
+- ready-to-import status
+- copyable import commands for caller-provided output paths
+
+The graph-pack review screen is read-only. It never imports, overwrites, or
+materializes files.
 
 ## Local Visual UI
 
@@ -104,6 +130,28 @@ pragmagraph-ui \
   --query RuntimeGraph \
   --evidence-out ./evidence.json \
   --agent-context-out ./agent-context.md \
+  --serve
+```
+
+Open guided investigation:
+
+```bash
+pragmagraph-ui \
+  --snapshot ./snapshot.json \
+  --screen investigation \
+  --query RuntimeGraph \
+  --preset symbol_map \
+  --serve
+```
+
+Preview a received graph pack:
+
+```bash
+pragmagraph-ui \
+  --screen graph_pack_review \
+  --graph-pack ./graph-pack \
+  --snapshot-out ./imported-snapshot.json \
+  --store-out ./imported.sqlite \
   --serve
 ```
 

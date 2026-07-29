@@ -31,6 +31,8 @@ SUPPORTED_UI_SCREENS = frozenset(
         "project_health",
         "evidence",
         "delta_review",
+        "investigation",
+        "graph_pack_review",
     }
 )
 

@@ -9,6 +9,7 @@ from pragmagraph.adapters.git_history import (
     DEFAULT_GIT_IDENTITY_MODE,
     SUPPORTED_GIT_IDENTITY_MODES,
 )
+from pragmagraph.investigate import INVESTIGATION_PRESETS
 from pragmagraph.ui.preview import serve_ui_preview, write_ui_preview
 from pragmagraph.ui.preview_types import UiPreviewRequest
 from pragmagraph.workspace import (
@@ -45,7 +46,12 @@ def run_ui_command(args: argparse.Namespace) -> object:
             evidence_path=args.evidence_out,
             agent_context_path=args.agent_context_out,
             store_path=args.store,
+            graph_pack_path=args.graph_pack,
+            snapshot_out=args.snapshot_out,
+            store_out=args.store_out,
             query=args.query,
+            investigation_preset=args.preset,
+            max_results=args.max_results,
             node_id=args.node_id,
             source_id=args.source_id,
             target_id=args.target_id,
@@ -57,8 +63,8 @@ def run_ui_command(args: argparse.Namespace) -> object:
     if args.config:
         config = load_workspace_config(args.config)
         store_path = str(resolve_workspace_config_paths(args.config).store_path)
-        screen = config.ui_screen
-        query_text = config.ui_query
+        screen = config.ui_screen if args.screen == "search" else args.screen
+        query_text = config.ui_query if args.query == "RuntimeGraph" else args.query
     else:
         screen = args.screen
         query_text = args.query
@@ -71,7 +77,12 @@ def run_ui_command(args: argparse.Namespace) -> object:
         evidence_path=args.evidence_out,
         agent_context_path=args.agent_context_out,
         store_path=store_path,
+        graph_pack_path=args.graph_pack,
+        snapshot_out=args.snapshot_out,
+        store_out=args.store_out,
         query=query_text,
+        investigation_preset=args.preset,
+        max_results=args.max_results,
         open_browser=args.open,
     )
     return _run_preview(request, args)
@@ -99,7 +110,12 @@ def _register_ui_preview_command(subparsers: argparse._SubParsersAction) -> None
     parser.add_argument("--evidence-out", default="")
     parser.add_argument("--agent-context-out", default="")
     parser.add_argument("--store")
+    parser.add_argument("--graph-pack")
+    parser.add_argument("--snapshot-out")
+    parser.add_argument("--store-out")
     parser.add_argument("--query", default="RuntimeGraph")
+    parser.add_argument("--preset", choices=INVESTIGATION_PRESETS, default="search")
+    parser.add_argument("--max-results", type=int, default=5)
     parser.add_argument("--node-id")
     parser.add_argument("--source-id")
     parser.add_argument("--target-id")
@@ -136,6 +152,11 @@ def _register_demo_ui_command(subparsers: argparse._SubParsersAction) -> None:
     parser.add_argument("--report-out", default="")
     parser.add_argument("--evidence-out", default="")
     parser.add_argument("--agent-context-out", default="")
+    parser.add_argument("--graph-pack")
+    parser.add_argument("--snapshot-out")
+    parser.add_argument("--store-out")
+    parser.add_argument("--preset", choices=INVESTIGATION_PRESETS, default="search")
+    parser.add_argument("--max-results", type=int, default=5)
     parser.add_argument("--open", action="store_true")
     parser.add_argument("--serve", action="store_true")
     parser.add_argument("--host", default="127.0.0.1")

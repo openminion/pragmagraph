@@ -117,6 +117,7 @@ Query the snapshot:
 ```bash
 pragmagraph query .pragmagraph/snapshot.json "RuntimeGraph" --json
 pragmagraph investigate .pragmagraph/snapshot.json "RuntimeGraph" --json
+pragmagraph investigate --config .pragmagraph/workspace.toml "RuntimeGraph" --json
 ```
 
 Refresh it explicitly:
@@ -155,6 +156,12 @@ pragmagraph graph-pack-review .pragmagraph/graph-pack \
   --snapshot-out .pragmagraph/imported-snapshot.json \
   --store-out .pragmagraph/imported.sqlite \
   --json
+pragmagraph ui-preview \
+  --screen graph_pack_review \
+  --graph-pack .pragmagraph/graph-pack \
+  --snapshot-out .pragmagraph/imported-snapshot.json \
+  --store-out .pragmagraph/imported.sqlite \
+  --json
 pragmagraph benchmark .
 ```
 
@@ -170,6 +177,18 @@ neighborhood facts, path facts when two matches exist, freshness facts, and
 copyable next commands. Presets include `file_map`, `symbol_map`, `doc_links`,
 `changed_recently`, `orphans`, and `high_degree`; all remain lexical or
 structural, with no LLM ranking or intent inference.
+
+Open the same investigation as a local visual panel:
+
+```bash
+pragmagraph ui-preview \
+  --screen investigation \
+  --snapshot .pragmagraph/snapshot.json \
+  --query RuntimeGraph \
+  --preset symbol_map \
+  --serve \
+  --open
+```
 
 Follow observed Git provenance:
 
@@ -198,6 +217,7 @@ pragmagraph store-search-explain \
 pragmagraph store-backends --probe-optional --json
 pragmagraph certify .pragmagraph/snapshot.json --json
 pragmagraph serve --snapshot .pragmagraph/snapshot.json
+pragmagraph mcp-smoke --snapshot .pragmagraph/snapshot.json --json
 ```
 
 ## What PragmaGraph Provides
