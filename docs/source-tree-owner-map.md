@@ -49,10 +49,12 @@ service, workspace, and `pragmagraph.ui`.
 12. `workspace/` owns the persistent local workspace directory contract,
    explicit workspace lifecycle helpers, deterministic multi-root overlays,
    named canonical-snapshot composition, and exact cross-root resolution.
-   `workspace/cli.py` owns both multi-root command registrations so the root CLI
-   remains an orchestrator.
+   `workspace/cli.py` owns both multi-root command registrations, and
+   `workspace/cli_resolution.py` owns shared config-aware CLI argument
+   resolution so the root CLI remains an orchestrator.
 13. `service/` owns the local repeated-query service boundary. `server/` owns
-   the bounded MCP transport, tool registry, and read-only resource registry.
+   the bounded MCP transport, tool registry, read-only resource registry, and
+   short-lived MCP consumer smoke.
 14. `ui/` owns typed UI contracts, the PragmaGraph-to-GraphFakos adapter, and
    package CLI preview wiring. `ui/__init__.py` remains the stable UI import
    seam, `ui/contracts.py` owns typed route and transport-boundary contracts,
@@ -60,8 +62,10 @@ service, workspace, and `pragmagraph.ui`.
    `preview.py` is the stable preview façade,
    `preview_types.py` owns typed request/result contracts, and
    `preview_inputs.py` owns preview request parsing plus snapshot-loading and
-   GraphFakos bridge helpers. Shared viewer shell, local server behavior,
-   static export, and reusable viewer assertions belong to GraphFakos.
+   GraphFakos bridge helpers. `ui/investigation.py` owns guided investigation
+   payloads for visual preview, and `ui/graph_pack.py` owns read-only
+   graph-pack receive-review payloads. Shared viewer shell, local server
+   behavior, static export, and reusable viewer assertions belong to GraphFakos.
 
 ## Repo-local but not public API
 

@@ -16,6 +16,8 @@ UiScreenId = Literal[
     "project_health",
     "evidence",
     "delta_review",
+    "investigation",
+    "graph_pack_review",
 ]
 
 
@@ -67,6 +69,10 @@ def build_default_ui_boundary() -> UiTransportBoundary:
 
 def build_ui_screen_manifest() -> tuple[UiScreenDefinition, ...]:
     """Return the first-pass route manifest for the observed-fact workbench."""
+    return (*_core_screen_manifest(), *_review_screen_manifest())
+
+
+def _core_screen_manifest() -> tuple[UiScreenDefinition, ...]:
     return (
         UiScreenDefinition(
             screen_id="search",
@@ -116,6 +122,11 @@ def build_ui_screen_manifest() -> tuple[UiScreenDefinition, ...]:
             mvp=True,
             mutating=True,
         ),
+    )
+
+
+def _review_screen_manifest() -> tuple[UiScreenDefinition, ...]:
+    return (
         UiScreenDefinition(
             screen_id="project_health",
             route="/third-brain/project-health",
@@ -148,6 +159,29 @@ def build_ui_screen_manifest() -> tuple[UiScreenDefinition, ...]:
                 "CiDeltaReport",
                 "RefreshStatus",
                 "SnapshotStructuralDelta",
+            ),
+            mvp=True,
+        ),
+        UiScreenDefinition(
+            screen_id="investigation",
+            route="/third-brain/investigation",
+            title="Guided Investigation",
+            primary_payloads=(
+                "InvestigationBundle",
+                "GraphQueryResult",
+                "GraphNeighborhoodRequest",
+                "GraphPathRequest",
+            ),
+            mvp=True,
+        ),
+        UiScreenDefinition(
+            screen_id="graph_pack_review",
+            route="/third-brain/graph-pack-review",
+            title="Graph-Pack Receive Review",
+            primary_payloads=(
+                "GraphPackReview",
+                "GraphPackVerification",
+                "GraphPackManifest",
             ),
             mvp=True,
         ),

@@ -15,7 +15,9 @@ from pragmagraph.workspace import load_workspace_metadata, load_workspace_status
 
 from .delta_review import build_delta_review_payload
 from .evidence import build_evidence_payload
+from .graph_pack import build_graph_pack_review_payload
 from .graphfakos_adapter import PragmaGraphViewerProvider
+from .investigation import build_investigation_payload
 from .preview_types import PreviewScreen, UiPreviewRequest
 
 
@@ -33,6 +35,8 @@ def render_server_preview_path(
         service_status_context=service_status_context_for_request(next_request),
         evidence_context=evidence_context_for_request(next_request, snapshot),
         delta_review_context=delta_review_context_for_request(next_request, snapshot),
+        investigation_context=investigation_context_for_request(next_request, snapshot),
+        graph_pack_review_context=graph_pack_review_context_for_request(next_request),
     )
     return render_provider_path(
         provider,
@@ -66,7 +70,18 @@ def request_from_query(
         evidence_path=request.evidence_path,
         agent_context_path=request.agent_context_path,
         store_path=first_query_value(query, "store") or request.store_path,
+        graph_pack_path=(
+            first_query_value(query, "graph_pack")
+            or first_query_value(query, "pack")
+            or request.graph_pack_path
+        ),
+        snapshot_out=first_query_value(query, "snapshot_out") or request.snapshot_out,
+        store_out=first_query_value(query, "store_out") or request.store_out,
         query=first_query_value(query, "query") or request.query,
+        investigation_preset=(
+            first_query_value(query, "preset") or request.investigation_preset
+        ),
+        max_results=_int_query_value(query, "max_results", request.max_results),
         node_id=first_query_value(query, "node_id") or request.node_id,
         source_id=first_query_value(query, "source_id") or request.source_id,
         target_id=first_query_value(query, "target_id") or request.target_id,
@@ -94,6 +109,11 @@ def screen_from_path(path: str) -> PreviewScreen | None:
         "delta": "delta_review",
         "delta-review": "delta_review",
         "refresh-review": "delta_review",
+        "investigate": "investigation",
+        "guided-investigation": "investigation",
+        "graph-pack": "graph_pack_review",
+        "graph-pack-review": "graph_pack_review",
+        "receive-review": "graph_pack_review",
     }
     value = aliases.get(value, value)
     if value in {
@@ -105,6 +125,8 @@ def screen_from_path(path: str) -> PreviewScreen | None:
         "project_health",
         "evidence",
         "delta_review",
+        "investigation",
+        "graph_pack_review",
     }:
         return value  # type: ignore[return-value]
     return None
@@ -120,6 +142,8 @@ def graphfakos_request(request: UiPreviewRequest) -> GraphFakosRequest:
         "project_health": "provider_status",
         "evidence": "provider_status",
         "delta_review": "provider_status",
+        "investigation": "provider_status",
+        "graph_pack_review": "provider_status",
     }
     return GraphFakosRequest(
         screen=screen_map[request.screen],  # type: ignore[arg-type]
@@ -220,6 +244,42 @@ def delta_review_context_for_request(
     )
 
 
+def investigation_context_for_request(
+    request: UiPreviewRequest,
+    snapshot: GraphSnapshot | None = None,
+) -> dict[str, object] | None:
+    """Return guided observed-fact investigation payloads for visual screens."""
+    if request.screen != "investigation":
+        return None
+    return build_investigation_payload(
+        snapshot or snapshot_for_request(request), request
+    )
+
+
+def graph_pack_review_context_for_request(
+    request: UiPreviewRequest,
+) -> dict[str, object] | None:
+    """Return read-only graph-pack receive facts for visual screens."""
+    if request.screen != "graph_pack_review":
+        return None
+    return build_graph_pack_review_payload(request)
+
+
+def _int_query_value(
+    query: dict[str, list[str]],
+    key: str,
+    default: int,
+) -> int:
+    value = first_query_value(query, key)
+    if not value:
+        return default
+    try:
+        parsed = int(value)
+    except ValueError:
+        return default
+    return parsed if parsed > 0 else default
+
+
 def demo_snapshot() -> GraphSnapshot:
     nodes = (
         GraphNode(
@@ -289,7 +349,9 @@ __all__ = [
     "delta_review_context_for_request",
     "evidence_context_for_request",
     "first_query_value",
+    "graph_pack_review_context_for_request",
     "graphfakos_request",
+    "investigation_context_for_request",
     "project_health_context_for_request",
     "render_server_preview_path",
     "request_from_query",

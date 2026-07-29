@@ -16,7 +16,9 @@ from .graphfakos_adapter import PragmaGraphViewerProvider
 from .preview_inputs import (
     delta_review_context_for_request,
     evidence_context_for_request,
+    graph_pack_review_context_for_request,
     graphfakos_request,
+    investigation_context_for_request,
     project_health_context_for_request,
     render_server_preview_path,
     service_status_context_for_request,
@@ -35,12 +37,16 @@ def write_ui_preview(request: UiPreviewRequest) -> UiPreviewResult:
     snapshot = snapshot_for_request(request)
     evidence_context = evidence_context_for_request(request, snapshot)
     delta_review_context = delta_review_context_for_request(request, snapshot)
+    investigation_context = investigation_context_for_request(request, snapshot)
+    graph_pack_review_context = graph_pack_review_context_for_request(request)
     provider = PragmaGraphViewerProvider(
         snapshot,
         project_health_context=project_health_context_for_request(request),
         service_status_context=service_status_context_for_request(request),
         evidence_context=evidence_context,
         delta_review_context=delta_review_context,
+        investigation_context=investigation_context,
+        graph_pack_review_context=graph_pack_review_context,
     )
     graph_request = graphfakos_request(request)
     payload = write_provider_preview_outputs(
@@ -70,6 +76,8 @@ def write_ui_preview(request: UiPreviewRequest) -> UiPreviewResult:
         markdown_report=payload.get("markdown_report"),
         evidence=_write_evidence_if_requested(request, evidence_context),
         delta_review=delta_review_context,
+        investigation=investigation_context,
+        graph_pack_review=graph_pack_review_context,
         agent_context=_write_agent_context_if_requested(request, evidence_context),
         opened=bool(payload["opened"]),
     )
@@ -80,12 +88,16 @@ def render_ui_preview(request: UiPreviewRequest) -> UiPreviewRender:
     snapshot = snapshot_for_request(request)
     evidence_context = evidence_context_for_request(request, snapshot)
     delta_review_context = delta_review_context_for_request(request, snapshot)
+    investigation_context = investigation_context_for_request(request, snapshot)
+    graph_pack_review_context = graph_pack_review_context_for_request(request)
     provider = PragmaGraphViewerProvider(
         snapshot,
         project_health_context=project_health_context_for_request(request),
         service_status_context=service_status_context_for_request(request),
         evidence_context=evidence_context,
         delta_review_context=delta_review_context,
+        investigation_context=investigation_context,
+        graph_pack_review_context=graph_pack_review_context,
     )
     graph_request = graphfakos_request(request)
     html = render_static_html(provider, graph_request)

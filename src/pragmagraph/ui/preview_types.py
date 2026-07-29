@@ -14,6 +14,8 @@ PreviewScreen = Literal[
     "project_health",
     "evidence",
     "delta_review",
+    "investigation",
+    "graph_pack_review",
 ]
 
 
@@ -34,7 +36,12 @@ class UiPreviewRequest:
     evidence_path: str = ""
     agent_context_path: str = ""
     store_path: str | None = None
+    graph_pack_path: str | None = None
+    snapshot_out: str | None = None
+    store_out: str | None = None
     query: str = "RuntimeGraph"
+    investigation_preset: str = "search"
+    max_results: int = 5
     node_id: str | None = None
     source_id: str | None = None
     target_id: str | None = None
@@ -59,6 +66,8 @@ class UiPreviewResult:
     markdown_report: dict[str, object] | None = None
     evidence: dict[str, object] | None = None
     delta_review: dict[str, object] | None = None
+    investigation: dict[str, object] | None = None
+    graph_pack_review: dict[str, object] | None = None
     agent_context: dict[str, object] | None = None
     opened: bool = False
 
@@ -86,6 +95,10 @@ class UiPreviewResult:
             payload["evidence"] = self.evidence
         if self.delta_review is not None:
             payload["delta_review"] = self.delta_review
+        if self.investigation is not None:
+            payload["investigation"] = self.investigation
+        if self.graph_pack_review is not None:
+            payload["graph_pack_review"] = self.graph_pack_review
         if self.agent_context is not None:
             payload["agent_context"] = self.agent_context
         return payload

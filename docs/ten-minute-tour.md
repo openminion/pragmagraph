@@ -70,6 +70,29 @@ using `query` directly:
 pragmagraph query --config .pragmagraph/workspace.toml RuntimeGraph --json
 ```
 
+Use the guided investigation bundle when you want a compact “what should I
+inspect next?” answer without remembering the snapshot path:
+
+```bash
+pragmagraph investigate \
+  --config .pragmagraph/workspace.toml \
+  RuntimeGraph \
+  --preset symbol_map \
+  --json
+```
+
+Open the same investigation as a visual panel:
+
+```bash
+pragmagraph demo-ui \
+  --config .pragmagraph/workspace.toml \
+  --screen investigation \
+  --preset symbol_map \
+  --serve \
+  --open \
+  --json
+```
+
 Use the compact repository map for fast orientation:
 
 ```bash
@@ -118,3 +141,60 @@ pragmagraph workspace-refresh --config .pragmagraph/workspace.toml --json
 
 PragmaGraph does not install watchers, git hooks, background daemons, or hosted
 runtime behavior. Refresh remains explicit and reproducible.
+
+Inspect freshness from the same workspace config:
+
+```bash
+pragmagraph freshness --config .pragmagraph/workspace.toml --json
+```
+
+## 7. Review A Portable Graph Pack
+
+Export, verify, and review a graph pack before importing it elsewhere:
+
+```bash
+pragmagraph graph-pack-export \
+  .pragmagraph/workspace/snapshot.json \
+  .pragmagraph/graph-pack \
+  --include-store \
+  --store .pragmagraph/graph.sqlite \
+  --json
+
+pragmagraph graph-pack-review \
+  .pragmagraph/graph-pack \
+  --snapshot-out .pragmagraph/imported-snapshot.json \
+  --store-out .pragmagraph/imported.sqlite \
+  --json
+```
+
+Preview the receive posture visually:
+
+```bash
+pragmagraph ui-preview \
+  --screen graph_pack_review \
+  --graph-pack .pragmagraph/graph-pack \
+  --snapshot-out .pragmagraph/imported-snapshot.json \
+  --store-out .pragmagraph/imported.sqlite \
+  --serve \
+  --open \
+  --json
+```
+
+## 8. Smoke The MCP Surface
+
+Generate config snippets when you want to wire a client manually:
+
+```bash
+pragmagraph mcp-config --snapshot .pragmagraph/workspace/snapshot.json --json
+pragmagraph mcp-config-smoke --snapshot .pragmagraph/workspace/snapshot.json --json
+```
+
+Run a short-lived package-owned MCP smoke when you want protocol proof:
+
+```bash
+pragmagraph mcp-smoke --config .pragmagraph/workspace.toml --json
+```
+
+The smoke starts `pragmagraph-server` locally, lists MCP tools, calls
+`pragmagraph_investigate`, and exits. It does not launch Claude, Cursor, or any
+other user client.

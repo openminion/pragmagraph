@@ -251,3 +251,24 @@ def test_serve_stdio_subprocess_completes_initialize_handshake(tmp_path: Path) -
     response = json.loads(lines[0])
     assert response["id"] == 1
     assert response["result"]["protocolVersion"] == MCP_PROTOCOL_VERSION
+
+
+def test_mcp_consumer_smoke_starts_server_and_calls_investigate(
+    tmp_path: Path,
+) -> None:
+    from pragmagraph import index_path, save_snapshot
+    from pragmagraph.server.smoke import run_mcp_consumer_smoke
+
+    repo = tmp_path / "repo"
+    _seed_repo(repo)
+    snapshot = tmp_path / "snapshot.json"
+    save_snapshot(index_path(repo, namespace="smoke"), snapshot)
+
+    payload = run_mcp_consumer_smoke(snapshot=str(snapshot), query="RuntimeGraph")
+
+    assert payload["schema_version"] == "pragmagraph.mcp_consumer_smoke.v1alpha1"
+    assert payload["ok"] is True
+    assert payload["source"] == "snapshot"
+    assert payload["protocol_version"] == MCP_PROTOCOL_VERSION
+    assert "pragmagraph_investigate" in payload["tool_names"]
+    assert payload["investigation"]["boundary"] == "observed_facts_only"

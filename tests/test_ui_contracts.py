@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from threading import Thread
 from urllib.request import urlopen
 
@@ -33,6 +34,8 @@ def test_ui_screen_manifest_covers_workbench_mvp_routes() -> None:
         "project_health",
         "evidence",
         "delta_review",
+        "investigation",
+        "graph_pack_review",
     ]
     assert [screen.screen_id for screen in screens if screen.mvp] == [
         "search",
@@ -43,6 +46,8 @@ def test_ui_screen_manifest_covers_workbench_mvp_routes() -> None:
         "project_health",
         "evidence",
         "delta_review",
+        "investigation",
+        "graph_pack_review",
     ]
     assert [screen.screen_id for screen in screens if screen.mutating] == [
         "provider_status"
@@ -92,6 +97,81 @@ def test_ui_preview_exports_match_sophiagraph_local_visual_pattern() -> None:
     assert "Graph Canvas" in rendered.html
     assert "Provider Status" in rendered.html
     assert "PragmaGraph Observed Source Graph" in rendered.html
+
+
+def test_ui_investigation_preview_carries_guided_payload(tmp_path) -> None:
+    from pragmagraph.adapters import index_path
+    from pragmagraph.storage import save_snapshot
+    from pragmagraph.ui import UiPreviewRequest, write_ui_preview
+
+    from .package_paths import build_fixture_repo
+
+    root = build_fixture_repo(
+        tmp_path,
+        files={"src/app.py": "class RuntimeGraph:\n    pass\n"},
+    )
+    snapshot_path = tmp_path / "snapshot.json"
+    artifact_path = tmp_path / "investigation-artifact.json"
+    save_snapshot(index_path(root, namespace="ui-investigation"), snapshot_path)
+
+    result = write_ui_preview(
+        UiPreviewRequest(
+            screen="investigation",
+            snapshot=str(snapshot_path),
+            query="RuntimeGraph",
+            investigation_preset="symbol_map",
+            output_path=str(tmp_path / "investigation.html"),
+            artifact_path=str(artifact_path),
+        )
+    )
+
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    assert result.investigation is not None
+    assert result.investigation["schema_version"] == (
+        "pragmagraph.investigation.v1alpha1"
+    )
+    assert result.investigation["boundary"] == "observed_facts_only"
+    assert result.investigation["matches"][0]["label"] == "RuntimeGraph"
+    assert artifact["provider_payload"]["investigation"]["preset"] == "symbol_map"
+
+
+def test_ui_graph_pack_review_preview_carries_receive_payload(tmp_path) -> None:
+    from pragmagraph.adapters import index_path
+    from pragmagraph.portability import write_graph_pack
+    from pragmagraph.ui import UiPreviewRequest, write_ui_preview
+
+    from .package_paths import build_fixture_repo
+
+    root = build_fixture_repo(
+        tmp_path,
+        files={"src/app.py": "class RuntimeGraph:\n    pass\n"},
+    )
+    snapshot = index_path(root, namespace="ui-pack")
+    pack_dir = tmp_path / "graph-pack"
+    artifact_path = tmp_path / "graph-pack-artifact.json"
+    write_graph_pack(snapshot, pack_dir, include_store=True)
+
+    result = write_ui_preview(
+        UiPreviewRequest(
+            screen="graph_pack_review",
+            graph_pack_path=str(pack_dir),
+            snapshot_out=str(tmp_path / "imported-snapshot.json"),
+            store_out=str(tmp_path / "imported.sqlite"),
+            output_path=str(tmp_path / "graph-pack.html"),
+            artifact_path=str(artifact_path),
+        )
+    )
+
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    assert result.graph_pack_review is not None
+    assert result.graph_pack_review["schema_version"] == (
+        "pragmagraph.ui_graph_pack_review.v1alpha1"
+    )
+    review = result.graph_pack_review["review"]
+    assert review["receive_summary"]["ready_to_import"] is True
+    assert artifact["provider_payload"]["graph_pack_review"]["mode"] == (
+        "receive_review"
+    )
 
 
 def test_ui_preview_includes_snapshot_service_status(tmp_path) -> None:

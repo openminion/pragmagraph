@@ -39,11 +39,14 @@ service, workspace, and `pragmagraph.ui`.
 11. `interchange/`, `topology/`, `docgraph/`, `planner/`,
    `certification/`, `lineage/`, and `parser_support/` own advanced
    structural views over observed snapshots.
-12. `workspace/` owns the persistent local workspace directory contract and
-   explicit workspace lifecycle helpers.
-13. `service/` owns the local repeated-query service boundary.
-14. `ui/` owns typed UI contracts only; runtime workbench implementation
-   belongs in OpenMinion.
+12. `workspace/` owns the persistent local workspace directory contract,
+   explicit workspace lifecycle helpers, and shared config-aware CLI argument
+   resolution.
+13. `service/` owns the local repeated-query service boundary. `server/` owns
+   the bounded MCP transport and short-lived MCP consumer smoke.
+14. `ui/` owns typed UI contracts, local GraphFakos preview wiring, guided
+   investigation visual payloads, and graph-pack receive-review visual
+   payloads. Runtime workbench implementation belongs in OpenMinion.
 
 ## Repo-local but not public API
 
