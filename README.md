@@ -70,9 +70,9 @@ PragmaGraph.
 ```bash
 python3.11 -m pip install pragmagraph
 pragmagraph-smoke --json
-pragmagraph index . --out .pragmagraph/snapshot.json --namespace demo --json
-pragmagraph query .pragmagraph/snapshot.json "RuntimeGraph" --json
-pragmagraph-ui --serve --open --json
+pragmagraph quickstart . --serve --open --json
+pragmagraph investigate --config .pragmagraph/workspace.toml "RuntimeGraph" --json
+pragmagraph freshness --config .pragmagraph/workspace.toml --json
 ```
 
 ## Install
@@ -101,6 +101,18 @@ python3.11 -m pip install -e ".[scip]"
 ## Quick Start
 
 ### External Consumer Quickstart
+
+Start with the one-command local loop:
+
+```bash
+pragmagraph quickstart . --serve --open --json
+```
+
+`quickstart` writes `.pragmagraph/workspace.toml` when it does not already
+exist, refreshes the local snapshot, materializes the local store, and opens a
+visual investigation panel through GraphFakos.
+
+When you want the lower-level steps explicitly, run the same pieces yourself.
 
 Index a local project:
 
@@ -141,9 +153,8 @@ For a reusable workspace and local visual graph, continue with
 
 ## Command Map
 
-The quickstart above is the shortest useful path. These grouped commands make
-the broader public surface easier to discover without requiring a full CLI
-reference read.
+The quickstart above is the shortest useful path. The grouped commands below
+are the advanced surfaces behind the same observed-fact workflow.
 
 Inspect, export, and benchmark a snapshot:
 

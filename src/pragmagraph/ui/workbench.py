@@ -15,17 +15,29 @@ from pragmagraph.ui.preview import serve_ui_preview, write_ui_preview
 from pragmagraph.ui.preview_types import UiPreviewRequest
 from pragmagraph.ui.workspace_paths import ensure_config_workspace
 from pragmagraph.workspace import (
+    DEFAULT_STORE_FILE,
+    DEFAULT_UI_QUERY,
+    DEFAULT_WORKSPACE_CONFIG,
+    DEFAULT_WORKSPACE_DIR,
     SUPPORTED_UI_SCREENS,
+    build_workspace_config,
     initialize_workspace,
     load_workspace_metadata,
     resolve_workspace_config_paths,
+    save_workspace_config,
 )
 
-WORKBENCH_COMMANDS = frozenset({"workbench"})
+WORKBENCH_COMMANDS = frozenset({"quickstart", "workbench"})
+QUICKSTART_UI_SCREENS = ("investigation", "project_health", "search")
 
 
 def register_workbench_commands(subparsers: argparse._SubParsersAction) -> None:
     """Register the standalone local workbench command."""
+    _register_quickstart_command(subparsers)
+    _register_workbench_command(subparsers)
+
+
+def _register_workbench_command(subparsers: argparse._SubParsersAction) -> None:
     parser = subparsers.add_parser(
         "workbench",
         help="write or serve the standalone local graph workbench",
@@ -72,12 +84,49 @@ def register_workbench_commands(subparsers: argparse._SubParsersAction) -> None:
 
 def run_workbench_command(args: argparse.Namespace) -> object:
     """Execute one parsed standalone workbench command."""
+    if args.command == "quickstart":
+        return _run_quickstart_command(args)
     request = _workbench_request(args)
     if args.serve:
         return serve_ui_preview(request, host=args.host, port=args.port)
     result = write_ui_preview(request).to_dict()
     result["next_commands"] = _workbench_next_commands(request)
     return result
+
+
+def _register_quickstart_command(subparsers: argparse._SubParsersAction) -> None:
+    parser = subparsers.add_parser(
+        "quickstart",
+        help="create a workspace and open the first visual investigation",
+    )
+    parser.add_argument("root", nargs="?", default=".")
+    parser.add_argument("--config", default=DEFAULT_WORKSPACE_CONFIG)
+    parser.add_argument("--workspace", default=DEFAULT_WORKSPACE_DIR)
+    parser.add_argument("--store", default=DEFAULT_STORE_FILE)
+    parser.add_argument("--label", default="quickstart")
+    parser.add_argument("--namespace", default="default")
+    parser.add_argument(
+        "--screen",
+        choices=QUICKSTART_UI_SCREENS,
+        default="investigation",
+    )
+    parser.add_argument("--query", default=DEFAULT_UI_QUERY)
+    parser.add_argument("--preset", choices=INVESTIGATION_PRESETS, default="search")
+    parser.add_argument("--max-results", type=int, default=5)
+    parser.add_argument("--html-out", default=".pragmagraph/pragmagraph.html")
+    parser.add_argument("--artifact-out", default="")
+    parser.add_argument("--report-out", default="")
+    parser.add_argument("--overwrite-config", action="store_true")
+    parser.add_argument("--open", action="store_true")
+    parser.add_argument("--serve", action="store_true")
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=8766)
+    parser.add_argument(
+        "--git-identity-mode",
+        choices=tuple(sorted(SUPPORTED_GIT_IDENTITY_MODES)),
+        default=DEFAULT_GIT_IDENTITY_MODE,
+    )
+    parser.add_argument("--json", action="store_true", help="emit JSON output")
 
 
 def _workbench_request(args: argparse.Namespace) -> UiPreviewRequest:
@@ -129,6 +178,101 @@ def _workbench_request(args: argparse.Namespace) -> UiPreviewRequest:
         target_id=args.target_id,
         open_browser=args.open,
     )
+
+
+def _run_quickstart_command(args: argparse.Namespace) -> object:
+    config_path = Path(args.config)
+    config_written = _ensure_quickstart_config(args, config_path)
+    resolved = resolve_workspace_config_paths(config_path)
+    workspace_path = ensure_config_workspace(config_path)
+    store_path = str(resolved.store_path)
+    _ensure_workbench_store(str(workspace_path), store_path)
+    request = UiPreviewRequest(
+        screen=resolved.config.ui_screen,
+        workspace=str(workspace_path),
+        output_path=args.html_out,
+        artifact_path=args.artifact_out,
+        report_path=args.report_out,
+        store_path=store_path,
+        query=resolved.config.ui_query,
+        investigation_preset=args.preset,
+        max_results=args.max_results,
+        open_browser=args.open,
+    )
+    if args.serve:
+        return serve_ui_preview(request, host=args.host, port=args.port)
+    result = write_ui_preview(request).to_dict()
+    result["quickstart"] = {
+        "config_path": str(config_path),
+        "config_written": config_written,
+        "workspace_path": str(workspace_path),
+        "store_path": store_path,
+    }
+    result["next_commands"] = _quickstart_next_commands(
+        config_path,
+        resolved.config.ui_query,
+    )
+    return result
+
+
+def _ensure_quickstart_config(
+    args: argparse.Namespace,
+    config_path: Path,
+) -> bool:
+    if config_path.exists() and not args.overwrite_config:
+        return False
+    config = build_workspace_config(
+        args.root,
+        workspace_path=args.workspace,
+        label=args.label,
+        namespace=args.namespace,
+        git_identity_mode=args.git_identity_mode,
+        store_path=args.store,
+        ui_screen=args.screen,
+        ui_query=args.query,
+    )
+    save_workspace_config(config, config_path)
+    return True
+
+
+def _quickstart_next_commands(
+    config_path: Path,
+    query_text: str,
+) -> dict[str, list[str]]:
+    config = str(config_path)
+    return {
+        "refresh": [
+            "pragmagraph",
+            "workspace-refresh",
+            "--config",
+            config,
+            "--json",
+        ],
+        "investigate": [
+            "pragmagraph",
+            "investigate",
+            "--config",
+            config,
+            query_text,
+            "--json",
+        ],
+        "visual": [
+            "pragmagraph",
+            "demo-ui",
+            "--config",
+            config,
+            "--serve",
+            "--open",
+            "--json",
+        ],
+        "mcp_smoke": [
+            "pragmagraph",
+            "mcp-smoke",
+            "--config",
+            config,
+            "--json",
+        ],
+    }
 
 
 def _ensure_workbench_store(workspace: str, store_path: str) -> None:

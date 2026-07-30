@@ -158,6 +158,57 @@ def test_workbench_writes_static_html_artifact_and_store_from_root(
     )
 
 
+def test_quickstart_creates_workspace_store_and_visual_investigation(
+    tmp_path: Path,
+) -> None:
+    root = _repo(tmp_path)
+    config_path = tmp_path / "workspace.toml"
+    workspace = tmp_path / "workspace"
+    store = tmp_path / "graph.sqlite"
+    html_path = tmp_path / "quickstart.html"
+    artifact_path = tmp_path / "quickstart-artifact.json"
+
+    payload = _run_cli_json(
+        "quickstart",
+        root,
+        "--config",
+        config_path,
+        "--workspace",
+        workspace,
+        "--store",
+        store,
+        "--html-out",
+        html_path,
+        "--artifact-out",
+        artifact_path,
+        "--query",
+        "RuntimeGraph",
+    )
+
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    assert payload["screen"] == "investigation"
+    assert payload["quickstart"]["config_written"] is True
+    assert payload["quickstart"]["config_path"] == str(config_path)
+    assert payload["quickstart"]["workspace_path"] == str(workspace.resolve())
+    assert payload["quickstart"]["store_path"] == str(store.resolve())
+    assert config_path.is_file()
+    assert (workspace / "snapshot.json").is_file()
+    assert store.is_file()
+    assert "PragmaGraph" in html_path.read_text(encoding="utf-8")
+    assert artifact["provider_payload"]["investigation"]["boundary"] == (
+        "observed_facts_only"
+    )
+    assert payload["next_commands"]["visual"] == [
+        "pragmagraph",
+        "demo-ui",
+        "--config",
+        str(config_path),
+        "--serve",
+        "--open",
+        "--json",
+    ]
+
+
 def test_delta_review_payload_and_ui_screen_compare_snapshots(tmp_path: Path) -> None:
     before = index_path(_repo(tmp_path), namespace="delta")
     after = index_path(
