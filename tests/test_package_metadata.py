@@ -76,7 +76,7 @@ def test_package_metadata_declares_public_urls() -> None:
     )
 
     assert pyproject["project"]["urls"] == {
-        "Repository": "https://github.com/openminion/pragmagraph",
+        "Repository": "https://github.com/OpenMinion/pragmagraph",
         "Download": "https://pypi.org/project/pragmagraph/",
     }
     assert pyproject["project"]["optional-dependencies"]["scip"] == [

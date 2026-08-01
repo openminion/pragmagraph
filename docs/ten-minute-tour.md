@@ -18,6 +18,12 @@ materializes the local SQLite store, and opens the first visual investigation
 panel through GraphFakos. It does not install watchers, start background
 indexers, or call an LLM.
 
+For a self-contained source-checkout example:
+
+```bash
+python3.11 examples/quickstart_flow.py
+```
+
 ## 2. Create A Workspace Config Explicitly
 
 Skip this section if you already ran `quickstart`. These commands show the

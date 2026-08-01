@@ -120,6 +120,38 @@ def _assert_smoke_payload(stdout: str) -> None:
         raise RuntimeError(f"unexpected stable import roots: {payload!r}")
 
 
+def _write_quickstart_fixture(root: Path) -> Path:
+    fixture_root = root / "quickstart-repo"
+    source_dir = fixture_root / "src"
+    source_dir.mkdir(parents=True)
+    (fixture_root / "README.md").write_text(
+        "# Quickstart Demo\n\nSee `src/app.py` for RuntimeGraph.\n",
+        encoding="utf-8",
+    )
+    (source_dir / "app.py").write_text(
+        "class RuntimeGraph:\n"
+        '    """Tiny source symbol for release-smoke quickstart."""\n'
+        "\n"
+        "def build_runtime_graph() -> RuntimeGraph:\n"
+        "    return RuntimeGraph()\n",
+        encoding="utf-8",
+    )
+    return fixture_root
+
+
+def _assert_quickstart_payload(stdout: str, *, config_path: Path) -> None:
+    payload = json.loads(stdout)
+    quickstart = payload.get("quickstart")
+    if not isinstance(quickstart, dict):
+        raise RuntimeError(f"quickstart payload missing: {payload!r}")
+    if quickstart.get("config_path") != str(config_path):
+        raise RuntimeError(f"quickstart config drifted: {payload!r}")
+    if payload.get("screen") != "investigation":
+        raise RuntimeError(f"quickstart expected investigation screen: {payload!r}")
+    if "visual" not in payload.get("next_commands", {}):
+        raise RuntimeError(f"quickstart next commands missing visual path: {payload!r}")
+
+
 def _assert_package_docs_shape(root: Path) -> None:
     required_paths = [
         root / "docs" / "README.md",
@@ -195,6 +227,7 @@ def main(argv: list[str] | None = None) -> int:
             venv_paths = _create_temp_venv(root, tmp)
             graphfakos_ui = venv_paths["venv"] / "bin" / "graphfakos-ui"
             smoke = venv_paths["venv"] / "bin" / "pragmagraph-smoke"
+            pragmagraph = venv_paths["venv"] / "bin" / "pragmagraph"
             server_cli = venv_paths["venv"] / "bin" / "pragmagraph-server"
             ui_preview = venv_paths["venv"] / "bin" / "pragmagraph-ui"
             wheel = sorted((root / "dist").glob("pragmagraph-*.whl"))[-1]
@@ -232,6 +265,31 @@ def main(argv: list[str] | None = None) -> int:
             )
             stdout = _run_capture([str(smoke), "--json"], cwd=root)
             _assert_smoke_payload(stdout)
+            fixture_root = _write_quickstart_fixture(tmp)
+            quickstart_config = tmp / "workspace.toml"
+            quickstart_stdout = _run_capture(
+                [
+                    str(pragmagraph),
+                    "quickstart",
+                    str(fixture_root),
+                    "--config",
+                    str(quickstart_config),
+                    "--workspace",
+                    str(tmp / "workspace"),
+                    "--store",
+                    str(tmp / "graph.sqlite"),
+                    "--html-out",
+                    str(tmp / "quickstart.html"),
+                    "--artifact-out",
+                    str(tmp / "quickstart-artifact.json"),
+                    "--json",
+                ],
+                cwd=root,
+            )
+            _assert_quickstart_payload(
+                quickstart_stdout,
+                config_path=quickstart_config,
+            )
             _run([str(server_cli), "--help"], cwd=root)
             _run_capture(
                 [

@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/openminion/pragmagraph"
+Repository = "https://github.com/OpenMinion/pragmagraph"
 Download = "https://pypi.org/project/pragmagraph/"
 
 [project.optional-dependencies]

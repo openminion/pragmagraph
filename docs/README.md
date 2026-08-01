@@ -5,68 +5,43 @@ Status: semantic alpha
 This directory holds the public package documentation for standalone
 `pragmagraph`.
 
-## Package-local references
+## Start Here
 
-- [`getting-started.md`](getting-started.md) gives the
-  package-local bootstrap and execution summary for contributors and automation.
-- [`ten-minute-tour.md`](ten-minute-tour.md) gives the shortest public
-  standalone path through workspace config, visual preview, store explain, and
-  certification output.
-- [`standalone-product-cycle.md`](standalone-product-cycle.md) gives the
-  public package loop for workbench navigation, delta review, graph packs,
-  storage/search backend inspection, and MCP client snippets.
-- [`engineering-patterns.md`](engineering-patterns.md)
-  summarizes the package-local engineering and boundary rules for contributors.
-- [`code-quality-enforcement.md`](code-quality-enforcement.md)
-  summarizes the active public quality gates and validation posture.
-- [`cleanup-workflow.md`](cleanup-workflow.md) defines the live-inventory,
-  per-file-ledger, and closeout process for broad maintainability work.
-- [`testing-and-validation.md`](testing-and-validation.md)
-  records the package-local install, smoke, test, lint, and release-check
-  flow.
-- [`report-mode.md`](report-mode.md) records the structural
-  report contract and CLI shape.
-- [`export-mode.md`](export-mode.md) records DOT/Mermaid
-  text export contracts and CLI shape.
-- [`service-mode.md`](service-mode.md) records the local
-  service request/response contract.
-- [`storage-interchange.md`](storage-interchange.md) records the
-  canonical snapshot, JSON store, SQLite materialized store, and vector
-  sidecar boundary.
-- [`workspace-mode.md`](workspace-mode.md) records the
-  package-owned persistent local workspace contract.
-- [`refresh-operations.md`](refresh-operations.md) records
-  the package-owned explicit refresh/profile/status surface.
-- [`navigation-mode.md`](navigation-mode.md) records the
-  compact repo-map and handoff surfaces for fast local graph orientation.
-- The public `investigate` command and `pragmagraph.investigate` import root
-  compose query, neighborhood, path, freshness, and next-command facts for
-  guided local graph inspection without semantic ranking.
-- [`ui-contracts.md`](ui-contracts.md) records the
-  package-owned `pragmagraph.ui` boundary for the future OpenMinion workbench
-  surface.
-- [`benchmarking.md`](benchmarking.md) records the
-  package-owned benchmark surface and repo-local regression fixture policy.
-- [`graphify-interop.md`](graphify-interop.md) records the
-  deterministic Graphify-shaped JSON import/export contract.
-- [`viewer-contract.md`](viewer-contract.md) records the
-  provider-neutral viewer envelope, scale-fixture commands, and GraphFakos
-  handoff boundary.
-- [`git-history-mode.md`](git-history-mode.md) records the
-  local git-overlay contract, privacy posture, and CLI shape.
-- [`advanced-structural-views.md`](advanced-structural-views.md)
-  records symbol/reference interchange, topology, document-graph, query-plan,
-  git-lineage, parser-support, and certification helper surfaces.
-- [`advanced-ingestion-and-interchange.md`](advanced-ingestion-and-interchange.md)
-  records multi-root composition, artifact indexing, CI delta, precise-fact
-  interchange, exact cross-repository SCIP resolution, query pagination,
-  export redaction, and read-only MCP resources.
-- [`native-scip-ingestion.md`](native-scip-ingestion.md) records
-  optional native SCIP protobuf intake, exact merge/freshness rules, and the
-  certified producer boundary.
-- [`certification-readiness-matrix.md`](certification-readiness-matrix.md)
-  records the current standalone and OpenMinion proof targets for the public
-  package surface.
+| If you want to... | Read |
+| --- | --- |
+| Install and run a first local graph | [`getting-started.md`](getting-started.md) |
+| See the shortest end-to-end product loop | [`ten-minute-tour.md`](ten-minute-tour.md) and [`standalone-product-cycle.md`](standalone-product-cycle.md) |
+| Understand storage, refresh, and workspace state | [`storage-interchange.md`](storage-interchange.md), [`refresh-operations.md`](refresh-operations.md), and [`workspace-mode.md`](workspace-mode.md) |
+| Export or serve graph facts | [`report-mode.md`](report-mode.md), [`export-mode.md`](export-mode.md), and [`service-mode.md`](service-mode.md) |
+| Hand graph data to GraphFakos or another viewer | [`viewer-contract.md`](viewer-contract.md) |
+| Check proof and public claim boundaries | [`certification-readiness-matrix.md`](certification-readiness-matrix.md) |
+
+## Command Guide
+
+| Command family | Use it for | Public posture |
+| --- | --- | --- |
+| `quickstart` | first local run with config, workspace, store, and visual artifact | recommended |
+| `investigate`, `repo-map`, `freshness` | day-to-day structural navigation | recommended |
+| `demo-ui` | reopening the local visual graph from a workspace config | recommended |
+| `ui-preview`, `viewer-*`, `graph-pack-*` | lower-level viewer and portability proofs | advanced |
+| `serve`, `mcp-*`, `pragmagraph-server` | repeated local queries or MCP client wiring | advanced |
+| `precise-import` | caller-provided precise facts, including native SCIP payloads when the optional extra is installed | advanced |
+
+## Topic Map
+
+- Local navigation: [`navigation-mode.md`](navigation-mode.md) plus the public
+  `investigate` command and `pragmagraph.investigate` import root.
+- Interchange and ingestion: [`graphify-interop.md`](graphify-interop.md),
+  [`advanced-ingestion-and-interchange.md`](advanced-ingestion-and-interchange.md),
+  and [`native-scip-ingestion.md`](native-scip-ingestion.md).
+- Structural views: [`advanced-structural-views.md`](advanced-structural-views.md)
+  and [`git-history-mode.md`](git-history-mode.md).
+- UI and validation: [`ui-contracts.md`](ui-contracts.md),
+  [`benchmarking.md`](benchmarking.md), and
+  [`testing-and-validation.md`](testing-and-validation.md).
+- Contributor workflow: [`engineering-patterns.md`](engineering-patterns.md),
+  [`code-quality-enforcement.md`](code-quality-enforcement.md), and
+  [`cleanup-workflow.md`](cleanup-workflow.md).
 
 ## Package-local code/docs boundaries
 
@@ -91,17 +66,18 @@ This directory holds the public package documentation for standalone
 
 ## Public package stance
 
-The `0.0.7` semantic alpha defines the current public package contract:
-immutable DTOs, JSON snapshots, local indexing, deterministic
-query/traversal/report/export helpers, JSON and SQLite-backed store contracts,
-compact navigation maps,
-Graphify-shaped interop, package-local service and UI boundary contracts,
-explicit refresh/profile/status helpers, workspace persistence helpers,
-git-aware provenance overlays and path lineage, symbol/reference interchange,
-optional native SCIP protobuf intake,
-topology and document-graph summaries, query-plan evidence, parser-support
-metadata, certification packs with Markdown output, benchmark helpers,
-package-owned visual demo commands, and package-owned validation fixtures.
+The `0.0.7` semantic alpha defines a reproducible observed-fact graph contract:
+
+1. immutable DTOs, JSON snapshots, local indexing, and deterministic query,
+   traversal, report, and export helpers,
+2. JSON and SQLite-backed store contracts plus workspace persistence and
+   explicit refresh/profile/status helpers,
+3. Graphify-shaped interop, optional native SCIP protobuf intake, and exact
+   cross-repository symbol evidence,
+4. topology, document-graph, query-plan, parser-support, and git-lineage
+   surfaces,
+5. certification packs, benchmark helpers, visual demo commands, and
+   package-owned validation fixtures.
 
 ## Boundary shorthand
 

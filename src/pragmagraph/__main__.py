@@ -230,7 +230,12 @@ def _snapshot_freshness_payload(
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="pragmagraph package smoke")
+    parser = argparse.ArgumentParser(
+        description=(
+            "PragmaGraph observed-fact graph CLI. Start with "
+            "`pragmagraph quickstart . --json`."
+        )
+    )
     _add_json_flag(parser)
     subparsers = parser.add_subparsers(dest="command")
 

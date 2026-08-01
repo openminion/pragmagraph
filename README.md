@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/openminion/pragmagraph">GitHub</a>
+  <a href="https://github.com/OpenMinion/pragmagraph">GitHub</a>
   · <a href="https://pypi.org/project/pragmagraph/">PyPI</a>
   · <a href="https://www.openminion.com">Website</a>
   · <a href="docs/README.md">Docs</a>
@@ -41,7 +41,7 @@ is true.
 
 ## Trust and Brand Safety
 
-- Official GitHub: <https://github.com/openminion/pragmagraph>
+- Official GitHub: <https://github.com/OpenMinion/pragmagraph>
 - Official website: <https://www.openminion.com>
 - Official X account: <https://x.com/OpenMinion>
 
@@ -146,6 +146,7 @@ Run the package example:
 
 ```bash
 python3.11 examples/basic_usage.py
+python3.11 examples/quickstart_flow.py
 ```
 
 For a reusable workspace and local visual graph, continue with
@@ -156,7 +157,16 @@ For a reusable workspace and local visual graph, continue with
 The quickstart above is the shortest useful path. The grouped commands below
 are the advanced surfaces behind the same observed-fact workflow.
 
-Inspect, export, and benchmark a snapshot:
+| Need | Recommended command | Notes |
+| --- | --- | --- |
+| First local run | `pragmagraph quickstart . --json` | Creates config, workspace, store, and first visual artifact |
+| Search facts | `pragmagraph investigate --config .pragmagraph/workspace.toml RuntimeGraph --json` | Compact structural bundle for one question |
+| Open the visual view again | `pragmagraph demo-ui --config .pragmagraph/workspace.toml --serve --open --json` | Reuses the workspace config |
+| Check freshness | `pragmagraph freshness --config .pragmagraph/workspace.toml --json` | Explicit status, no background watcher |
+| Package or receive a graph | `graph-pack-export`, `graph-pack-verify`, `graph-pack-review` | Advanced portability surface |
+| Serve repeated local queries | `serve`, `mcp-smoke`, `pragmagraph-server` | Advanced service/MCP surface |
+
+Inspect, export, and benchmark a snapshot when you need lower-level artifacts:
 
 ```bash
 pragmagraph report .pragmagraph/snapshot.json --json

@@ -27,13 +27,15 @@ From the package root:
 
 ```bash
 pragmagraph-smoke --json
+pragmagraph quickstart . --json
 ```
 
 Expected outcome:
 
 1. the command exits successfully,
 2. it returns JSON,
-3. the output reports the stable package contract fields.
+3. the smoke output reports the stable package contract fields,
+4. the quickstart output reports a workspace, local store, and visual artifact.
 
 ## Package validation gates
 
@@ -71,4 +73,4 @@ make release-check
 ```
 
 That command runs the package release smoke that builds artifacts, checks the
-wheel, and verifies the documented standalone install path.
+wheel, and verifies the documented standalone install and quickstart paths.

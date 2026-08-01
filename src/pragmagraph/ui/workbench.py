@@ -97,7 +97,7 @@ def run_workbench_command(args: argparse.Namespace) -> object:
 def _register_quickstart_command(subparsers: argparse._SubParsersAction) -> None:
     parser = subparsers.add_parser(
         "quickstart",
-        help="create a workspace and open the first visual investigation",
+        help="recommended first run: create a workspace and visual investigation",
     )
     parser.add_argument("root", nargs="?", default=".")
     parser.add_argument("--config", default=DEFAULT_WORKSPACE_CONFIG)
