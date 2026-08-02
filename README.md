@@ -17,13 +17,13 @@
 </p>
 
 <p align="center">
-  <a href="https://pypi.org/project/pragmagraph/"><img alt="PyPI" src="https://img.shields.io/badge/pypi-v0.0.7-3775A9"></a>
+  <a href="https://pypi.org/project/pragmagraph/"><img alt="PyPI" src="https://img.shields.io/badge/pypi-v0.0.8rc1-3775A9"></a>
   <a href="https://pypi.org/project/pragmagraph/"><img alt="Python" src="https://img.shields.io/pypi/pyversions/pragmagraph?cacheSeconds=300"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
   <img alt="Status" src="https://img.shields.io/badge/status-alpha-6B7280">
 </p>
 
-PragmaGraph `v0.0.7` is a standalone public alpha package for facts that can be
+PragmaGraph `v0.0.8rc1` is a standalone public alpha package for facts that can be
 reproduced from source. It indexes local code, documents, artifacts, and Git
 history into deterministic graph snapshots without asking an LLM to decide what
 is true.
@@ -54,7 +54,7 @@ and should be treated as a scam.
 | | |
 | --- | --- |
 | Package | `pragmagraph` |
-| Current line | `v0.0.7` public alpha |
+| Current line | `v0.0.8rc1` public alpha |
 | Python | 3.11+ |
 | Best fit | Reproducible source, document, artifact, and Git facts |
 | Primary artifact | Deterministic JSON graph snapshot |

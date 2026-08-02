@@ -66,7 +66,7 @@ This directory holds the public package documentation for standalone
 
 ## Public package stance
 
-The `0.0.7` semantic alpha defines a reproducible observed-fact graph contract:
+The `0.0.8rc1` semantic alpha defines a reproducible observed-fact graph contract:
 
 1. immutable DTOs, JSON snapshots, local indexing, and deterministic query,
    traversal, report, and export helpers,
