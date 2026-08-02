@@ -85,7 +85,11 @@ from pragmagraph.storage.cli import (
 )
 from pragmagraph.topology import build_topology_summary, render_markdown_topology
 from pragmagraph.ui.cli import UI_COMMANDS, register_ui_commands, run_ui_command
-from pragmagraph.ui.workbench import register_workbench_commands, run_workbench_command
+from pragmagraph.ui.workbench import (
+    WORKBENCH_COMMANDS,
+    register_workbench_commands,
+    run_workbench_command,
+)
 from pragmagraph.viewer.cli import (
     VIEWER_COMMANDS,
     register_viewer_commands,
@@ -226,7 +230,12 @@ def _snapshot_freshness_payload(
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="pragmagraph package smoke")
+    parser = argparse.ArgumentParser(
+        description=(
+            "PragmaGraph observed-fact graph CLI. Start with "
+            "`pragmagraph quickstart . --json`."
+        )
+    )
     _add_json_flag(parser)
     subparsers = parser.add_subparsers(dest="command")
 
@@ -879,7 +888,7 @@ def main(argv: list[str] | None = None) -> int:
         return run_stdio_service(service)
     elif args.command in UI_COMMANDS:
         _print_payload(run_ui_command(args), as_json=args.json)
-    elif args.command == "workbench":
+    elif args.command in WORKBENCH_COMMANDS:
         _print_payload(run_workbench_command(args), as_json=args.json)
     elif args.command == "doctor":
         from pragmagraph.ui import (

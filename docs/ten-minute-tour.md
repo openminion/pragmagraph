@@ -2,11 +2,32 @@
 
 Status: semantic alpha
 
-This tour shows the shortest standalone path through PragmaGraph: index a local
-project, open the visual graph, query the materialized store, and export a
-certification pack.
+This tour shows the shortest standalone path through PragmaGraph: create a
+local workspace, open the visual graph, query the materialized store, and export
+a certification pack.
 
-## 1. Create A Workspace Config
+## 1. Start The Local Loop
+
+```bash
+pragmagraph quickstart . --serve --open --json
+```
+
+`quickstart` is the recommended first-run path. It creates
+`.pragmagraph/workspace.toml` when needed, refreshes the local snapshot,
+materializes the local SQLite store, and opens the first visual investigation
+panel through GraphFakos. It does not install watchers, start background
+indexers, or call an LLM.
+
+For a self-contained source-checkout example:
+
+```bash
+python3.11 examples/quickstart_flow.py
+```
+
+## 2. Create A Workspace Config Explicitly
+
+Skip this section if you already ran `quickstart`. These commands show the
+same setup in separate steps for scripts and demos.
 
 ```bash
 pragmagraph workspace-config-init . \
@@ -29,7 +50,7 @@ Inspect the config and any realized workspace state:
 pragmagraph workspace-config-status .pragmagraph/workspace.toml --json
 ```
 
-## 2. Open The Visual Graph
+## 3. Open The Visual Graph
 
 ```bash
 pragmagraph demo-ui \
@@ -54,7 +75,7 @@ pragmagraph demo-ui \
   --json
 ```
 
-## 3. Search The Workspace Snapshot
+## 4. Search The Workspace Snapshot
 
 ```bash
 pragmagraph workspace-query \
@@ -101,7 +122,7 @@ pragmagraph repo-map \
   --handoff
 ```
 
-## 4. Materialize And Explain Store Search
+## 5. Materialize And Explain Store Search
 
 ```bash
 pragmagraph store-import \
@@ -120,7 +141,7 @@ The explain output reports the materialized search strategy, FTS availability,
 candidate node IDs, omitted reasons, and a reproducible `store-query` command.
 It does not change ranking or add semantic inference.
 
-## 5. Export A Certification Pack
+## 6. Export A Certification Pack
 
 ```bash
 pragmagraph certify \
@@ -133,7 +154,7 @@ The JSON and Markdown outputs include observed counts, parser coverage, omitted
 reasons, privacy posture, topology summary, cross-repository resolution counts
 when present, and the canonical snapshot hash.
 
-## 6. Refresh Explicitly
+## 7. Refresh Explicitly
 
 ```bash
 pragmagraph workspace-refresh --config .pragmagraph/workspace.toml --json
@@ -148,7 +169,7 @@ Inspect freshness from the same workspace config:
 pragmagraph freshness --config .pragmagraph/workspace.toml --json
 ```
 
-## 7. Review A Portable Graph Pack
+## 8. Review A Portable Graph Pack
 
 Export, verify, and review a graph pack before importing it elsewhere:
 
@@ -180,7 +201,7 @@ pragmagraph ui-preview \
   --json
 ```
 
-## 8. Smoke The MCP Surface
+## 9. Smoke The MCP Surface
 
 Generate config snippets when you want to wire a client manually:
 

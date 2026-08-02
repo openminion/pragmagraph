@@ -59,7 +59,7 @@ Requires Python 3.11+.
 
 ```bash
 # 1. Clone and enter the repo
-git clone https://github.com/openminion/pragmagraph.git pragmagraph
+git clone https://github.com/OpenMinion/pragmagraph.git pragmagraph
 cd pragmagraph
 
 # 2. Create and activate a virtualenv
