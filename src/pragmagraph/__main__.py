@@ -231,6 +231,7 @@ def _snapshot_freshness_payload(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
+        prog="pragmagraph",
         description=(
             "PragmaGraph observed-fact graph CLI. Start with "
             "`pragmagraph quickstart . --json`."

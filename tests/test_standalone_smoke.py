@@ -68,6 +68,7 @@ def test_python_m_pragmagraph_help_has_compact_first_run_guidance() -> None:
     )
 
     assert "<command>" in result.stdout
+    assert result.stdout.startswith("usage: pragmagraph")
     assert "Recommended first run: pragmagraph quickstart . --json" in result.stdout
     assert "Reopen the visual graph: pragmagraph demo-ui" in result.stdout
 
