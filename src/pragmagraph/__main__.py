@@ -234,10 +234,16 @@ def main(argv: list[str] | None = None) -> int:
         description=(
             "PragmaGraph observed-fact graph CLI. Start with "
             "`pragmagraph quickstart . --json`."
-        )
+        ),
+        epilog=(
+            "Recommended first run: pragmagraph quickstart . --json\n"
+            "Reopen the visual graph: pragmagraph demo-ui --config "
+            ".pragmagraph/workspace.toml --serve --open"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     _add_json_flag(parser)
-    subparsers = parser.add_subparsers(dest="command")
+    subparsers = parser.add_subparsers(dest="command", metavar="<command>")
 
     index_parser = subparsers.add_parser("index", help="index a local root")
     index_parser.add_argument("root")

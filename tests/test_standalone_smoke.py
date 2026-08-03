@@ -59,6 +59,19 @@ def test_python_m_pragmagraph_smoke() -> None:
     }
 
 
+def test_python_m_pragmagraph_help_has_compact_first_run_guidance() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "pragmagraph", "--help"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert "<command>" in result.stdout
+    assert "Recommended first run: pragmagraph quickstart . --json" in result.stdout
+    assert "Reopen the visual graph: pragmagraph demo-ui" in result.stdout
+
+
 def test_console_script_contract_and_release_smoke_shape() -> None:
     from pathlib import Path
 

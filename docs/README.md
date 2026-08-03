@@ -7,6 +7,14 @@ This directory holds the public package documentation for standalone
 
 ## Start Here
 
+Most readers only need the first five links:
+
+1. [`getting-started.md`](getting-started.md)
+2. [`ten-minute-tour.md`](ten-minute-tour.md)
+3. [`storage-interchange.md`](storage-interchange.md)
+4. [`viewer-contract.md`](viewer-contract.md)
+5. [`testing-and-validation.md`](testing-and-validation.md)
+
 | If you want to... | Read |
 | --- | --- |
 | Install and run a first local graph | [`getting-started.md`](getting-started.md) |
@@ -17,6 +25,10 @@ This directory holds the public package documentation for standalone
 | Check proof and public claim boundaries | [`certification-readiness-matrix.md`](certification-readiness-matrix.md) |
 
 ## Command Guide
+
+Use `quickstart` first. The other local UI commands are supporting surfaces:
+`demo-ui` reopens an existing workspace, while `ui-preview` and `workbench`
+are lower-level proof and debugging commands.
 
 | Command family | Use it for | Public posture |
 | --- | --- | --- |
