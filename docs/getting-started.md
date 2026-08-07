@@ -50,7 +50,13 @@ Before substantial code changes, read:
 
 ## Common local checks
 
-Create a snapshot:
+Run the complete local loop:
+
+```bash
+pragmagraph quickstart . --json
+```
+
+Create only a snapshot:
 
 ```bash
 pragmagraph index . --out snapshot.json --json

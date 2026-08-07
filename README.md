@@ -142,10 +142,9 @@ pragmagraph refresh . \
   --json
 ```
 
-Run the package example:
+Run the self-contained package example:
 
 ```bash
-python3.11 examples/basic_usage.py
 python3.11 examples/quickstart_flow.py
 ```
 

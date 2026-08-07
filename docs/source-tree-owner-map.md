@@ -15,7 +15,7 @@ The public alpha surface is documented in:
 
 The preferred entrypoint is `pragmagraph`, with additional stable import roots
 for contracts, models, query, storage, adapters, bench, portability, parsers,
-export, graphify, report, refresh, navigation, interchange, topology, docgraph,
+export, graphify, report, refresh, navigation, viewer, interchange, topology, docgraph,
 planner, certification, lineage, parser_support, investigate, security,
 service, workspace, and `pragmagraph.ui`.
 
@@ -55,7 +55,12 @@ service, workspace, and `pragmagraph.ui`.
 13. `service/` owns the local repeated-query service boundary. `server/` owns
    the bounded MCP transport, tool registry, read-only resource registry, and
    short-lived MCP consumer smoke.
-14. `ui/` owns typed UI contracts, the PragmaGraph-to-GraphFakos adapter, and
+14. `viewer/` owns the provider-neutral viewer envelope, bounded viewer query
+   helpers, and deterministic scale fixtures. `viewer/__init__.py` remains the
+   stable viewer import seam, `viewer/envelope.py` owns envelope DTO,
+   persistence, compatibility, and capability metadata, and
+   `viewer/fixtures.py` owns synthetic viewer fixture generation.
+15. `ui/` owns typed UI contracts, the PragmaGraph-to-GraphFakos adapter, and
    package CLI preview wiring. `ui/__init__.py` remains the stable UI import
    seam, `ui/contracts.py` owns typed route and transport-boundary contracts,
    `ui/local_server.py` remains the stable local-viewer compatibility seam,

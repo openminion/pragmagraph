@@ -18,7 +18,8 @@ materializes the local SQLite store, and opens the first visual investigation
 panel through GraphFakos. It does not install watchers, start background
 indexers, or call an LLM.
 
-For a self-contained source-checkout example:
+For a self-contained source-checkout example that does not rely on test
+fixtures:
 
 ```bash
 python3.11 examples/quickstart_flow.py
