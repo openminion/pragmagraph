@@ -18,6 +18,11 @@ materializes the local SQLite store, and opens the first visual investigation
 panel through GraphFakos. It does not install watchers, start background
 indexers, or call an LLM.
 
+The JSON result includes copyable follow-up commands for the most common first
+checks: refresh the workspace, inspect a compact repo map, reopen the visual
+graph, switch to project-health or search screens, explain store search, and
+smoke the MCP server.
+
 For a self-contained source-checkout example that does not rely on test
 fixtures:
 
@@ -122,6 +127,9 @@ pragmagraph repo-map \
   .pragmagraph/workspace/snapshot.json \
   --handoff
 ```
+
+The same command is emitted as `next_commands.repo_map` by `quickstart` and
+`workbench`, so agents and scripts can reuse the exact generated snapshot path.
 
 ## 5. Materialize And Explain Store Search
 

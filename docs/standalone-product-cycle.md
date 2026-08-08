@@ -25,9 +25,9 @@ canonical snapshot, materializes a local SQLite store, and renders the
 GraphFakos-backed local visual shell. It does not start a background watcher,
 schedule refresh, or call a hosted service. JSON output includes
 `next_commands` with copyable query, investigation, freshness, report,
-backend-probe, graph-pack, MCP-config, MCP-smoke, store-health,
-store-search-explain, and reopen-visual commands for the files that were just
-created.
+repo-map, project-health visual, search visual, backend-probe, graph-pack,
+MCP-config, MCP-smoke, store-health, store-search-explain, and reopen-visual
+commands for the files that were just created.
 
 ## Guided investigation
 
@@ -83,6 +83,13 @@ pragmagraph workbench \
   --html-out .pragmagraph/workbench.html \
   --artifact-out .pragmagraph/workbench-artifact.json \
   --json
+```
+
+Use the emitted `repo_map` command when you want a fast text handoff before
+opening the full visual graph:
+
+```bash
+pragmagraph repo-map .pragmagraph/workspace/snapshot.json --handoff
 ```
 
 ## Refresh and delta review

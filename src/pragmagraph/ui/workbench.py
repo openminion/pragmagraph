@@ -240,6 +240,8 @@ def _quickstart_next_commands(
     query_text: str,
 ) -> dict[str, list[str]]:
     config = str(config_path)
+    resolved = resolve_workspace_config_paths(config_path)
+    snapshot_path = str(resolved.workspace_path / "snapshot.json")
     return {
         "refresh": [
             "pragmagraph",
@@ -254,6 +256,36 @@ def _quickstart_next_commands(
             "--config",
             config,
             query_text,
+            "--json",
+        ],
+        "repo_map": [
+            "pragmagraph",
+            "repo-map",
+            snapshot_path,
+            "--handoff",
+        ],
+        "project_health_visual": [
+            "pragmagraph",
+            "demo-ui",
+            "--config",
+            config,
+            "--screen",
+            "project_health",
+            "--serve",
+            "--open",
+            "--json",
+        ],
+        "search_visual": [
+            "pragmagraph",
+            "demo-ui",
+            "--config",
+            config,
+            "--screen",
+            "search",
+            "--query",
+            query_text,
+            "--serve",
+            "--open",
             "--json",
         ],
         "visual": [
@@ -322,6 +354,7 @@ def _base_next_commands(
 ) -> dict[str, list[str]]:
     return {
         "query": ["pragmagraph", "query", snapshot_path, request.query, "--json"],
+        "repo_map": ["pragmagraph", "repo-map", snapshot_path, "--handoff"],
         "report": ["pragmagraph", "report", snapshot_path, "--json"],
         "investigate": [
             "pragmagraph",

@@ -56,6 +56,18 @@ Run the complete local loop:
 pragmagraph quickstart . --json
 ```
 
+Open the local visual graph after quickstart:
+
+```bash
+pragmagraph demo-ui --config .pragmagraph/workspace.toml --serve --open --json
+```
+
+Show a compact navigation handoff for the generated snapshot:
+
+```bash
+pragmagraph repo-map .pragmagraph/workspace/snapshot.json --handoff
+```
+
 Create only a snapshot:
 
 ```bash

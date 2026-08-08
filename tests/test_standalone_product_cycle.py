@@ -67,6 +67,12 @@ def test_workbench_writes_static_html_artifact_and_store_from_root(
         "query",
         str(workspace / "snapshot.json"),
     ]
+    assert payload["next_commands"]["repo_map"] == [
+        "pragmagraph",
+        "repo-map",
+        str(workspace / "snapshot.json"),
+        "--handoff",
+    ]
     assert payload["next_commands"]["store_health"] == [
         "pragmagraph",
         "store-health",
@@ -232,6 +238,36 @@ def test_quickstart_creates_workspace_store_and_visual_investigation(
     assert (
         payload["next_commands"]["reopen_visual"] == payload["next_commands"]["visual"]
     )
+    assert payload["next_commands"]["repo_map"] == [
+        "pragmagraph",
+        "repo-map",
+        str(workspace / "snapshot.json"),
+        "--handoff",
+    ]
+    assert payload["next_commands"]["project_health_visual"] == [
+        "pragmagraph",
+        "demo-ui",
+        "--config",
+        str(config_path),
+        "--screen",
+        "project_health",
+        "--serve",
+        "--open",
+        "--json",
+    ]
+    assert payload["next_commands"]["search_visual"] == [
+        "pragmagraph",
+        "demo-ui",
+        "--config",
+        str(config_path),
+        "--screen",
+        "search",
+        "--query",
+        "RuntimeGraph",
+        "--serve",
+        "--open",
+        "--json",
+    ]
     assert payload["next_commands"]["store_search_explain"] == [
         "pragmagraph",
         "store-search-explain",
