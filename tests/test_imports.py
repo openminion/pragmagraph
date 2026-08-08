@@ -259,6 +259,8 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     import pragmagraph.adapters as adapters
     import pragmagraph.bench as bench
     import pragmagraph.certification as certification
+    import pragmagraph.cli as cli
+    import pragmagraph.cli.commands as cli_commands
     import pragmagraph.contracts as contracts
     import pragmagraph.docgraph as docgraph
     import pragmagraph.evidence as evidence
@@ -292,6 +294,8 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     assert "render_markdown_benchmark" in bench.__all__
     assert "build_certification_pack" in certification.__all__
     assert "render_markdown_certification_pack" in certification.__all__
+    assert "register_core_commands" in cli.__all__
+    assert "register_core_commands" in cli_commands.__all__
     assert "SCHEMA_VERSION" in contracts.__all__
     assert "build_doc_graph_summary" in docgraph.__all__
     assert "collect_memory_evidence" in evidence.__all__
