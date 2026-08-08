@@ -43,8 +43,9 @@ service, workspace, and `pragmagraph.ui`.
 11. `parsers/` owns built-in deterministic parser implementations and
    parser-family registration. `parsers/registry.py` owns parser registry
    contracts, version constants, suffix declarations, and optional-parser
-   diagnostics; parser implementations should not reimplement that selection
-   policy.
+   diagnostics; `parsers/python_ast.py`, `parsers/script.py`, and
+   `parsers/script_precise.py` own language-specific extraction. Parser
+   implementations should not reimplement registry selection policy.
 12. `interchange/`, `topology/`, `docgraph/`, `planner/`,
    `certification/`, `lineage/`, and `parser_support/` own advanced
    structural views over observed snapshots. `interchange/` also owns the SCIP
