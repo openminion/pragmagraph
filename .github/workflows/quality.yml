@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: openminion/graphfakos
-          ref: 4d44366dc832d1f55e2113f512ae3dffd858797c
+          ref: v0.0.9
           path: graphfakos
 
       - uses: actions/setup-python@v5
