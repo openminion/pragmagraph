@@ -240,6 +240,8 @@ def _quickstart_next_commands(
     query_text: str,
 ) -> dict[str, list[str]]:
     config = str(config_path)
+    resolved = resolve_workspace_config_paths(config_path)
+    snapshot_path = str(resolved.workspace_path / "snapshot.json")
     return {
         "refresh": [
             "pragmagraph",
@@ -256,6 +258,36 @@ def _quickstart_next_commands(
             query_text,
             "--json",
         ],
+        "repo_map": [
+            "pragmagraph",
+            "repo-map",
+            snapshot_path,
+            "--handoff",
+        ],
+        "project_health_visual": [
+            "pragmagraph",
+            "demo-ui",
+            "--config",
+            config,
+            "--screen",
+            "project_health",
+            "--serve",
+            "--open",
+            "--json",
+        ],
+        "search_visual": [
+            "pragmagraph",
+            "demo-ui",
+            "--config",
+            config,
+            "--screen",
+            "search",
+            "--query",
+            query_text,
+            "--serve",
+            "--open",
+            "--json",
+        ],
         "visual": [
             "pragmagraph",
             "demo-ui",
@@ -263,6 +295,23 @@ def _quickstart_next_commands(
             config,
             "--serve",
             "--open",
+            "--json",
+        ],
+        "reopen_visual": [
+            "pragmagraph",
+            "demo-ui",
+            "--config",
+            config,
+            "--serve",
+            "--open",
+            "--json",
+        ],
+        "store_search_explain": [
+            "pragmagraph",
+            "store-search-explain",
+            "--config",
+            config,
+            query_text,
             "--json",
         ],
         "mcp_smoke": [
@@ -294,6 +343,8 @@ def _workbench_next_commands(request: UiPreviewRequest) -> dict[str, list[str]]:
     if request.store_path:
         commands.update(_graph_pack_next_commands(request, snapshot_path))
     commands["investigation_ui"] = _investigation_ui_command(request, snapshot_path)
+    if request.workspace:
+        commands["reopen_visual"] = _reopen_visual_command(request)
     return commands
 
 
@@ -303,6 +354,7 @@ def _base_next_commands(
 ) -> dict[str, list[str]]:
     return {
         "query": ["pragmagraph", "query", snapshot_path, request.query, "--json"],
+        "repo_map": ["pragmagraph", "repo-map", snapshot_path, "--handoff"],
         "report": ["pragmagraph", "report", snapshot_path, "--json"],
         "investigate": [
             "pragmagraph",
@@ -351,6 +403,13 @@ def _graph_pack_next_commands(
             "pragmagraph",
             "store-health",
             request.store_path,
+            "--json",
+        ],
+        "store_search_explain": [
+            "pragmagraph",
+            "store-search-explain",
+            request.store_path,
+            request.query,
             "--json",
         ],
         "graph_pack_export": [
@@ -410,6 +469,24 @@ def _investigation_ui_command(
         request.query,
         "--preset",
         request.investigation_preset,
+        "--json",
+    ]
+
+
+def _reopen_visual_command(request: UiPreviewRequest) -> list[str]:
+    return [
+        "pragmagraph",
+        "ui-preview",
+        "--workspace",
+        str(request.workspace),
+        "--screen",
+        request.screen,
+        "--query",
+        request.query,
+        "--preset",
+        request.investigation_preset,
+        "--serve",
+        "--open",
         "--json",
     ]
 

@@ -67,10 +67,23 @@ def test_workbench_writes_static_html_artifact_and_store_from_root(
         "query",
         str(workspace / "snapshot.json"),
     ]
+    assert payload["next_commands"]["repo_map"] == [
+        "pragmagraph",
+        "repo-map",
+        str(workspace / "snapshot.json"),
+        "--handoff",
+    ]
     assert payload["next_commands"]["store_health"] == [
         "pragmagraph",
         "store-health",
         str(workspace / "graph.sqlite"),
+        "--json",
+    ]
+    assert payload["next_commands"]["store_search_explain"] == [
+        "pragmagraph",
+        "store-search-explain",
+        str(workspace / "graph.sqlite"),
+        "RuntimeGraph",
         "--json",
     ]
     assert payload["next_commands"]["backend_probe"] == [
@@ -146,6 +159,21 @@ def test_workbench_writes_static_html_artifact_and_store_from_root(
         "search",
         "--json",
     ]
+    assert payload["next_commands"]["reopen_visual"] == [
+        "pragmagraph",
+        "ui-preview",
+        "--workspace",
+        str(workspace),
+        "--screen",
+        "evidence",
+        "--query",
+        "RuntimeGraph",
+        "--preset",
+        "search",
+        "--serve",
+        "--open",
+        "--json",
+    ]
     assert payload["next_commands"]["mcp_config_smoke"] == [
         "pragmagraph",
         "mcp-config-smoke",
@@ -205,6 +233,47 @@ def test_quickstart_creates_workspace_store_and_visual_investigation(
         str(config_path),
         "--serve",
         "--open",
+        "--json",
+    ]
+    assert (
+        payload["next_commands"]["reopen_visual"] == payload["next_commands"]["visual"]
+    )
+    assert payload["next_commands"]["repo_map"] == [
+        "pragmagraph",
+        "repo-map",
+        str(workspace / "snapshot.json"),
+        "--handoff",
+    ]
+    assert payload["next_commands"]["project_health_visual"] == [
+        "pragmagraph",
+        "demo-ui",
+        "--config",
+        str(config_path),
+        "--screen",
+        "project_health",
+        "--serve",
+        "--open",
+        "--json",
+    ]
+    assert payload["next_commands"]["search_visual"] == [
+        "pragmagraph",
+        "demo-ui",
+        "--config",
+        str(config_path),
+        "--screen",
+        "search",
+        "--query",
+        "RuntimeGraph",
+        "--serve",
+        "--open",
+        "--json",
+    ]
+    assert payload["next_commands"]["store_search_explain"] == [
+        "pragmagraph",
+        "store-search-explain",
+        "--config",
+        str(config_path),
+        "RuntimeGraph",
         "--json",
     ]
 
