@@ -40,27 +40,32 @@ service, workspace, and `pragmagraph.ui`.
 10. `investigate/` owns guided graph-inspection bundles that compose query,
    neighborhood, path, freshness, and next-command facts without owning new
    indexing, storage, or semantic ranking.
-11. `interchange/`, `topology/`, `docgraph/`, `planner/`,
+11. `parsers/` owns built-in deterministic parser implementations and
+   parser-family registration. `parsers/registry.py` owns parser registry
+   contracts, version constants, suffix declarations, and optional-parser
+   diagnostics; parser implementations should not reimplement that selection
+   policy.
+12. `interchange/`, `topology/`, `docgraph/`, `planner/`,
    `certification/`, `lineage/`, and `parser_support/` own advanced
    structural views over observed snapshots. `interchange/` also owns the SCIP
    JSON subset, optional native SCIP protobuf intake, and caller-fed exact
    compiler/LSP fact bridge. `interchange/scip_symbols.py` owns grammar-aware
    complete SCIP identity validation; query-time code must not reimplement it.
-12. `workspace/` owns the persistent local workspace directory contract,
+13. `workspace/` owns the persistent local workspace directory contract,
    explicit workspace lifecycle helpers, deterministic multi-root overlays,
    named canonical-snapshot composition, and exact cross-root resolution.
    `workspace/cli.py` owns both multi-root command registrations, and
    `workspace/cli_resolution.py` owns shared config-aware CLI argument
    resolution so the root CLI remains an orchestrator.
-13. `service/` owns the local repeated-query service boundary. `server/` owns
+14. `service/` owns the local repeated-query service boundary. `server/` owns
    the bounded MCP transport, tool registry, read-only resource registry, and
    short-lived MCP consumer smoke.
-14. `viewer/` owns the provider-neutral viewer envelope, bounded viewer query
+15. `viewer/` owns the provider-neutral viewer envelope, bounded viewer query
    helpers, and deterministic scale fixtures. `viewer/__init__.py` remains the
    stable viewer import seam, `viewer/envelope.py` owns envelope DTO,
    persistence, compatibility, and capability metadata, and
    `viewer/fixtures.py` owns synthetic viewer fixture generation.
-15. `ui/` owns typed UI contracts, the PragmaGraph-to-GraphFakos adapter, and
+16. `ui/` owns typed UI contracts, the PragmaGraph-to-GraphFakos adapter, and
    package CLI preview wiring. `ui/__init__.py` remains the stable UI import
    seam, `ui/contracts.py` owns typed route and transport-boundary contracts,
    `ui/local_server.py` remains the stable local-viewer compatibility seam,

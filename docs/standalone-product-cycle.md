@@ -25,8 +25,9 @@ canonical snapshot, materializes a local SQLite store, and renders the
 GraphFakos-backed local visual shell. It does not start a background watcher,
 schedule refresh, or call a hosted service. JSON output includes
 `next_commands` with copyable query, investigation, freshness, report,
-backend-probe, graph-pack, MCP-config, MCP-smoke, and store-health commands for
-the files that were just created.
+backend-probe, graph-pack, MCP-config, MCP-smoke, store-health,
+store-search-explain, and reopen-visual commands for the files that were just
+created.
 
 ## Guided investigation
 

@@ -270,6 +270,7 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     import pragmagraph.navigation as navigation
     import pragmagraph.parser_support as parser_support
     import pragmagraph.parsers as parsers
+    import pragmagraph.parsers.registry as parser_registry
     import pragmagraph.planner as planner
     import pragmagraph.portability as portability
     import pragmagraph.query as query
@@ -299,6 +300,7 @@ def test_public_roots_expose_semantic_alpha_contracts() -> None:
     assert "build_parser_support_matrix" in parser_support.__all__
     assert "OptionalParserFamily" in parsers.__all__
     assert "get_default_registry" in parsers.__all__
+    assert "ParserRegistry" in parser_registry.__all__
     assert "explain_query_plan" in planner.__all__
     assert "pragma_uri" in portability.__all__
     assert "reverse_imports" in query.__all__

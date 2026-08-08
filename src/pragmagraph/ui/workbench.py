@@ -265,6 +265,23 @@ def _quickstart_next_commands(
             "--open",
             "--json",
         ],
+        "reopen_visual": [
+            "pragmagraph",
+            "demo-ui",
+            "--config",
+            config,
+            "--serve",
+            "--open",
+            "--json",
+        ],
+        "store_search_explain": [
+            "pragmagraph",
+            "store-search-explain",
+            "--config",
+            config,
+            query_text,
+            "--json",
+        ],
         "mcp_smoke": [
             "pragmagraph",
             "mcp-smoke",
@@ -294,6 +311,8 @@ def _workbench_next_commands(request: UiPreviewRequest) -> dict[str, list[str]]:
     if request.store_path:
         commands.update(_graph_pack_next_commands(request, snapshot_path))
     commands["investigation_ui"] = _investigation_ui_command(request, snapshot_path)
+    if request.workspace:
+        commands["reopen_visual"] = _reopen_visual_command(request)
     return commands
 
 
@@ -353,6 +372,13 @@ def _graph_pack_next_commands(
             request.store_path,
             "--json",
         ],
+        "store_search_explain": [
+            "pragmagraph",
+            "store-search-explain",
+            request.store_path,
+            request.query,
+            "--json",
+        ],
         "graph_pack_export": [
             "pragmagraph",
             "graph-pack-export",
@@ -410,6 +436,24 @@ def _investigation_ui_command(
         request.query,
         "--preset",
         request.investigation_preset,
+        "--json",
+    ]
+
+
+def _reopen_visual_command(request: UiPreviewRequest) -> list[str]:
+    return [
+        "pragmagraph",
+        "ui-preview",
+        "--workspace",
+        str(request.workspace),
+        "--screen",
+        request.screen,
+        "--query",
+        request.query,
+        "--preset",
+        request.investigation_preset,
+        "--serve",
+        "--open",
         "--json",
     ]
 

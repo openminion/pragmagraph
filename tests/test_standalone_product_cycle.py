@@ -73,6 +73,13 @@ def test_workbench_writes_static_html_artifact_and_store_from_root(
         str(workspace / "graph.sqlite"),
         "--json",
     ]
+    assert payload["next_commands"]["store_search_explain"] == [
+        "pragmagraph",
+        "store-search-explain",
+        str(workspace / "graph.sqlite"),
+        "RuntimeGraph",
+        "--json",
+    ]
     assert payload["next_commands"]["backend_probe"] == [
         "pragmagraph",
         "store-backends",
@@ -146,6 +153,21 @@ def test_workbench_writes_static_html_artifact_and_store_from_root(
         "search",
         "--json",
     ]
+    assert payload["next_commands"]["reopen_visual"] == [
+        "pragmagraph",
+        "ui-preview",
+        "--workspace",
+        str(workspace),
+        "--screen",
+        "evidence",
+        "--query",
+        "RuntimeGraph",
+        "--preset",
+        "search",
+        "--serve",
+        "--open",
+        "--json",
+    ]
     assert payload["next_commands"]["mcp_config_smoke"] == [
         "pragmagraph",
         "mcp-config-smoke",
@@ -205,6 +227,17 @@ def test_quickstart_creates_workspace_store_and_visual_investigation(
         str(config_path),
         "--serve",
         "--open",
+        "--json",
+    ]
+    assert (
+        payload["next_commands"]["reopen_visual"] == payload["next_commands"]["visual"]
+    )
+    assert payload["next_commands"]["store_search_explain"] == [
+        "pragmagraph",
+        "store-search-explain",
+        "--config",
+        str(config_path),
+        "RuntimeGraph",
         "--json",
     ]
 
