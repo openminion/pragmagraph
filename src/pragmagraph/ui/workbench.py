@@ -264,48 +264,17 @@ def _quickstart_next_commands(
             snapshot_path,
             "--handoff",
         ],
-        "project_health_visual": [
-            "pragmagraph",
-            "demo-ui",
-            "--config",
+        "project_health_visual": _demo_visual_command(
             config,
-            "--screen",
-            "project_health",
-            "--serve",
-            "--open",
-            "--json",
-        ],
-        "search_visual": [
-            "pragmagraph",
-            "demo-ui",
-            "--config",
+            screen="project_health",
+        ),
+        "search_visual": _demo_visual_command(
             config,
-            "--screen",
-            "search",
-            "--query",
-            query_text,
-            "--serve",
-            "--open",
-            "--json",
-        ],
-        "visual": [
-            "pragmagraph",
-            "demo-ui",
-            "--config",
-            config,
-            "--serve",
-            "--open",
-            "--json",
-        ],
-        "reopen_visual": [
-            "pragmagraph",
-            "demo-ui",
-            "--config",
-            config,
-            "--serve",
-            "--open",
-            "--json",
-        ],
+            screen="search",
+            query=query_text,
+        ),
+        "visual": _demo_visual_command(config),
+        "reopen_visual": _demo_visual_command(config),
         "store_search_explain": [
             "pragmagraph",
             "store-search-explain",
@@ -322,6 +291,26 @@ def _quickstart_next_commands(
             "--json",
         ],
     }
+
+
+def _demo_visual_command(
+    config_path: str,
+    *,
+    screen: str = "",
+    query: str = "",
+) -> list[str]:
+    command = [
+        "pragmagraph",
+        "demo-ui",
+        "--config",
+        config_path,
+    ]
+    if screen:
+        command.extend(["--screen", screen])
+    if query:
+        command.extend(["--query", query])
+    command.extend(["--serve", "--open", "--json"])
+    return command
 
 
 def _ensure_workbench_store(workspace: str, store_path: str) -> None:
