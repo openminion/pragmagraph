@@ -35,7 +35,7 @@ def test_pragmagraph_package_imports() -> None:
     import pragmagraph.ui
     import pragmagraph.workspace
 
-    assert pragmagraph.__version__ == "0.0.9"
+    assert pragmagraph.__version__ == "0.0.10"
     assert pragmagraph.PACKAGE_STATUS == "semantic-alpha"
     assert "pragmagraph.bench" in pragmagraph.STABLE_IMPORT_ROOTS
     assert "pragmagraph.certification" in pragmagraph.STABLE_IMPORT_ROOTS
