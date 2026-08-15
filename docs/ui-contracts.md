@@ -23,7 +23,8 @@ The important ownership rule is explicit:
 - owner import root: `pragmagraph.ui`
 - runtime package: `openminion`
 - transport kind: `openminion_workbench`
-- transport status: `planned_not_implemented`
+- hosted OpenMinion transport status: `planned_not_implemented`
+- package-local preview status: `available`
 - host-runtime seam: OpenMinion's third-brain adapter layer
 - reusable local server primitive: `graphfakos.server`
 - local visual UI seam: `python3.11 -m pragmagraph ui-preview --serve`

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 
+from pragmagraph.cli import add_json_flag
 from pragmagraph.server.client_config import (
     build_mcp_config_smoke_payload,
     build_mcp_doctor_payload,
@@ -25,7 +26,7 @@ def register_mcp_client_commands(subparsers: argparse._SubParsersAction) -> None
     source.add_argument("--snapshot")
     source.add_argument("--root")
     parser.add_argument("--namespace", default="default")
-    parser.add_argument("--json", action="store_true", help="emit JSON output")
+    add_json_flag(parser)
 
     smoke_parser = subparsers.add_parser(
         "mcp-config-smoke",
@@ -35,7 +36,7 @@ def register_mcp_client_commands(subparsers: argparse._SubParsersAction) -> None
     smoke_source.add_argument("--snapshot")
     smoke_source.add_argument("--root")
     smoke_parser.add_argument("--namespace", default="default")
-    smoke_parser.add_argument("--json", action="store_true", help="emit JSON output")
+    add_json_flag(smoke_parser)
 
     consumer_parser = subparsers.add_parser(
         "mcp-smoke",
@@ -48,7 +49,7 @@ def register_mcp_client_commands(subparsers: argparse._SubParsersAction) -> None
     consumer_parser.add_argument("--namespace", default="default")
     consumer_parser.add_argument("--query", default="RuntimeGraph")
     consumer_parser.add_argument("--timeout", type=int, default=15)
-    consumer_parser.add_argument("--json", action="store_true", help="emit JSON output")
+    add_json_flag(consumer_parser)
 
 
 def run_mcp_client_command(args: argparse.Namespace) -> object:

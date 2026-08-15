@@ -9,6 +9,7 @@ from pragmagraph.adapters.git_history import (
     DEFAULT_GIT_IDENTITY_MODE,
     SUPPORTED_GIT_IDENTITY_MODES,
 )
+from pragmagraph.cli import add_json_flag
 from pragmagraph.investigate import INVESTIGATION_PRESETS
 from pragmagraph.ui.preview import serve_ui_preview, write_ui_preview
 from pragmagraph.ui.preview_types import UiPreviewRequest
@@ -123,7 +124,7 @@ def _register_ui_preview_command(subparsers: argparse._SubParsersAction) -> None
     parser.add_argument("--serve", action="store_true")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8766)
-    parser.add_argument("--json", action="store_true", help="emit JSON output")
+    add_json_flag(parser)
 
 
 def _register_demo_ui_command(subparsers: argparse._SubParsersAction) -> None:
@@ -161,7 +162,7 @@ def _register_demo_ui_command(subparsers: argparse._SubParsersAction) -> None:
     parser.add_argument("--serve", action="store_true")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8766)
-    parser.add_argument("--json", action="store_true", help="emit JSON output")
+    add_json_flag(parser)
 
 
 def _run_preview(request: UiPreviewRequest, args: argparse.Namespace) -> object:

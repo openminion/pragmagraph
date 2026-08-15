@@ -9,6 +9,7 @@ from pragmagraph.adapters.git_history import (
     DEFAULT_GIT_IDENTITY_MODE,
     SUPPORTED_GIT_IDENTITY_MODES,
 )
+from pragmagraph.cli import add_json_flag
 from pragmagraph.investigate import INVESTIGATION_PRESETS
 from pragmagraph.storage import SQLiteGraphStore, load_snapshot
 from pragmagraph.ui.preview import serve_ui_preview, write_ui_preview
@@ -79,7 +80,7 @@ def _register_workbench_command(subparsers: argparse._SubParsersAction) -> None:
         choices=tuple(sorted(SUPPORTED_GIT_IDENTITY_MODES)),
         default=DEFAULT_GIT_IDENTITY_MODE,
     )
-    parser.add_argument("--json", action="store_true", help="emit JSON output")
+    add_json_flag(parser)
 
 
 def run_workbench_command(args: argparse.Namespace) -> object:
@@ -126,7 +127,7 @@ def _register_quickstart_command(subparsers: argparse._SubParsersAction) -> None
         choices=tuple(sorted(SUPPORTED_GIT_IDENTITY_MODES)),
         default=DEFAULT_GIT_IDENTITY_MODE,
     )
-    parser.add_argument("--json", action="store_true", help="emit JSON output")
+    add_json_flag(parser)
 
 
 def _workbench_request(args: argparse.Namespace) -> UiPreviewRequest:
