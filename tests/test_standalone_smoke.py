@@ -73,6 +73,20 @@ def test_python_m_pragmagraph_help_has_compact_first_run_guidance() -> None:
     assert "Reopen the visual graph: pragmagraph demo-ui" in result.stdout
 
 
+def test_python_m_pragmagraph_quickstart_help_keeps_first_run_examples() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "pragmagraph", "quickstart", "--help"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.stdout.startswith("usage: pragmagraph quickstart")
+    assert "Create a repeatable local PragmaGraph workspace" in result.stdout
+    assert "First run: pragmagraph quickstart . --serve --open --json" in result.stdout
+    assert "Reopen later: pragmagraph demo-ui --config" in result.stdout
+
+
 def test_console_script_contract_and_release_smoke_shape() -> None:
     from pathlib import Path
 

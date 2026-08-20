@@ -99,6 +99,16 @@ def _register_quickstart_command(subparsers: argparse._SubParsersAction) -> None
     parser = subparsers.add_parser(
         "quickstart",
         help="recommended first run: create a workspace and visual investigation",
+        description=(
+            "Create a repeatable local PragmaGraph workspace, materialized store, "
+            "and visual investigation from one source root."
+        ),
+        epilog=(
+            "First run: pragmagraph quickstart . --serve --open --json\n"
+            "Reopen later: pragmagraph demo-ui --config "
+            ".pragmagraph/workspace.toml --serve --open --json"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("root", nargs="?", default=".")
     parser.add_argument("--config", default=DEFAULT_WORKSPACE_CONFIG)
