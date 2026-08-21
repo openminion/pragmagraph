@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 
+from pragmagraph.cli import add_json_flag
 from pragmagraph.portability.graph_pack import (
     import_graph_pack,
     inspect_graph_pack,
@@ -36,7 +37,7 @@ def register_graph_pack_commands(subparsers: argparse._SubParsersAction) -> None
     export_parser.add_argument("--store")
     export_parser.add_argument("--evidence")
     export_parser.add_argument("--redaction-profile", default="none")
-    _add_json_flag(export_parser)
+    add_json_flag(export_parser)
 
     import_parser = subparsers.add_parser(
         "graph-pack-import",
@@ -45,14 +46,14 @@ def register_graph_pack_commands(subparsers: argparse._SubParsersAction) -> None
     import_parser.add_argument("pack")
     import_parser.add_argument("--snapshot-out")
     import_parser.add_argument("--store-out")
-    _add_json_flag(import_parser)
+    add_json_flag(import_parser)
 
     inspect_parser = subparsers.add_parser(
         "graph-pack-inspect",
         help="inspect a portable graph pack manifest",
     )
     inspect_parser.add_argument("pack")
-    _add_json_flag(inspect_parser)
+    add_json_flag(inspect_parser)
 
     review_parser = subparsers.add_parser(
         "graph-pack-review",
@@ -61,14 +62,14 @@ def register_graph_pack_commands(subparsers: argparse._SubParsersAction) -> None
     review_parser.add_argument("pack")
     review_parser.add_argument("--snapshot-out")
     review_parser.add_argument("--store-out")
-    _add_json_flag(review_parser)
+    add_json_flag(review_parser)
 
     verify_parser = subparsers.add_parser(
         "graph-pack-verify",
         help="verify graph pack manifest, snapshot, store, and evidence consistency",
     )
     verify_parser.add_argument("pack")
-    _add_json_flag(verify_parser)
+    add_json_flag(verify_parser)
 
 
 def run_graph_pack_command(args: argparse.Namespace) -> object:
@@ -98,10 +99,6 @@ def run_graph_pack_command(args: argparse.Namespace) -> object:
             store_out=args.store_out,
         ).to_dict()
     return inspect_graph_pack(args.pack).to_dict()
-
-
-def _add_json_flag(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--json", action="store_true", help="emit JSON output")
 
 
 __all__ = [

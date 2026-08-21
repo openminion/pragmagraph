@@ -7,6 +7,7 @@ from typing import Literal
 
 UiTransportKind = Literal["openminion_workbench"]
 UiTransportStatus = Literal["planned_not_implemented"]
+UiLocalPreviewStatus = Literal["available"]
 UiScreenId = Literal[
     "search",
     "result_detail",
@@ -29,6 +30,7 @@ class UiTransportBoundary:
     runtime_package: str
     transport: UiTransportKind
     transport_status: UiTransportStatus
+    local_preview_status: UiLocalPreviewStatus
     ui_owner_surface: str
     api_surface: str
     imports_openminion: bool
@@ -60,6 +62,7 @@ def build_default_ui_boundary() -> UiTransportBoundary:
         runtime_package="openminion",
         transport="openminion_workbench",
         transport_status="planned_not_implemented",
+        local_preview_status="available",
         ui_owner_surface="openminion third-brain workbench",
         api_surface="openminion third-brain adapter layer",
         imports_openminion=False,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 
+from pragmagraph.cli import add_json_flag
 from pragmagraph.models import PragmaGraphError, QueryRequest
 from pragmagraph.query import health
 from pragmagraph.storage import (
@@ -49,7 +50,7 @@ def register_storage_commands(subparsers: argparse._SubParsersAction) -> None:
     import_parser.add_argument("--out")
     import_parser.add_argument("--backend", choices=("sqlite",), default="sqlite")
     import_parser.add_argument("--config")
-    _add_json_flag(import_parser)
+    add_json_flag(import_parser)
 
     export_parser = subparsers.add_parser(
         "store-export",
@@ -57,7 +58,7 @@ def register_storage_commands(subparsers: argparse._SubParsersAction) -> None:
     )
     export_parser.add_argument("store")
     export_parser.add_argument("--out")
-    _add_json_flag(export_parser)
+    add_json_flag(export_parser)
 
     health_parser = subparsers.add_parser(
         "store-health",
@@ -65,7 +66,7 @@ def register_storage_commands(subparsers: argparse._SubParsersAction) -> None:
     )
     health_parser.add_argument("store", nargs="?")
     health_parser.add_argument("--config")
-    _add_json_flag(health_parser)
+    add_json_flag(health_parser)
 
     query_parser = subparsers.add_parser(
         "store-query",
@@ -77,7 +78,7 @@ def register_storage_commands(subparsers: argparse._SubParsersAction) -> None:
     query_parser.add_argument("--max-results", type=int, default=10)
     query_parser.add_argument("--cursor", default="")
     query_parser.add_argument("--max-examined", type=int)
-    _add_json_flag(query_parser)
+    add_json_flag(query_parser)
 
     explain_parser = subparsers.add_parser(
         "store-search-explain",
@@ -88,7 +89,7 @@ def register_storage_commands(subparsers: argparse._SubParsersAction) -> None:
     explain_parser.add_argument("--config")
     explain_parser.add_argument("--max-results", type=int, default=10)
     explain_parser.add_argument("--max-examined", type=int)
-    _add_json_flag(explain_parser)
+    add_json_flag(explain_parser)
 
     neighborhood_parser = subparsers.add_parser(
         "store-neighborhood",
@@ -100,7 +101,7 @@ def register_storage_commands(subparsers: argparse._SubParsersAction) -> None:
     neighborhood_parser.add_argument("--max-results", type=int, default=10)
     neighborhood_parser.add_argument("--edge-kind", action="append", default=[])
     neighborhood_parser.add_argument("--node-kind", action="append", default=[])
-    _add_json_flag(neighborhood_parser)
+    add_json_flag(neighborhood_parser)
 
     path_parser = subparsers.add_parser(
         "store-path",
@@ -112,13 +113,13 @@ def register_storage_commands(subparsers: argparse._SubParsersAction) -> None:
     path_parser.add_argument("--max-hops", type=int, default=4)
     path_parser.add_argument("--edge-kind", action="append", default=[])
     path_parser.add_argument("--node-kind", action="append", default=[])
-    _add_json_flag(path_parser)
+    add_json_flag(path_parser)
 
     migrate_parser = subparsers.add_parser(
         "store-migrate", help="explicitly migrate a SQLite graph store"
     )
     migrate_parser.add_argument("store")
-    _add_json_flag(migrate_parser)
+    add_json_flag(migrate_parser)
 
     round_trip_parser = subparsers.add_parser(
         "store-round-trip",
@@ -128,14 +129,14 @@ def register_storage_commands(subparsers: argparse._SubParsersAction) -> None:
     round_trip_parser.add_argument("--store", required=True)
     round_trip_parser.add_argument("--query", default="")
     round_trip_parser.add_argument("--export-out")
-    _add_json_flag(round_trip_parser)
+    add_json_flag(round_trip_parser)
 
     update_parser = subparsers.add_parser(
         "store-update", help="atomically apply a canonical snapshot delta"
     )
     update_parser.add_argument("store")
     update_parser.add_argument("snapshot")
-    _add_json_flag(update_parser)
+    add_json_flag(update_parser)
 
     _register_backend_catalog_command(subparsers)
 
@@ -312,10 +313,6 @@ def _store_payload(store: SQLiteGraphStore) -> dict[str, object]:
     }
 
 
-def _add_json_flag(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--json", action="store_true", help="emit JSON output")
-
-
 def _register_backend_catalog_command(
     subparsers: argparse._SubParsersAction,
 ) -> None:
@@ -330,7 +327,7 @@ def _register_backend_catalog_command(
         action="store_true",
         help="check whether reserved optional backend packages are installed",
     )
-    _add_json_flag(parser)
+    add_json_flag(parser)
 
 
 __all__ = [

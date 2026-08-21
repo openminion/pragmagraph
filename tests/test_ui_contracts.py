@@ -15,6 +15,7 @@ def test_ui_import_root_and_boundary_contract_are_stable() -> None:
     assert boundary.runtime_package == "openminion"
     assert boundary.transport == "openminion_workbench"
     assert boundary.transport_status == "planned_not_implemented"
+    assert boundary.local_preview_status == "available"
     assert boundary.ui_owner_surface == "openminion third-brain workbench"
     assert boundary.api_surface == "openminion third-brain adapter layer"
     assert boundary.imports_openminion is False

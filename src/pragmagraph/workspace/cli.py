@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 
+from pragmagraph.cli import add_json_flag
 from pragmagraph.adapters.git_history import (
     DEFAULT_GIT_IDENTITY_MODE,
     SUPPORTED_GIT_IDENTITY_MODES,
@@ -53,7 +54,7 @@ def register_workspace_commands(subparsers: argparse._SubParsersAction) -> None:
     init_parser.add_argument("--label", default="default")
     init_parser.add_argument("--namespace", default="default")
     _add_git_identity_mode_argument(init_parser)
-    _add_json_flag(init_parser)
+    add_json_flag(init_parser)
 
     refresh_parser = subparsers.add_parser(
         "workspace-refresh",
@@ -61,7 +62,7 @@ def register_workspace_commands(subparsers: argparse._SubParsersAction) -> None:
     )
     refresh_parser.add_argument("workspace", nargs="?")
     refresh_parser.add_argument("--config")
-    _add_json_flag(refresh_parser)
+    add_json_flag(refresh_parser)
 
     status_parser = subparsers.add_parser(
         "workspace-status",
@@ -69,7 +70,7 @@ def register_workspace_commands(subparsers: argparse._SubParsersAction) -> None:
     )
     status_parser.add_argument("workspace", nargs="?")
     status_parser.add_argument("--config")
-    _add_json_flag(status_parser)
+    add_json_flag(status_parser)
 
     query_parser = subparsers.add_parser(
         "workspace-query",
@@ -81,7 +82,7 @@ def register_workspace_commands(subparsers: argparse._SubParsersAction) -> None:
     query_parser.add_argument("--max-results", type=int, default=10)
     query_parser.add_argument("--cursor", default="")
     query_parser.add_argument("--max-examined", type=int)
-    _add_json_flag(query_parser)
+    add_json_flag(query_parser)
 
     config_parser = subparsers.add_parser(
         "workspace-config-init",
@@ -100,14 +101,14 @@ def register_workspace_commands(subparsers: argparse._SubParsersAction) -> None:
     )
     config_parser.add_argument("--ui-query", default="RuntimeGraph")
     _add_git_identity_mode_argument(config_parser)
-    _add_json_flag(config_parser)
+    add_json_flag(config_parser)
 
     config_status_parser = subparsers.add_parser(
         "workspace-config-status",
         help="inspect a workspace TOML file and any realized workspace state",
     )
     config_status_parser.add_argument("config")
-    _add_json_flag(config_status_parser)
+    add_json_flag(config_status_parser)
 
     index_parser = subparsers.add_parser(
         "multi-root-index",
@@ -116,7 +117,7 @@ def register_workspace_commands(subparsers: argparse._SubParsersAction) -> None:
     index_parser.add_argument("--root", action="append", required=True)
     index_parser.add_argument("--namespace", default="workspace")
     index_parser.add_argument("--out", required=True)
-    _add_json_flag(index_parser)
+    add_json_flag(index_parser)
 
     compose_parser = subparsers.add_parser(
         "multi-root-compose",
@@ -126,7 +127,7 @@ def register_workspace_commands(subparsers: argparse._SubParsersAction) -> None:
     compose_parser.add_argument("--namespace", default="workspace")
     compose_parser.add_argument("--created-at", default="")
     compose_parser.add_argument("--out", required=True)
-    _add_json_flag(compose_parser)
+    add_json_flag(compose_parser)
 
 
 def run_workspace_command(
@@ -254,10 +255,6 @@ def _add_git_identity_mode_argument(parser: argparse.ArgumentParser) -> None:
         choices=tuple(sorted(SUPPORTED_GIT_IDENTITY_MODES)),
         default=DEFAULT_GIT_IDENTITY_MODE,
     )
-
-
-def _add_json_flag(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--json", action="store_true", help="emit JSON output")
 
 
 __all__ = [

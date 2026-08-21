@@ -7,13 +7,13 @@ This directory holds the public package documentation for standalone
 
 ## Start Here
 
-Most readers only need the first five links:
+Most readers only need one path:
 
-1. [`getting-started.md`](getting-started.md)
-2. [`ten-minute-tour.md`](ten-minute-tour.md)
-3. [`storage-interchange.md`](storage-interchange.md)
-4. [`viewer-contract.md`](viewer-contract.md)
-5. [`testing-and-validation.md`](testing-and-validation.md)
+```bash
+pragmagraph quickstart . --serve --open --json
+```
+
+Then use the docs below as a product map.
 
 | If you want to... | Read |
 | --- | --- |
@@ -23,6 +23,16 @@ Most readers only need the first five links:
 | Export or serve graph facts | [`report-mode.md`](report-mode.md), [`export-mode.md`](export-mode.md), and [`service-mode.md`](service-mode.md) |
 | Hand graph data to GraphFakos or another viewer | [`viewer-contract.md`](viewer-contract.md) |
 | Check proof and public claim boundaries | [`certification-readiness-matrix.md`](certification-readiness-matrix.md) |
+
+## Product Map
+
+| Area | Main docs |
+| --- | --- |
+| Start and navigate | [`getting-started.md`](getting-started.md), [`ten-minute-tour.md`](ten-minute-tour.md), [`navigation-mode.md`](navigation-mode.md) |
+| Operate local state | [`workspace-mode.md`](workspace-mode.md), [`refresh-operations.md`](refresh-operations.md), [`storage-interchange.md`](storage-interchange.md) |
+| Visualize and share | [`viewer-contract.md`](viewer-contract.md), [`ui-contracts.md`](ui-contracts.md), [`export-mode.md`](export-mode.md) |
+| Integrate | [`service-mode.md`](service-mode.md), [`graphify-interop.md`](graphify-interop.md), [`native-scip-ingestion.md`](native-scip-ingestion.md) |
+| Validate and release | [`testing-and-validation.md`](testing-and-validation.md), [`certification-readiness-matrix.md`](certification-readiness-matrix.md), [`benchmarking.md`](benchmarking.md) |
 
 ## Command Guide
 

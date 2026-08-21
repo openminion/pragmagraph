@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 
+from pragmagraph.cli import add_json_flag
 from pragmagraph.storage import load_snapshot
 from pragmagraph.viewer import (
     VIEWER_FIXTURE_SCENARIOS,
@@ -52,7 +53,7 @@ def register_viewer_commands(subparsers: argparse._SubParsersAction) -> None:
     export_parser.add_argument("--edge-budget", type=int, default=480)
     export_parser.add_argument("--cluster-size", type=int, default=24)
     export_parser.add_argument("--out", default="")
-    _add_json_flag(export_parser)
+    add_json_flag(export_parser)
 
     fixture_parser = subparsers.add_parser(
         "viewer-fixture",
@@ -65,7 +66,7 @@ def register_viewer_commands(subparsers: argparse._SubParsersAction) -> None:
     fixture_parser.add_argument("--node-budget", type=int, default=240)
     fixture_parser.add_argument("--edge-budget", type=int, default=480)
     fixture_parser.add_argument("--seed", type=int, default=20260706)
-    _add_json_flag(fixture_parser)
+    add_json_flag(fixture_parser)
 
     cluster_parser = subparsers.add_parser(
         "viewer-cluster",
@@ -74,7 +75,7 @@ def register_viewer_commands(subparsers: argparse._SubParsersAction) -> None:
     cluster_parser.add_argument("envelope")
     cluster_parser.add_argument("cluster_id")
     cluster_parser.add_argument("--budget", type=int, default=100)
-    _add_json_flag(cluster_parser)
+    add_json_flag(cluster_parser)
 
     content_parser = subparsers.add_parser(
         "viewer-content",
@@ -85,7 +86,7 @@ def register_viewer_commands(subparsers: argparse._SubParsersAction) -> None:
     content_parser.add_argument(
         "--mode", choices=("preview", "full"), default="preview"
     )
-    _add_json_flag(content_parser)
+    add_json_flag(content_parser)
 
     neighborhood_parser = subparsers.add_parser(
         "viewer-neighborhood",
@@ -95,7 +96,7 @@ def register_viewer_commands(subparsers: argparse._SubParsersAction) -> None:
     neighborhood_parser.add_argument("node_id")
     neighborhood_parser.add_argument("--depth", type=int, default=1)
     neighborhood_parser.add_argument("--budget", type=int, default=100)
-    _add_json_flag(neighborhood_parser)
+    add_json_flag(neighborhood_parser)
 
     path_parser = subparsers.add_parser(
         "viewer-path",
@@ -105,7 +106,7 @@ def register_viewer_commands(subparsers: argparse._SubParsersAction) -> None:
     path_parser.add_argument("source_id")
     path_parser.add_argument("target_id")
     path_parser.add_argument("--budget", type=int, default=100)
-    _add_json_flag(path_parser)
+    add_json_flag(path_parser)
 
     cluster_nodes_parser = subparsers.add_parser(
         "viewer-cluster-nodes",
@@ -117,7 +118,7 @@ def register_viewer_commands(subparsers: argparse._SubParsersAction) -> None:
         "--role", choices=("hub", "bridge"), required=True
     )
     cluster_nodes_parser.add_argument("--budget", type=int, default=100)
-    _add_json_flag(cluster_nodes_parser)
+    add_json_flag(cluster_nodes_parser)
 
     omitted_parser = subparsers.add_parser(
         "viewer-omitted",
@@ -125,7 +126,7 @@ def register_viewer_commands(subparsers: argparse._SubParsersAction) -> None:
     )
     omitted_parser.add_argument("envelope")
     omitted_parser.add_argument("--reason", default="")
-    _add_json_flag(omitted_parser)
+    add_json_flag(omitted_parser)
 
     delta_parser = subparsers.add_parser(
         "viewer-delta",
@@ -134,7 +135,7 @@ def register_viewer_commands(subparsers: argparse._SubParsersAction) -> None:
     delta_parser.add_argument("before_snapshot")
     delta_parser.add_argument("after_snapshot")
     delta_parser.add_argument("--budget", type=int, default=100)
-    _add_json_flag(delta_parser)
+    add_json_flag(delta_parser)
 
 
 def run_viewer_command(args: argparse.Namespace) -> object:
@@ -195,10 +196,6 @@ def run_viewer_command(args: argparse.Namespace) -> object:
     if args.command == "viewer-omitted":
         return explain_omitted(envelope, reason=args.reason)
     raise ValueError(f"unsupported viewer command: {args.command}")
-
-
-def _add_json_flag(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--json", action="store_true", help="emit JSON output")
 
 
 __all__ = ["VIEWER_COMMANDS", "register_viewer_commands", "run_viewer_command"]

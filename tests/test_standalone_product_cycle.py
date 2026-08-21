@@ -286,6 +286,7 @@ def test_delta_review_payload_and_ui_screen_compare_snapshots(tmp_path: Path) ->
     )
     before_path = tmp_path / "before.json"
     after_path = tmp_path / "after.json"
+    html_path = tmp_path / "delta.html"
     artifact_path = tmp_path / "delta-artifact.json"
     save_snapshot(before, before_path)
     save_snapshot(after, after_path)
@@ -307,6 +308,8 @@ def test_delta_review_payload_and_ui_screen_compare_snapshots(tmp_path: Path) ->
         before_path,
         "--after-snapshot",
         after_path,
+        "--html-out",
+        html_path,
         "--artifact-out",
         artifact_path,
     )

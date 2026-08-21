@@ -5,13 +5,16 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from pragmagraph.adapters import index_path
-from pragmagraph.models import QueryRequest
+from pragmagraph.models import PragmaGraphError, QueryRequest
 from pragmagraph.interchange import load_native_scip
 from pragmagraph.query import query
 from pragmagraph.service import (
     ERROR_INVALID_PARAMS,
     ERROR_INVALID_REQUEST,
+    ERROR_INTERNAL,
     ERROR_REFRESH_UNSUPPORTED,
     ERROR_UNSUPPORTED_METHOD,
     METHOD_CAPABILITIES,
@@ -283,12 +286,9 @@ def test_service_invalid_requests_return_typed_errors(tmp_path: Path) -> None:
 
     assert request_from_json_line('{"id":"1","method":"health"}').method == "health"
 
-    invalid_json = None
-    try:
+    with pytest.raises(PragmaGraphError) as exc_info:
         request_from_json_line("{bad json")
-    except Exception as exc:  # pragma: no cover - assertion uses captured value
-        invalid_json = exc
-    assert getattr(invalid_json, "code") == ERROR_INVALID_REQUEST
+    assert exc_info.value.code == ERROR_INVALID_REQUEST
 
     unsupported = service.handle_request(
         ServiceRequest(id="u1", method="unknown", params={})
@@ -301,6 +301,28 @@ def test_service_invalid_requests_return_typed_errors(tmp_path: Path) -> None:
     assert unsupported.to_dict()["error"]["code"] == ERROR_UNSUPPORTED_METHOD
     assert invalid_params.ok is False
     assert invalid_params.to_dict()["error"]["code"] == ERROR_INVALID_PARAMS
+
+
+def test_service_unexpected_failures_return_a_safe_internal_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = _repo_root(tmp_path)
+    service = LocalQueryService.from_root(root, namespace="fixture")
+
+    def fail_dispatch(_request: ServiceRequest) -> None:
+        raise RuntimeError("private implementation detail")
+
+    monkeypatch.setattr(service, "_dispatch", fail_dispatch)
+    response = service.handle_request(
+        ServiceRequest(id="broken", method=METHOD_QUERY, params={})
+    )[0].to_dict()
+
+    assert response["error"] == {
+        "code": ERROR_INTERNAL,
+        "message": "internal service error",
+        "details": {"error_type": "RuntimeError"},
+    }
 
 
 def test_service_health_and_export_surface_richer_metadata(tmp_path: Path) -> None:

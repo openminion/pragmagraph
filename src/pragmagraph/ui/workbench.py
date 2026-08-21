@@ -9,11 +9,12 @@ from pragmagraph.adapters.git_history import (
     DEFAULT_GIT_IDENTITY_MODE,
     SUPPORTED_GIT_IDENTITY_MODES,
 )
+from pragmagraph.cli import add_json_flag
 from pragmagraph.investigate import INVESTIGATION_PRESETS
 from pragmagraph.storage import SQLiteGraphStore, load_snapshot
 from pragmagraph.ui.preview import serve_ui_preview, write_ui_preview
 from pragmagraph.ui.preview_types import UiPreviewRequest
-from pragmagraph.ui.workspace_paths import ensure_config_workspace
+from pragmagraph.workspace.cli_resolution import ensure_config_workspace
 from pragmagraph.workspace import (
     DEFAULT_STORE_FILE,
     DEFAULT_UI_QUERY,
@@ -79,7 +80,7 @@ def _register_workbench_command(subparsers: argparse._SubParsersAction) -> None:
         choices=tuple(sorted(SUPPORTED_GIT_IDENTITY_MODES)),
         default=DEFAULT_GIT_IDENTITY_MODE,
     )
-    parser.add_argument("--json", action="store_true", help="emit JSON output")
+    add_json_flag(parser)
 
 
 def run_workbench_command(args: argparse.Namespace) -> object:
@@ -98,6 +99,16 @@ def _register_quickstart_command(subparsers: argparse._SubParsersAction) -> None
     parser = subparsers.add_parser(
         "quickstart",
         help="recommended first run: create a workspace and visual investigation",
+        description=(
+            "Create a repeatable local PragmaGraph workspace, materialized store, "
+            "and visual investigation from one source root."
+        ),
+        epilog=(
+            "First run: pragmagraph quickstart . --serve --open --json\n"
+            "Reopen later: pragmagraph demo-ui --config "
+            ".pragmagraph/workspace.toml --serve --open --json"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("root", nargs="?", default=".")
     parser.add_argument("--config", default=DEFAULT_WORKSPACE_CONFIG)
@@ -126,7 +137,7 @@ def _register_quickstart_command(subparsers: argparse._SubParsersAction) -> None
         choices=tuple(sorted(SUPPORTED_GIT_IDENTITY_MODES)),
         default=DEFAULT_GIT_IDENTITY_MODE,
     )
-    parser.add_argument("--json", action="store_true", help="emit JSON output")
+    add_json_flag(parser)
 
 
 def _workbench_request(args: argparse.Namespace) -> UiPreviewRequest:
