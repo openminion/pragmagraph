@@ -14,7 +14,7 @@ from pragmagraph.investigate import INVESTIGATION_PRESETS
 from pragmagraph.storage import SQLiteGraphStore, load_snapshot
 from pragmagraph.ui.preview import serve_ui_preview, write_ui_preview
 from pragmagraph.ui.preview_types import UiPreviewRequest
-from pragmagraph.ui.workspace_paths import ensure_config_workspace
+from pragmagraph.workspace.cli_resolution import ensure_config_workspace
 from pragmagraph.workspace import (
     DEFAULT_STORE_FILE,
     DEFAULT_UI_QUERY,

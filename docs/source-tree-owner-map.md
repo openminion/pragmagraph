@@ -37,7 +37,7 @@ service, workspace, and `pragmagraph.ui`.
    persisted status ledgers, and repeatable local ingest runs.
 9. `cli/` owns reusable root command registration helpers for the package
    entrypoint. `__main__.py` owns command dispatch and should not grow new
-   parser-registration blocks when `cli/commands.py` can own them.
+   parser-registration blocks when a domain CLI owner can own them.
 10. `navigation/` owns compact repo-map and handoff views over observed
    snapshots.
 11. `investigate/` owns guided graph-inspection bundles that compose query,
@@ -73,7 +73,8 @@ service, workspace, and `pragmagraph.ui`.
    package CLI preview wiring. `ui/__init__.py` remains the stable UI import
    seam, `ui/contracts.py` owns typed route and transport-boundary contracts,
    `ui/local_server.py` remains the stable local-viewer compatibility seam,
-   `preview.py` is the stable preview façade,
+   `preview.py` is the stable preview façade, `cli.py` owns preview and evidence
+   doctor command registration and execution,
    `preview_types.py` owns typed request/result contracts, and
    `preview_inputs.py` owns preview request parsing plus snapshot-loading and
    GraphFakos bridge helpers. `ui/investigation.py` owns guided investigation

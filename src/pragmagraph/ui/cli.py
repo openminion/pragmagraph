@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 from pathlib import Path
 
 from pragmagraph.adapters.git_history import (
@@ -11,7 +12,14 @@ from pragmagraph.adapters.git_history import (
 )
 from pragmagraph.cli import add_json_flag
 from pragmagraph.investigate import INVESTIGATION_PRESETS
+from pragmagraph.storage import backend_catalog_payload
+from pragmagraph.ui.evidence import (
+    build_evidence_payload,
+    write_agent_context,
+    write_evidence_payload,
+)
 from pragmagraph.ui.preview import serve_ui_preview, write_ui_preview
+from pragmagraph.ui.preview_inputs import snapshot_for_request
 from pragmagraph.ui.preview_types import UiPreviewRequest
 from pragmagraph.workspace import (
     SUPPORTED_UI_SCREENS,
@@ -19,19 +27,22 @@ from pragmagraph.workspace import (
     load_workspace_config,
     resolve_workspace_config_paths,
 )
-from pragmagraph.ui.workspace_paths import ensure_config_workspace
+from pragmagraph.workspace.cli_resolution import ensure_config_workspace
 
-UI_COMMANDS = frozenset({"ui-preview", "demo-ui"})
+UI_COMMANDS = frozenset({"ui-preview", "demo-ui", "doctor"})
 
 
 def register_ui_commands(subparsers: argparse._SubParsersAction) -> None:
     """Register package-local UI commands."""
     _register_ui_preview_command(subparsers)
     _register_demo_ui_command(subparsers)
+    _register_doctor_command(subparsers)
 
 
 def run_ui_command(args: argparse.Namespace) -> object:
     """Execute one parsed UI command."""
+    if args.command == "doctor":
+        return _run_doctor_command(args)
     if args.command == "ui-preview":
         request = UiPreviewRequest(
             screen=args.screen,
@@ -163,6 +174,91 @@ def _register_demo_ui_command(subparsers: argparse._SubParsersAction) -> None:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8766)
     add_json_flag(parser)
+
+
+def _register_doctor_command(subparsers: argparse._SubParsersAction) -> None:
+    parser = subparsers.add_parser(
+        "doctor",
+        help="inspect status, search evidence, and storage proof for one graph",
+    )
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument("--config")
+    source.add_argument("--workspace")
+    source.add_argument("--snapshot")
+    source.add_argument("--store-only")
+    parser.add_argument("--store")
+    parser.add_argument("--query", default="")
+    parser.add_argument("--evidence-out", default="")
+    parser.add_argument("--agent-context-out", default="")
+    add_json_flag(parser)
+
+
+def _run_doctor_command(args: argparse.Namespace) -> dict[str, object]:
+    request = _doctor_request(args)
+    payload = build_evidence_payload(snapshot_for_request(request), request)
+    output: dict[str, object] = {"evidence": payload}
+    if args.evidence_out:
+        output["evidence_output_path"] = str(
+            write_evidence_payload(payload, args.evidence_out)
+        )
+    if args.agent_context_out:
+        output["agent_context_output_path"] = str(
+            write_agent_context(payload, args.agent_context_out)
+        )
+    output["storage_backends"] = backend_catalog_payload()
+    output["mcp"] = importlib.import_module(
+        "pragmagraph.server.client_config"
+    ).build_mcp_doctor_payload(
+        snapshot=request.snapshot or "",
+        root="",
+        namespace="default",
+    )
+    return output
+
+
+def _doctor_request(args: argparse.Namespace) -> UiPreviewRequest:
+    if args.config:
+        resolved = resolve_workspace_config_paths(args.config)
+        return UiPreviewRequest(
+            screen="evidence",
+            workspace=str(ensure_config_workspace(args.config)),
+            store_path=str(resolved.store_path),
+            query=args.query or resolved.config.ui_query or "RuntimeGraph",
+            evidence_path=args.evidence_out,
+            agent_context_path=args.agent_context_out,
+        )
+    if args.workspace:
+        return UiPreviewRequest(
+            screen="evidence",
+            workspace=args.workspace,
+            store_path=args.store,
+            query=args.query or "RuntimeGraph",
+            evidence_path=args.evidence_out,
+            agent_context_path=args.agent_context_out,
+        )
+    if args.snapshot:
+        return UiPreviewRequest(
+            screen="evidence",
+            snapshot=args.snapshot,
+            store_path=args.store,
+            query=args.query or "RuntimeGraph",
+            evidence_path=args.evidence_out,
+            agent_context_path=args.agent_context_out,
+        )
+    if args.store_only:
+        return UiPreviewRequest(
+            screen="evidence",
+            store_path=args.store_only,
+            query=args.query or "RuntimeGraph",
+            evidence_path=args.evidence_out,
+            agent_context_path=args.agent_context_out,
+        )
+    return UiPreviewRequest(
+        screen="evidence",
+        query=args.query or "RuntimeGraph",
+        evidence_path=args.evidence_out,
+        agent_context_path=args.agent_context_out,
+    )
 
 
 def _run_preview(request: UiPreviewRequest, args: argparse.Namespace) -> object:

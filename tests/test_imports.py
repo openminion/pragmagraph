@@ -74,6 +74,7 @@ def test_top_level_public_api_and_version_metadata_are_stable() -> None:
     pyproject = tomllib.loads((root / "pyproject.toml").read_text())
 
     assert pragmagraph.__version__ == pyproject["project"]["version"]
+    assert len(pragmagraph.__all__) == len(set(pragmagraph.__all__))
     assert set(pragmagraph.__all__) == {
         "PACKAGE_STATUS",
         "STABLE_IMPORT_ROOTS",

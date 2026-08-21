@@ -403,7 +403,7 @@ class LocalQueryService:
                 ),
                 False,
             )
-        except Exception as exc:  # pragma: no cover - defensive envelope
+        except Exception as exc:
             return (
                 ServiceResponse.failure(
                     request.id,

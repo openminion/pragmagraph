@@ -73,7 +73,7 @@ from pragmagraph.refresh import (
 )
 from pragmagraph.report import build_report, render_markdown_report
 from pragmagraph.service import LocalQueryService, run_stdio_service
-from pragmagraph.storage import backend_catalog_payload, load_snapshot, save_snapshot
+from pragmagraph.storage import load_snapshot, save_snapshot
 from pragmagraph.storage.cli import (
     STORAGE_COMMANDS,
     register_storage_commands,
@@ -91,16 +91,12 @@ from pragmagraph.viewer.cli import (
     register_viewer_commands,
     run_viewer_command,
 )
-from pragmagraph.workspace import (
-    resolve_workspace_config_paths,
-)
 from pragmagraph.workspace.cli import (
     WORKSPACE_COMMANDS,
     register_workspace_commands,
     run_workspace_command,
 )
 from pragmagraph.workspace.cli_resolution import (
-    ensure_config_workspace,
     freshness_snapshot_arg,
     investigation_args,
     query_args,
@@ -131,28 +127,6 @@ def _print_payload(payload: object, *, as_json: bool) -> None:
 
 def _server_client_cli():
     return importlib.import_module("pragmagraph.server.client_cli")
-
-
-def _server_client_config():
-    return importlib.import_module("pragmagraph.server.client_config")
-
-
-def _register_mcp_client_commands(subparsers: argparse._SubParsersAction) -> None:
-    _server_client_cli().register_mcp_client_commands(subparsers)
-
-
-def _run_mcp_client_command(args: argparse.Namespace) -> object:
-    return _server_client_cli().run_mcp_client_command(args)
-
-
-def _mcp_doctor_payload(
-    *, snapshot: str, root: str, namespace: str
-) -> dict[str, object]:
-    return _server_client_config().build_mcp_doctor_payload(
-        snapshot=snapshot,
-        root=root,
-        namespace=namespace,
-    )
 
 
 def _service_from_args(args: argparse.Namespace) -> LocalQueryService:
@@ -233,24 +207,10 @@ def main(argv: list[str] | None = None) -> int:
     register_core_commands(subparsers)
 
     register_ui_commands(subparsers)
-    doctor_parser = subparsers.add_parser(
-        "doctor",
-        help="inspect status, search evidence, and storage proof for one graph",
-    )
-    doctor_source = doctor_parser.add_mutually_exclusive_group()
-    doctor_source.add_argument("--config")
-    doctor_source.add_argument("--workspace")
-    doctor_source.add_argument("--snapshot")
-    doctor_source.add_argument("--store-only")
-    doctor_parser.add_argument("--store")
-    doctor_parser.add_argument("--query", default="")
-    doctor_parser.add_argument("--evidence-out", default="")
-    doctor_parser.add_argument("--agent-context-out", default="")
-    add_json_flag(doctor_parser)
-
     register_workbench_commands(subparsers)
     register_graph_pack_commands(subparsers)
-    _register_mcp_client_commands(subparsers)
+    server_client_cli = _server_client_cli()
+    server_client_cli.register_mcp_client_commands(subparsers)
     register_storage_commands(subparsers)
     register_workspace_commands(subparsers)
     register_viewer_commands(subparsers)
@@ -598,36 +558,12 @@ def main(argv: list[str] | None = None) -> int:
         _print_payload(run_ui_command(args), as_json=args.json)
     elif args.command in WORKBENCH_COMMANDS:
         _print_payload(run_workbench_command(args), as_json=args.json)
-    elif args.command == "doctor":
-        from pragmagraph.ui import (
-            build_evidence_payload,
-            write_agent_context,
-            write_evidence_payload,
-        )
-        from pragmagraph.ui.preview_inputs import snapshot_for_request
-
-        request = _doctor_request(args)
-        payload = build_evidence_payload(snapshot_for_request(request), request)
-        output: dict[str, object] = {"evidence": payload}
-        if args.evidence_out:
-            output["evidence_output_path"] = str(
-                write_evidence_payload(payload, args.evidence_out)
-            )
-        if args.agent_context_out:
-            output["agent_context_output_path"] = str(
-                write_agent_context(payload, args.agent_context_out)
-            )
-        output["storage_backends"] = backend_catalog_payload()
-        output["mcp"] = _mcp_doctor_payload(
-            snapshot=request.snapshot or "",
-            root="",
-            namespace="default",
-        )
-        _print_payload(output, as_json=args.json)
     elif args.command in GRAPH_PACK_COMMANDS:
         _print_payload(run_graph_pack_command(args), as_json=args.json)
-    elif args.command in _server_client_cli().MCP_CLIENT_COMMANDS:
-        _print_payload(_run_mcp_client_command(args), as_json=args.json)
+    elif args.command in server_client_cli.MCP_CLIENT_COMMANDS:
+        _print_payload(
+            server_client_cli.run_mcp_client_command(args), as_json=args.json
+        )
     elif args.command in VIEWER_COMMANDS:
         _print_payload(run_viewer_command(args), as_json=True)
     elif args.json:
@@ -635,54 +571,6 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(f"pragmagraph semantic alpha OK: {smoke_payload()}")
     return 0
-
-
-def _doctor_request(args: argparse.Namespace):
-    from pragmagraph.ui import UiPreviewRequest
-
-    if args.config:
-        resolved = resolve_workspace_config_paths(args.config)
-        workspace = ensure_config_workspace(args.config)
-        return UiPreviewRequest(
-            screen="evidence",
-            workspace=str(workspace),
-            store_path=str(resolved.store_path),
-            query=args.query or resolved.config.ui_query or "RuntimeGraph",
-            evidence_path=args.evidence_out,
-            agent_context_path=args.agent_context_out,
-        )
-    if args.workspace:
-        return UiPreviewRequest(
-            screen="evidence",
-            workspace=args.workspace,
-            store_path=args.store,
-            query=args.query or "RuntimeGraph",
-            evidence_path=args.evidence_out,
-            agent_context_path=args.agent_context_out,
-        )
-    if args.snapshot:
-        return UiPreviewRequest(
-            screen="evidence",
-            snapshot=args.snapshot,
-            store_path=args.store,
-            query=args.query or "RuntimeGraph",
-            evidence_path=args.evidence_out,
-            agent_context_path=args.agent_context_out,
-        )
-    if args.store_only:
-        return UiPreviewRequest(
-            screen="evidence",
-            store_path=args.store_only,
-            query=args.query or "RuntimeGraph",
-            evidence_path=args.evidence_out,
-            agent_context_path=args.agent_context_out,
-        )
-    return UiPreviewRequest(
-        screen="evidence",
-        query=args.query or "RuntimeGraph",
-        evidence_path=args.evidence_out,
-        agent_context_path=args.agent_context_out,
-    )
 
 
 def ui_preview_main(argv: list[str] | None = None) -> int:
