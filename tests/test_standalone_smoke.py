@@ -55,7 +55,7 @@ def test_python_m_pragmagraph_smoke() -> None:
             "pragmagraph.viewer",
         ],
         "status": "semantic-alpha",
-        "version": "0.0.11",
+        "version": "0.0.12rc1",
     }
 
 
