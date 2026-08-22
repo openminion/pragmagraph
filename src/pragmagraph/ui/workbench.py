@@ -83,13 +83,13 @@ def _register_workbench_command(subparsers: argparse._SubParsersAction) -> None:
     add_json_flag(parser)
 
 
-def run_workbench_command(args: argparse.Namespace) -> object:
+def run_workbench_command(args: argparse.Namespace) -> dict[str, object]:
     """Execute one parsed standalone workbench command."""
     if args.command == "quickstart":
         return _run_quickstart_command(args)
     request = _workbench_request(args)
     if args.serve:
-        return serve_ui_preview(request, host=args.host, port=args.port)
+        return serve_ui_preview(request, host=args.host, port=args.port).to_dict()
     result = write_ui_preview(request).to_dict()
     result["next_commands"] = _workbench_next_commands(request)
     return result
@@ -191,7 +191,7 @@ def _workbench_request(args: argparse.Namespace) -> UiPreviewRequest:
     )
 
 
-def _run_quickstart_command(args: argparse.Namespace) -> object:
+def _run_quickstart_command(args: argparse.Namespace) -> dict[str, object]:
     config_path = Path(args.config)
     config_written = _ensure_quickstart_config(args, config_path)
     resolved = resolve_workspace_config_paths(config_path)
@@ -211,7 +211,7 @@ def _run_quickstart_command(args: argparse.Namespace) -> object:
         open_browser=args.open,
     )
     if args.serve:
-        return serve_ui_preview(request, host=args.host, port=args.port)
+        return serve_ui_preview(request, host=args.host, port=args.port).to_dict()
     result = write_ui_preview(request).to_dict()
     result["quickstart"] = {
         "config_path": str(config_path),

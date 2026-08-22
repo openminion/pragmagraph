@@ -8,6 +8,7 @@ from pathlib import Path
 
 from pragmagraph.server.backend import ServiceConfig, build_wired_registry
 from pragmagraph.server.contracts import (
+    JSONRPC_INTERNAL_ERROR,
     JSONRPC_INVALID_REQUEST,
     MCP_PROTOCOL_VERSION,
     TOOL_NOT_FOUND_CODE,
@@ -15,7 +16,7 @@ from pragmagraph.server.contracts import (
     TOOL_UNSUPPORTED_CAPABILITY_CODE,
 )
 from pragmagraph.server.server import ServerInfo, dispatch, serve_stdio
-from pragmagraph.server.tools import SUPPORTED_TOOL_NAMES
+from pragmagraph.server.tools import SUPPORTED_TOOL_NAMES, ToolRegistry
 
 
 def _seed_repo(root: Path) -> None:
@@ -135,6 +136,36 @@ def test_unknown_tool_returns_typed_not_found(tmp_path: Path) -> None:
     )
     assert response is not None
     assert response["error"]["code"] == TOOL_NOT_FOUND_CODE
+
+
+def test_unexpected_tool_failure_returns_jsonrpc_internal_error() -> None:
+    registry = ToolRegistry.default()
+
+    def fail() -> dict[str, object]:
+        raise RuntimeError("provider unavailable")
+
+    health_schema = next(
+        schema for schema in registry.schemas() if schema.name == "pragmagraph_health"
+    )
+    registry.register(health_schema, fail)
+    response = dispatch(
+        {
+            "jsonrpc": "2.0",
+            "id": 61,
+            "method": "tools/call",
+            "params": {"name": "pragmagraph_health", "arguments": {}},
+        },
+        registry=registry,
+        server_info=ServerInfo(),
+    )
+
+    assert response is not None
+    assert response["error"]["code"] == JSONRPC_INTERNAL_ERROR
+    assert (
+        response["error"]["message"] == "tool 'pragmagraph_health' failed unexpectedly"
+    )
+    assert "data" not in response["error"]
+    assert "provider unavailable" not in json.dumps(response)
 
 
 def test_missing_jsonrpc_version_returns_invalid_request(tmp_path: Path) -> None:

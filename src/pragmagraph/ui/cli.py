@@ -39,7 +39,7 @@ def register_ui_commands(subparsers: argparse._SubParsersAction) -> None:
     _register_doctor_command(subparsers)
 
 
-def run_ui_command(args: argparse.Namespace) -> object:
+def run_ui_command(args: argparse.Namespace) -> dict[str, object]:
     """Execute one parsed UI command."""
     if args.command == "doctor":
         return _run_doctor_command(args)
@@ -261,10 +261,13 @@ def _doctor_request(args: argparse.Namespace) -> UiPreviewRequest:
     )
 
 
-def _run_preview(request: UiPreviewRequest, args: argparse.Namespace) -> object:
+def _run_preview(
+    request: UiPreviewRequest,
+    args: argparse.Namespace,
+) -> dict[str, object]:
     if args.serve:
-        return serve_ui_preview(request, host=args.host, port=args.port)
-    return write_ui_preview(request)
+        return serve_ui_preview(request, host=args.host, port=args.port).to_dict()
+    return write_ui_preview(request).to_dict()
 
 
 def _ensure_demo_workspace(args: argparse.Namespace) -> Path | None:
