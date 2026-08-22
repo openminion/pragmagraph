@@ -219,7 +219,7 @@ def _register_certify_export_commands(subparsers: argparse._SubParsersAction) ->
     graphify_import_parser.add_argument("--root-path", default="")
 
 
-def _register_refresh_profile_commands(
+def _register_benchmark_command(
     subparsers: argparse._SubParsersAction,
 ) -> None:
     benchmark_parser = subparsers.add_parser(
@@ -232,52 +232,6 @@ def _register_refresh_profile_commands(
     benchmark_parser.add_argument("--max-results", type=int, default=10)
     benchmark_parser.add_argument("--top-n", type=int, default=10)
     add_json_flag(benchmark_parser)
-
-    refresh_parser = subparsers.add_parser("refresh", help="refresh a local root")
-    refresh_parser.add_argument("root")
-    refresh_parser.add_argument("--out", required=True)
-    refresh_parser.add_argument("--manifest-in")
-    refresh_parser.add_argument("--manifest-out", required=True)
-    refresh_parser.add_argument("--cache-in")
-    refresh_parser.add_argument("--cache-out")
-    refresh_parser.add_argument("--namespace", default="default")
-    add_git_identity_mode_argument(refresh_parser)
-    add_json_flag(refresh_parser)
-
-    refresh_plan_parser = subparsers.add_parser(
-        "refresh-plan",
-        help="preview explicit refresh-visible path changes without mutating outputs",
-    )
-    refresh_plan_parser.add_argument("root")
-    refresh_plan_parser.add_argument("--manifest-in")
-    refresh_plan_parser.add_argument("--namespace", default="default")
-    add_json_flag(refresh_plan_parser)
-
-    refresh_status_parser = subparsers.add_parser(
-        "refresh-status", help="inspect a persisted refresh status ledger"
-    )
-    refresh_status_parser.add_argument("state")
-    add_json_flag(refresh_status_parser)
-
-    profile_init_parser = subparsers.add_parser(
-        "profile-init", help="write a repeatable explicit-refresh invocation profile"
-    )
-    profile_init_parser.add_argument("root")
-    profile_init_parser.add_argument("--out", required=True)
-    profile_init_parser.add_argument("--label", default="default")
-    profile_init_parser.add_argument("--namespace", default="default")
-    profile_init_parser.add_argument("--snapshot-out", required=True)
-    profile_init_parser.add_argument("--manifest-out", required=True)
-    profile_init_parser.add_argument("--state-out", required=True)
-    profile_init_parser.add_argument("--cache-out")
-    add_git_identity_mode_argument(profile_init_parser)
-    add_json_flag(profile_init_parser)
-
-    profile_run_parser = subparsers.add_parser(
-        "profile-run", help="run one explicit refresh from a saved invocation profile"
-    )
-    profile_run_parser.add_argument("profile")
-    add_json_flag(profile_run_parser)
 
 
 def _register_navigation_service_commands(
@@ -303,15 +257,6 @@ def _register_navigation_service_commands(
     health_parser.add_argument("snapshot")
     add_json_flag(health_parser)
 
-    freshness_parser = subparsers.add_parser(
-        "freshness",
-        help="show snapshot freshness and optional structural delta facts",
-    )
-    freshness_parser.add_argument("snapshot", nargs="?")
-    freshness_parser.add_argument("--config")
-    freshness_parser.add_argument("--before")
-    add_json_flag(freshness_parser)
-
     serve_parser = subparsers.add_parser(
         "serve", help="run the local newline-delimited JSON service"
     )
@@ -334,7 +279,7 @@ def register_core_commands(subparsers: argparse._SubParsersAction) -> None:
     _register_git_and_graph_view_commands(subparsers)
     _register_interchange_and_plan_commands(subparsers)
     _register_certify_export_commands(subparsers)
-    _register_refresh_profile_commands(subparsers)
+    _register_benchmark_command(subparsers)
     _register_navigation_service_commands(subparsers)
 
 

@@ -31,8 +31,9 @@ service, workspace, and `pragmagraph.ui`.
 6. `report/`, `export/`, and `graphify/` own derived structural views over
    snapshots, including structural git-overlay summaries and non-mutating
    export redaction profiles.
-7. `refresh/` owns content-hash manifest, refresh behavior, and CI-facing
-   canonical snapshot deltas.
+7. `refresh/` owns content-hash manifests, refresh behavior, CI-facing
+   canonical snapshot deltas, and refresh-specific CLI registration and
+   execution.
 8. `operations.py` owns explicit refresh planning, saved invocation profiles,
    persisted status ledgers, and repeatable local ingest runs.
 9. `cli/` owns reusable root command registration helpers for the package

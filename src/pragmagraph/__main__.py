@@ -6,13 +6,16 @@ import argparse
 import importlib
 import json
 import sys
-from dataclasses import replace
 from pathlib import Path
 
 from pragmagraph import PACKAGE_STATUS, STABLE_IMPORT_ROOTS, __version__
 from pragmagraph.adapters import DEFAULT_GIT_IDENTITY_MODE, index_path
 from pragmagraph.bench import benchmark_root, render_markdown_benchmark
-from pragmagraph.cli import add_json_flag, register_core_commands
+from pragmagraph.cli import (
+    add_json_flag,
+    print_payload as _print_payload,
+    register_core_commands,
+)
 from pragmagraph.certification import (
     build_certification_pack,
     render_markdown_certification_pack,
@@ -23,7 +26,6 @@ from pragmagraph.graphify import (
     snapshot_from_graphify_payload,
     to_graphify_payload,
 )
-from pragmagraph.incremental import load_extraction_cache, save_extraction_cache
 from pragmagraph.investigate import (
     build_investigation_bundle,
     render_markdown_investigation,
@@ -34,19 +36,11 @@ from pragmagraph.interchange import (
     merge_precise_snapshot,
 )
 from pragmagraph.lineage import build_git_lineage
-from pragmagraph.models import PragmaGraphError, QueryRequest
+from pragmagraph.models import QueryRequest
 from pragmagraph.navigation import (
     build_repo_map,
     render_compact_handoff,
     render_markdown_repo_map,
-)
-from pragmagraph.operations import (
-    build_refresh_plan,
-    build_refresh_profile,
-    load_refresh_profile,
-    load_refresh_status,
-    run_refresh_profile,
-    save_refresh_profile,
 )
 from pragmagraph.parser_support import build_parser_support_matrix
 from pragmagraph.planner import explain_query_plan
@@ -64,12 +58,11 @@ from pragmagraph.query import (
     query,
     recent_commits_for_path,
 )
-from pragmagraph.refresh import (
-    build_ci_delta,
-    load_manifest,
-    refresh_snapshot,
-    refresh_snapshot_incremental,
-    save_manifest,
+from pragmagraph.refresh import build_ci_delta
+from pragmagraph.refresh.cli import (
+    REFRESH_COMMANDS,
+    register_refresh_commands,
+    run_refresh_command,
 )
 from pragmagraph.report import build_report, render_markdown_report
 from pragmagraph.service import LocalQueryService, run_stdio_service
@@ -96,11 +89,7 @@ from pragmagraph.workspace.cli import (
     register_workspace_commands,
     run_workspace_command,
 )
-from pragmagraph.workspace.cli_resolution import (
-    freshness_snapshot_arg,
-    investigation_args,
-    query_args,
-)
+from pragmagraph.workspace.cli_resolution import investigation_args, query_args
 
 
 def smoke_payload() -> dict[str, object]:
@@ -114,15 +103,6 @@ def smoke_payload() -> dict[str, object]:
         "openminion_imports": False,
         "git_identity_mode_default": DEFAULT_GIT_IDENTITY_MODE,
     }
-
-
-def _print_payload(payload: object, *, as_json: bool) -> None:
-    if as_json:
-        if hasattr(payload, "to_dict"):
-            payload = payload.to_dict()
-        print(json.dumps(payload, sort_keys=True))
-        return
-    print(payload)
 
 
 def _server_client_cli():
@@ -148,45 +128,6 @@ def _service_from_args(args: argparse.Namespace) -> LocalQueryService:
     )
 
 
-def _snapshot_freshness_payload(
-    snapshot,
-    *,
-    snapshot_path: str,
-    before_path: str | None,
-) -> dict[str, object]:
-    payload: dict[str, object] = {
-        "schema_version": "pragmagraph.freshness.v1alpha1",
-        "boundary": "observed_facts_only",
-        "snapshot_path": snapshot_path,
-        "created_at": snapshot.created_at,
-        "indexer_version": snapshot.indexer_version,
-        "health": health(snapshot).to_dict(),
-        "git_overlay": {
-            "enabled": bool(snapshot.stats.get("git_overlay_enabled", False)),
-            "commit_count": int(snapshot.stats.get("git_commit_count", 0) or 0),
-            "changed_path_count": int(
-                snapshot.stats.get("git_changed_path_count", 0) or 0
-            ),
-            "identity_mode": str(snapshot.stats.get("git_identity_mode", "") or ""),
-        },
-        "next_commands": {
-            "refresh_plan": [
-                "pragmagraph",
-                "refresh-plan",
-                snapshot.root_path or "<repo-root>",
-                "--json",
-            ],
-            "health": ["pragmagraph", "health", snapshot_path, "--json"],
-        },
-    }
-    if before_path:
-        payload["delta"] = build_ci_delta(
-            load_snapshot(before_path),
-            snapshot,
-        ).to_dict()
-    return payload
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="pragmagraph",
@@ -205,6 +146,7 @@ def main(argv: list[str] | None = None) -> int:
     subparsers = parser.add_subparsers(dest="command", metavar="<command>")
 
     register_core_commands(subparsers)
+    register_refresh_commands(subparsers)
 
     register_ui_commands(subparsers)
     register_workbench_commands(subparsers)
@@ -432,89 +374,8 @@ def main(argv: list[str] | None = None) -> int:
             _print_payload(report.to_dict(), as_json=True)
         else:
             print(render_markdown_benchmark(report), end="")
-    elif args.command == "refresh":
-        previous_manifest = (
-            load_manifest(args.manifest_in) if args.manifest_in else None
-        )
-        previous_snapshot = load_snapshot(args.out) if Path(args.out).exists() else None
-        if args.cache_in or args.cache_out:
-            previous_cache = None
-            fallback_reason = ""
-            if args.cache_in and Path(args.cache_in).exists():
-                try:
-                    previous_cache = load_extraction_cache(args.cache_in)
-                except PragmaGraphError as exc:
-                    fallback_reason = exc.code.lower()
-            result, next_cache = refresh_snapshot_incremental(
-                args.root,
-                namespace=args.namespace,
-                previous_manifest=previous_manifest,
-                previous_snapshot=previous_snapshot,
-                previous_cache=previous_cache,
-                git_identity_mode=args.git_identity_mode,
-            )
-            if fallback_reason:
-                result = replace(
-                    result,
-                    work=replace(result.work, cache_fallback_reason=fallback_reason),
-                )
-        else:
-            result = refresh_snapshot(
-                args.root,
-                namespace=args.namespace,
-                previous_manifest=previous_manifest,
-                previous_snapshot=previous_snapshot,
-                git_identity_mode=args.git_identity_mode,
-            )
-        save_snapshot(result.snapshot, args.out)
-        save_manifest(result.manifest, args.manifest_out)
-        if args.cache_out:
-            save_extraction_cache(next_cache, args.cache_out)
-        _print_payload(
-            {
-                "changed_paths": list(result.changed_paths),
-                "unchanged_paths": list(result.unchanged_paths),
-                "removed_paths": list(result.removed_paths),
-                "path_changes": [item.to_dict() for item in result.path_changes],
-                "snapshot_delta": result.snapshot_delta.to_dict(),
-                "identity_transitions": [
-                    item.to_dict() for item in result.identity_transitions
-                ],
-                "work": result.work.to_dict(),
-                "health": health(result.snapshot).to_dict(),
-            },
-            as_json=args.json,
-        )
-    elif args.command == "refresh-plan":
-        previous_manifest = (
-            load_manifest(args.manifest_in) if args.manifest_in else None
-        )
-        plan = build_refresh_plan(
-            args.root,
-            namespace=args.namespace,
-            previous_manifest=previous_manifest,
-        )
-        _print_payload(plan.to_dict(), as_json=True)
-    elif args.command == "refresh-status":
-        status = load_refresh_status(args.state)
-        _print_payload(status.to_dict(), as_json=True)
-    elif args.command == "profile-init":
-        profile = build_refresh_profile(
-            label=args.label,
-            root_path=args.root,
-            snapshot_path=args.snapshot_out,
-            manifest_path=args.manifest_out,
-            state_path=args.state_out,
-            cache_path=args.cache_out or "",
-            namespace=args.namespace,
-            git_identity_mode=args.git_identity_mode,
-        )
-        save_refresh_profile(profile, args.out)
-        _print_payload(profile.to_dict(), as_json=True)
-    elif args.command == "profile-run":
-        profile = load_refresh_profile(args.profile)
-        operation = run_refresh_profile(profile)
-        _print_payload(operation.to_dict(), as_json=True)
+    elif args.command in REFRESH_COMMANDS:
+        run_refresh_command(args, parser)
     elif args.command == "neighborhood":
         snapshot = load_snapshot(args.snapshot)
         _print_payload(
@@ -540,17 +401,6 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "health":
         snapshot = load_snapshot(args.snapshot)
         _print_payload(health(snapshot), as_json=True)
-    elif args.command == "freshness":
-        snapshot_path = freshness_snapshot_arg(args, parser)
-        snapshot = load_snapshot(snapshot_path)
-        _print_payload(
-            _snapshot_freshness_payload(
-                snapshot,
-                snapshot_path=snapshot_path,
-                before_path=args.before,
-            ),
-            as_json=True,
-        )
     elif args.command == "serve":
         service = _service_from_args(args)
         return run_stdio_service(service)
