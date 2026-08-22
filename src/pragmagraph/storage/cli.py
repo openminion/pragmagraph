@@ -141,7 +141,7 @@ def register_storage_commands(subparsers: argparse._SubParsersAction) -> None:
     _register_backend_catalog_command(subparsers)
 
 
-def run_storage_command(args: argparse.Namespace) -> object:
+def run_storage_command(args: argparse.Namespace) -> dict[str, object]:
     """Execute one parsed materialized-store command."""
     if args.command == "store-import":
         if args.backend != "sqlite":
@@ -173,7 +173,7 @@ def run_storage_command(args: argparse.Namespace) -> object:
         return explain_store_query(
             SQLiteGraphStore(store_path),
             _query_request(args, query_text),
-        )
+        ).to_dict()
     if args.command == "store-neighborhood":
         return (
             SQLiteGraphStore(args.store)

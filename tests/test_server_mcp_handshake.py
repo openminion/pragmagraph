@@ -164,7 +164,7 @@ def test_unexpected_tool_failure_returns_jsonrpc_internal_error() -> None:
     assert (
         response["error"]["message"] == "tool 'pragmagraph_health' failed unexpectedly"
     )
-    assert response["error"]["data"] == {"error_type": "RuntimeError"}
+    assert "data" not in response["error"]
     assert "provider unavailable" not in json.dumps(response)
 
 

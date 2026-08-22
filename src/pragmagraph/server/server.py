@@ -110,12 +110,11 @@ def _handle_tools_call(
         return _err_response(request_id, err.code, str(err), err.details)
     except ValueError as err:
         return _err_response(request_id, JSONRPC_INVALID_PARAMS, str(err))
-    except Exception as err:
+    except Exception:
         return _err_response(
             request_id,
             JSONRPC_INTERNAL_ERROR,
             f"tool {name!r} failed unexpectedly",
-            {"error_type": type(err).__name__},
         )
     structured = dict(result)
     return _ok_response(

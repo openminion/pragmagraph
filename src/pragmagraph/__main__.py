@@ -13,7 +13,7 @@ from pragmagraph.adapters import DEFAULT_GIT_IDENTITY_MODE, index_path
 from pragmagraph.bench import benchmark_root, render_markdown_benchmark
 from pragmagraph.cli import (
     add_json_flag,
-    print_payload as _print_payload,
+    print_payload,
     register_core_commands,
 )
 from pragmagraph.certification import (
@@ -166,11 +166,11 @@ def main(argv: list[str] | None = None) -> int:
             git_identity_mode=args.git_identity_mode,
         )
         save_snapshot(snapshot, args.out)
-        _print_payload(health(snapshot), as_json=args.json)
+        print_payload(health(snapshot).to_dict(), as_json=args.json)
     elif args.command == "query":
         snapshot_path, query_text = query_args(args, parser)
         snapshot = load_snapshot(snapshot_path)
-        _print_payload(
+        print_payload(
             query(
                 snapshot,
                 QueryRequest(
@@ -183,7 +183,7 @@ def main(argv: list[str] | None = None) -> int:
             as_json=True,
         )
     elif args.command in WORKSPACE_COMMANDS:
-        _print_payload(
+        print_payload(
             run_workspace_command(args, parser),
             as_json=args.json,
         )
@@ -193,7 +193,7 @@ def main(argv: list[str] | None = None) -> int:
             load_snapshot(args.after),
             fail_on_changes=args.fail_on_changes,
         )
-        _print_payload(report.to_dict(), as_json=True)
+        print_payload(report.to_dict(), as_json=True)
         return report.exit_code
     elif args.command == "explain":
         snapshot = load_snapshot(args.snapshot)
@@ -206,7 +206,7 @@ def main(argv: list[str] | None = None) -> int:
                 max_examined=args.max_examined,
             ),
         )
-        _print_payload(result.to_dict(), as_json=True)
+        print_payload(result.to_dict(), as_json=True)
     elif args.command == "investigate":
         snapshot_path, query_text = investigation_args(args, parser)
         snapshot = load_snapshot(snapshot_path)
@@ -218,12 +218,12 @@ def main(argv: list[str] | None = None) -> int:
             max_results=args.max_results,
         )
         if args.json:
-            _print_payload(bundle.to_dict(), as_json=True)
+            print_payload(bundle.to_dict(), as_json=True)
         else:
             print(render_markdown_investigation(bundle), end="")
     elif args.command == "git-commits-for-path":
         snapshot = load_snapshot(args.snapshot)
-        _print_payload(
+        print_payload(
             recent_commits_for_path(
                 snapshot,
                 args.path,
@@ -233,7 +233,7 @@ def main(argv: list[str] | None = None) -> int:
         )
     elif args.command == "git-files-for-commit":
         snapshot = load_snapshot(args.snapshot)
-        _print_payload(
+        print_payload(
             files_touched_by_commit(
                 snapshot,
                 args.commit_ref,
@@ -243,7 +243,7 @@ def main(argv: list[str] | None = None) -> int:
         )
     elif args.command == "git-commits-for-symbol":
         snapshot = load_snapshot(args.snapshot)
-        _print_payload(
+        print_payload(
             commits_touching_symbol_file(
                 snapshot,
                 args.symbol_node_id,
@@ -255,14 +255,14 @@ def main(argv: list[str] | None = None) -> int:
         snapshot = load_snapshot(args.snapshot)
         report = build_report(snapshot, top_n=args.top_n)
         if args.json:
-            _print_payload(report.to_dict(), as_json=True)
+            print_payload(report.to_dict(), as_json=True)
         else:
             print(render_markdown_report(report), end="")
     elif args.command == "repo-map":
         snapshot = load_snapshot(args.snapshot)
         repo_map = build_repo_map(snapshot, top_n=args.top_n)
         if args.json:
-            _print_payload(repo_map.to_dict(), as_json=True)
+            print_payload(repo_map.to_dict(), as_json=True)
         elif args.handoff:
             print(render_compact_handoff(snapshot, top_n=args.top_n), end="")
         else:
@@ -271,19 +271,19 @@ def main(argv: list[str] | None = None) -> int:
         snapshot = load_snapshot(args.snapshot)
         summary = build_topology_summary(snapshot, top_n=args.top_n)
         if args.json:
-            _print_payload(summary.to_dict(), as_json=True)
+            print_payload(summary.to_dict(), as_json=True)
         else:
             print(render_markdown_topology(summary), end="")
     elif args.command == "doc-graph":
         snapshot = load_snapshot(args.snapshot)
         summary = build_doc_graph_summary(snapshot, top_n=args.top_n)
         if args.json:
-            _print_payload(summary.to_dict(), as_json=True)
+            print_payload(summary.to_dict(), as_json=True)
         else:
             print(render_markdown_doc_graph(summary), end="")
     elif args.command == "interchange":
         snapshot = load_snapshot(args.snapshot)
-        _print_payload(build_symbol_reference_bundle(snapshot), as_json=True)
+        print_payload(build_symbol_reference_bundle(snapshot).to_dict(), as_json=True)
     elif args.command == "precise-import":
         base = load_snapshot(args.base) if args.base else None
         namespace = base.namespace if base is not None else args.namespace
@@ -301,7 +301,7 @@ def main(argv: list[str] | None = None) -> int:
             else imported.snapshot
         )
         save_snapshot(snapshot, args.out)
-        _print_payload(
+        print_payload(
             {
                 "output": str(args.out),
                 "merged": base is not None,
@@ -312,24 +312,22 @@ def main(argv: list[str] | None = None) -> int:
         )
     elif args.command == "query-plan":
         snapshot = load_snapshot(args.snapshot)
-        _print_payload(
+        print_payload(
             explain_query_plan(
                 snapshot,
                 QueryRequest(
                     query=args.query,
                     max_results=args.max_results,
                 ),
-            ),
+            ).to_dict(),
             as_json=True,
         )
     elif args.command == "git-lineage":
         snapshot = load_snapshot(args.snapshot)
-        _print_payload(
-            build_git_lineage(snapshot, args.path, max_results=args.max_results),
-            as_json=True,
-        )
+        lineage = build_git_lineage(snapshot, args.path, max_results=args.max_results)
+        print_payload(lineage.to_dict(), as_json=True)
     elif args.command == "parser-support":
-        _print_payload(
+        print_payload(
             [item.to_dict() for item in build_parser_support_matrix()],
             as_json=True,
         )
@@ -341,14 +339,14 @@ def main(argv: list[str] | None = None) -> int:
                 render_markdown_certification_pack(certification),
                 encoding="utf-8",
             )
-        _print_payload(certification, as_json=True)
+        print_payload(certification.to_dict(), as_json=True)
     elif args.command == "export":
         snapshot = load_snapshot(args.snapshot)
         projection = project_snapshot(snapshot, profile=args.profile)
         print(render_graph_export(projection.snapshot, format=args.format), end="")
     elif args.command == "graphify-export":
         snapshot = load_snapshot(args.snapshot)
-        _print_payload(to_graphify_payload(snapshot), as_json=True)
+        print_payload(to_graphify_payload(snapshot), as_json=True)
     elif args.command == "graphify-import":
         with open(args.payload, encoding="utf-8") as graphify_payload:
             payload = json.load(graphify_payload)
@@ -358,9 +356,9 @@ def main(argv: list[str] | None = None) -> int:
             root_path=args.root_path,
         )
         save_snapshot(snapshot, args.out)
-        _print_payload(health(snapshot), as_json=True)
+        print_payload(health(snapshot).to_dict(), as_json=True)
     elif args.command in STORAGE_COMMANDS:
-        _print_payload(run_storage_command(args), as_json=True)
+        print_payload(run_storage_command(args), as_json=True)
     elif args.command == "benchmark":
         report = benchmark_root(
             args.root,
@@ -371,14 +369,14 @@ def main(argv: list[str] | None = None) -> int:
             git_identity_mode=args.git_identity_mode,
         )
         if args.json:
-            _print_payload(report.to_dict(), as_json=True)
+            print_payload(report.to_dict(), as_json=True)
         else:
             print(render_markdown_benchmark(report), end="")
     elif args.command in REFRESH_COMMANDS:
         run_refresh_command(args, parser)
     elif args.command == "neighborhood":
         snapshot = load_snapshot(args.snapshot)
-        _print_payload(
+        print_payload(
             neighborhood(
                 snapshot,
                 args.node_id,
@@ -389,7 +387,7 @@ def main(argv: list[str] | None = None) -> int:
         )
     elif args.command == "path":
         snapshot = load_snapshot(args.snapshot)
-        _print_payload(
+        print_payload(
             path(
                 snapshot,
                 args.source_id,
@@ -400,22 +398,20 @@ def main(argv: list[str] | None = None) -> int:
         )
     elif args.command == "health":
         snapshot = load_snapshot(args.snapshot)
-        _print_payload(health(snapshot), as_json=True)
+        print_payload(health(snapshot).to_dict(), as_json=True)
     elif args.command == "serve":
         service = _service_from_args(args)
         return run_stdio_service(service)
     elif args.command in UI_COMMANDS:
-        _print_payload(run_ui_command(args), as_json=args.json)
+        print_payload(run_ui_command(args), as_json=args.json)
     elif args.command in WORKBENCH_COMMANDS:
-        _print_payload(run_workbench_command(args), as_json=args.json)
+        print_payload(run_workbench_command(args), as_json=args.json)
     elif args.command in GRAPH_PACK_COMMANDS:
-        _print_payload(run_graph_pack_command(args), as_json=args.json)
+        print_payload(run_graph_pack_command(args), as_json=args.json)
     elif args.command in server_client_cli.MCP_CLIENT_COMMANDS:
-        _print_payload(
-            server_client_cli.run_mcp_client_command(args), as_json=args.json
-        )
+        print_payload(server_client_cli.run_mcp_client_command(args), as_json=args.json)
     elif args.command in VIEWER_COMMANDS:
-        _print_payload(run_viewer_command(args), as_json=True)
+        print_payload(run_viewer_command(args), as_json=True)
     elif args.json:
         print(json.dumps(smoke_payload(), sort_keys=True))
     else:

@@ -6,10 +6,10 @@ import argparse
 from dataclasses import replace
 from pathlib import Path
 
-from pragmagraph.cli import print_payload
-from pragmagraph.cli.commands import (
+from pragmagraph.cli import (
     add_git_identity_mode_argument,
     add_json_flag,
+    print_payload,
 )
 from pragmagraph.incremental import load_extraction_cache, save_extraction_cache
 from pragmagraph.models import GraphSnapshot, PragmaGraphError

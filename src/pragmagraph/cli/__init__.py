@@ -11,8 +11,6 @@ from pragmagraph.cli.commands import (
 
 def print_payload(payload: object, *, as_json: bool) -> None:
     if as_json:
-        if hasattr(payload, "to_dict"):
-            payload = payload.to_dict()
         print(json.dumps(payload, sort_keys=True))
         return
     print(payload)
