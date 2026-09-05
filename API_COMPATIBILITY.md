@@ -24,6 +24,7 @@ External consumers should treat these import roots as the supported public API:
 - `pragmagraph.portability`
 - `pragmagraph.parsers`
 - `pragmagraph.export`
+- `pragmagraph.evidence`
 - `pragmagraph.graphify`
 - `pragmagraph.report`
 - `pragmagraph.refresh`
@@ -40,6 +41,7 @@ External consumers should treat these import roots as the supported public API:
 - `pragmagraph.security`
 - `pragmagraph.service`
 - `pragmagraph.ui`
+- `pragmagraph.viewer`
 - `pragmagraph.workspace`
 
 The top-level `pragmagraph` package is the preferred entrypoint for package
