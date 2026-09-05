@@ -169,7 +169,7 @@ from pragmagraph.workspace import (
     save_workspace_config,
 )
 
-__version__ = "0.0.12"
+__version__ = "0.0.13rc1"
 
 PACKAGE_STATUS = "semantic-alpha"
 STABLE_IMPORT_ROOTS = (
