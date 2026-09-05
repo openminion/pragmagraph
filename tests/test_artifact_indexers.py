@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from pragmagraph.adapters import index_path
+from pragmagraph.contracts import NODE_CONFIG, NODE_CONFIG_KEY
 
 
 def test_artifact_indexers_emit_cited_static_facts(tmp_path: Path) -> None:
@@ -50,6 +51,34 @@ def test_artifact_indexers_emit_cited_static_facts(tmp_path: Path) -> None:
         and snapshot.node_map()[edge.source_id].kind == "sql_table"
     ]
     assert len(sql_dependencies) == 1
+
+
+def test_generic_yaml_does_not_invent_flat_config_keys(tmp_path: Path) -> None:
+    (tmp_path / "settings.yaml").write_text(
+        "services:\n"
+        "  api:\n"
+        "    image: example/api\n"
+        "  worker:\n"
+        "    image: example/worker\n",
+        encoding="utf-8",
+    )
+
+    snapshot = index_path(tmp_path, namespace="yaml-config")
+
+    assert any(
+        node.kind == NODE_CONFIG and node.source_ref.path == "settings.yaml"
+        for node in snapshot.nodes
+    )
+    assert not any(
+        node.kind == NODE_CONFIG_KEY and node.source_ref.path == "settings.yaml"
+        for node in snapshot.nodes
+    )
+    assert any(
+        item.reason == "config_key_extraction_unsupported"
+        and item.item_id == "settings.yaml"
+        and item.details["format"] == "yaml"
+        for item in snapshot.omitted
+    )
 
 
 def test_manifest_and_lockfile_dependency_facts_resolve_by_exact_name(

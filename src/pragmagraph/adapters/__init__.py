@@ -911,10 +911,17 @@ def _config_items(
         elif rel.endswith(".toml"):
             data = tomllib.loads(text)
         elif rel.endswith((".yaml", ".yml")):
-            data = _parse_simple_yaml(text)
+            omitted.append(
+                _omitted(
+                    reason="config_key_extraction_unsupported",
+                    item_id=rel,
+                    details={"format": Path(rel).suffix.lower().lstrip(".")},
+                )
+            )
+            return ()
         else:
             return ()
-    except (json.JSONDecodeError, tomllib.TOMLDecodeError, ValueError) as exc:
+    except (json.JSONDecodeError, tomllib.TOMLDecodeError) as exc:
         omitted.append(
             _omitted(
                 reason="config_parse_error",
@@ -964,16 +971,6 @@ def _dependency_values(key: str, value: object) -> tuple[str, ...]:
     if isinstance(value, str):
         return (value,)
     return ()
-
-
-def _parse_simple_yaml(text: str) -> dict[str, str]:
-    data: dict[str, str] = {}
-    for line in text.splitlines():
-        if ":" not in line or line.lstrip().startswith("#"):
-            continue
-        key, value = line.split(":", 1)
-        data[key.strip()] = value.strip().strip("'\"")
-    return data
 
 
 __all__ = [

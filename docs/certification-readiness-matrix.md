@@ -20,8 +20,8 @@ This matrix does not cover:
 
 1. hosted graph services,
 2. OpenMinion memory behavior,
-3. future Graphify interop, hosted visualization, or browser rendering lanes not
-   yet implemented.
+3. OpenMinion-hosted workbench behavior or package-internal implementation
+   details.
 
 ## Success criteria
 
@@ -37,9 +37,16 @@ target that exercises only the public package surface.
 | Core features depth lane | `pragmagraph/tests/test_core_features.py` | `n/a` |
 | Structural report mode | `pragmagraph/tests/test_report.py` | `n/a` |
 | Git-aware structural facts | `pragmagraph/tests/test_git_history.py` | `n/a` |
+| Repository artifacts | `pragmagraph/tests/test_artifact_indexers.py` | `n/a` |
+| Precise index ingestion | `pragmagraph/tests/test_precise_index_certification.py`, `pragmagraph/tests/test_native_scip_import.py` | `n/a` |
 | Graph text export mode | `pragmagraph/tests/test_export.py` | `n/a` |
 | Graphify-shaped JSON interop | `pragmagraph/tests/test_graphify_interop.py` | `n/a` |
+| Multi-root and cross-repository resolution | `pragmagraph/tests/test_multi_root_and_ci.py`, `pragmagraph/tests/test_cross_repository_resolution.py` | `n/a` |
 | Workspace persistence and `serve --workspace` | `pragmagraph/tests/test_workspace.py`, `pragmagraph/tests/test_service.py::test_service_workspace_startup_uses_persisted_workspace` | `n/a` |
+| Storage interchange | `pragmagraph/tests/test_storage_interchange.py` | `n/a` |
+| Memory evidence references | `pragmagraph/tests/test_memory_evidence_bridge.py` | `n/a` |
+| Viewer and local UI contracts | `pragmagraph/tests/test_viewer_contract.py`, `pragmagraph/tests/test_ui_contracts.py` | `n/a` |
+| MCP server contract | `pragmagraph/tests/test_server_mcp_contract.py`, `pragmagraph/tests/test_server_mcp_handshake.py` | `n/a` |
 | Benchmark and medium-fixture readiness | `pragmagraph/tests/test_bench.py` | `n/a` |
 | Incremental extraction and SQLite v2 scale | `pragmagraph/tests/test_incremental_materialization.py`, `pragmagraph/tests/test_bench.py::test_generated_scale_profiles_report_deterministic_bounded_work` | `n/a` |
 | Release and smoke contract | `pragmagraph/tests/test_standalone_smoke.py`, `pragmagraph/scripts/release_check.py` | `openminion/tests/runtime/test_bootstrap_memory_retrieve_di.py` |

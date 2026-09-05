@@ -30,7 +30,8 @@ service, workspace, and `pragmagraph.ui`.
 5. `storage/` owns snapshot load/save and stable JSON encoding.
 6. `report/`, `export/`, and `graphify/` own derived structural views over
    snapshots, including structural git-overlay summaries and non-mutating
-   export redaction profiles.
+   export redaction profiles. `evidence.py` owns deterministic source-backed
+   evidence references and freshness verification over snapshots.
 7. `refresh/` owns content-hash manifests, refresh behavior, CI-facing
    canonical snapshot deltas, and refresh-specific CLI registration and
    execution.

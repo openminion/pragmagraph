@@ -88,7 +88,7 @@ are lower-level proof and debugging commands.
 
 ## Public package stance
 
-The `0.0.10` semantic alpha defines a reproducible observed-fact graph contract:
+The current semantic alpha defines a reproducible observed-fact graph contract:
 
 1. immutable DTOs, JSON snapshots, local indexing, and deterministic query,
    traversal, report, and export helpers,
