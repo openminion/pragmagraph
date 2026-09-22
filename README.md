@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://www.openminion.com/brand/openminion-logo.png" alt="PragmaGraph logo" width="128" />
+  <img src="https://www.openminion.com/brand/openminion-logo-transparent-v1.png" alt="OpenMinion logo" width="128" />
 </p>
 
 <h1 align="center">PragmaGraph</h1>
