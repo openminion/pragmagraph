@@ -25,6 +25,7 @@ from pragmagraph.incremental.models import (
     FileIndexFragment,
 )
 from pragmagraph.models import (
+    GraphNode,
     GraphSnapshot,
     IdentityTransition,
     RefreshManifest,
@@ -210,8 +211,8 @@ def _identity_transitions(
     )
 
 
-def _nodes_by_path(snapshot: GraphSnapshot) -> dict[str, tuple]:
-    grouped: dict[str, list] = {}
+def _nodes_by_path(snapshot: GraphSnapshot) -> dict[str, tuple[GraphNode, ...]]:
+    grouped: dict[str, list[GraphNode]] = {}
     for node in snapshot.nodes:
         if node.source_ref.path:
             grouped.setdefault(node.source_ref.path, []).append(node)
@@ -220,8 +221,8 @@ def _nodes_by_path(snapshot: GraphSnapshot) -> dict[str, tuple]:
 
 def _add_transition_matches(
     transitions: dict[tuple[str, str], IdentityTransition],
-    before: tuple,
-    after: tuple,
+    before: tuple[GraphNode, ...],
+    after: tuple[GraphNode, ...],
     *,
     previous_path: str,
     current_path: str,
@@ -256,19 +257,19 @@ def _add_transition_matches(
 
 def _record_transition(
     transitions: dict[tuple[str, str], IdentityTransition],
-    previous: object,
-    current: object,
+    previous: GraphNode,
+    current: GraphNode,
     previous_path: str,
     current_path: str,
 ) -> None:
-    previous_id = getattr(previous, "id")
-    current_id = getattr(current, "id")
+    previous_id = previous.id
+    current_id = current.id
     if previous_id == current_id:
         return
     transition = IdentityTransition(
         previous_id=previous_id,
         current_id=current_id,
-        kind=getattr(current, "kind"),
+        kind=current.kind,
         previous_path=previous_path,
         current_path=current_path,
     )
