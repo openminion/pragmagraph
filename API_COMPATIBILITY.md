@@ -126,6 +126,21 @@ schema. The schema is alpha but deterministic: snapshots are JSON objects with
 stable `nodes`, `edges`, `omitted`, and `stats` fields. Future schema changes
 must either preserve load compatibility or fail with typed package errors.
 
+## Local configuration contracts
+
+Workspace config files resolve relative paths from the config file directory.
+CLI config-authoring commands accept paths relative to the caller's working
+directory and persist an equivalent config-relative value.
+
+MCP setup generation supports Claude Desktop, Cursor, Codex, Claude Code, and
+Hermes. When a snapshot or root is supplied, generated server arguments use
+machine-local absolute paths so stdio clients can launch from another working
+directory.
+
+PragmaGraph ships inline annotations but does not currently declare a PEP 561
+typed-package marker. That declaration remains deferred until package-wide
+type checking and an installed-wheel consumer check are clean.
+
 ## Versioning posture
 
 `pragmagraph` is currently `0.x` software.

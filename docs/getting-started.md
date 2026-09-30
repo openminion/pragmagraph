@@ -56,6 +56,9 @@ Run the complete local loop:
 pragmagraph quickstart . --json
 ```
 
+The default command creates `.pragmagraph/workspace.toml` and keeps its root,
+workspace, and store paths anchored to the repository where the command ran.
+
 Open the local visual graph after quickstart:
 
 ```bash

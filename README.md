@@ -110,7 +110,8 @@ pragmagraph quickstart . --serve --open --json
 
 `quickstart` writes `.pragmagraph/workspace.toml` when it does not already
 exist, refreshes the local snapshot, materializes the local store, and opens a
-visual investigation panel through GraphFakos.
+visual investigation panel through GraphFakos. The generated config keeps the
+root, workspace, and store anchored to the repository where the command ran.
 
 When you want the lower-level steps explicitly, run the same pieces yourself.
 
@@ -164,6 +165,22 @@ are the advanced surfaces behind the same observed-fact workflow.
 | Check freshness | `pragmagraph freshness --config .pragmagraph/workspace.toml --json` | Explicit status, no background watcher |
 | Package or receive a graph | `graph-pack-export`, `graph-pack-verify`, `graph-pack-review` | Advanced portability surface |
 | Serve repeated local queries | `serve`, `mcp-smoke`, `pragmagraph-server` | Advanced service/MCP surface |
+
+### Connect an MCP client
+
+Generate setup records for Claude Desktop, Cursor, Codex, Claude Code, and
+Hermes:
+
+```bash
+pragmagraph mcp-config --snapshot .pragmagraph/workspace/snapshot.json --json
+pragmagraph mcp-config-smoke --snapshot .pragmagraph/workspace/snapshot.json --json
+```
+
+Supplied snapshot and root paths become machine-local absolute paths so the
+client can launch `pragmagraph-server serve-stdio` from another working
+directory. The command emits config objects for JSON/YAML-style clients and
+exact registration commands for Codex and Claude Code; it does not install or
+launch a client.
 
 Inspect, export, and benchmark a snapshot when you need lower-level artifacts:
 

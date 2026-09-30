@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 
 from pragmagraph.cli import add_json_flag
 from pragmagraph.adapters.git_history import (
@@ -13,6 +14,8 @@ from pragmagraph.models import PragmaGraphError, QueryRequest
 from pragmagraph.query import query
 from pragmagraph.storage import load_snapshot, save_snapshot
 from pragmagraph.workspace import (
+    DEFAULT_STORE_FILE,
+    DEFAULT_WORKSPACE_CONFIG,
     SUPPORTED_UI_SCREENS,
     build_workspace_config,
     ensure_workspace_snapshot,
@@ -22,6 +25,7 @@ from pragmagraph.workspace import (
     resolve_workspace_config_paths,
     save_workspace_config,
 )
+from pragmagraph.workspace.cli_resolution import config_relative_cli_path
 from pragmagraph.workspace.composition import (
     NamedSnapshot,
     compose_snapshots,
@@ -93,7 +97,7 @@ def register_workspace_commands(subparsers: argparse._SubParsersAction) -> None:
     config_parser.add_argument("--workspace", default=".pragmagraph/workspace")
     config_parser.add_argument("--label", default="default")
     config_parser.add_argument("--namespace", default="default")
-    config_parser.add_argument("--store", default="graph.sqlite")
+    config_parser.add_argument("--store")
     config_parser.add_argument(
         "--ui-screen",
         choices=tuple(sorted(SUPPORTED_UI_SCREENS)),
@@ -163,13 +167,17 @@ def run_workspace_command(
             ),
         ).to_dict()
     if args.command == "workspace-config-init":
+        default_store = str(Path(DEFAULT_WORKSPACE_CONFIG).parent / DEFAULT_STORE_FILE)
         config = build_workspace_config(
-            args.root,
-            workspace_path=args.workspace,
+            config_relative_cli_path(args.out, args.root),
+            workspace_path=config_relative_cli_path(args.out, args.workspace),
             label=args.label,
             namespace=args.namespace,
             git_identity_mode=args.git_identity_mode,
-            store_path=args.store,
+            store_path=config_relative_cli_path(
+                args.out,
+                args.store or default_store,
+            ),
             ui_screen=args.ui_screen,
             ui_query=args.ui_query,
         )

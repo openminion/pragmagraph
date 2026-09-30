@@ -139,17 +139,28 @@ def _write_quickstart_fixture(root: Path) -> Path:
     return fixture_root
 
 
-def _assert_quickstart_payload(stdout: str, *, config_path: Path) -> None:
+def _assert_quickstart_payload(stdout: str, *, fixture_root: Path) -> None:
     payload = json.loads(stdout)
     quickstart = payload.get("quickstart")
     if not isinstance(quickstart, dict):
         raise RuntimeError(f"quickstart payload missing: {payload!r}")
-    if quickstart.get("config_path") != str(config_path):
+    if quickstart.get("config_path") != ".pragmagraph/workspace.toml":
         raise RuntimeError(f"quickstart config drifted: {payload!r}")
+    workspace = (fixture_root / ".pragmagraph" / "workspace").resolve()
+    store = (fixture_root / ".pragmagraph" / "graph.sqlite").resolve()
+    if quickstart.get("workspace_path") != str(workspace):
+        raise RuntimeError(f"quickstart workspace drifted: {payload!r}")
+    if quickstart.get("store_path") != str(store):
+        raise RuntimeError(f"quickstart store drifted: {payload!r}")
     if payload.get("screen") != "investigation":
         raise RuntimeError(f"quickstart expected investigation screen: {payload!r}")
     if "visual" not in payload.get("next_commands", {}):
         raise RuntimeError(f"quickstart next commands missing visual path: {payload!r}")
+    snapshot = json.loads((workspace / "snapshot.json").read_text(encoding="utf-8"))
+    if not any(node.get("label") == "RuntimeGraph" for node in snapshot["nodes"]):
+        raise RuntimeError("quickstart did not index the fixture source")
+    if (fixture_root / ".pragmagraph" / ".pragmagraph").exists():
+        raise RuntimeError("quickstart duplicated the package workspace directory")
 
 
 def _assert_package_docs_shape(root: Path) -> None:
@@ -266,29 +277,18 @@ def main(argv: list[str] | None = None) -> int:
             stdout = _run_capture([str(smoke), "--json"], cwd=root)
             _assert_smoke_payload(stdout)
             fixture_root = _write_quickstart_fixture(tmp)
-            quickstart_config = tmp / "workspace.toml"
             quickstart_stdout = _run_capture(
                 [
                     str(pragmagraph),
                     "quickstart",
-                    str(fixture_root),
-                    "--config",
-                    str(quickstart_config),
-                    "--workspace",
-                    str(tmp / "workspace"),
-                    "--store",
-                    str(tmp / "graph.sqlite"),
-                    "--html-out",
-                    str(tmp / "quickstart.html"),
-                    "--artifact-out",
-                    str(tmp / "quickstart-artifact.json"),
+                    ".",
                     "--json",
                 ],
-                cwd=root,
+                cwd=fixture_root,
             )
             _assert_quickstart_payload(
                 quickstart_stdout,
-                config_path=quickstart_config,
+                fixture_root=fixture_root,
             )
             _run([str(server_cli), "--help"], cwd=root)
             _run_capture(

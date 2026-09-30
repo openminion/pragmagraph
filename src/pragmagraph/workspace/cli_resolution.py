@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 
 from pragmagraph.workspace import (
@@ -24,6 +25,15 @@ def ensure_config_workspace(config_path: str | Path) -> Path:
             git_identity_mode=resolved.config.git_identity_mode,
         )
     return resolved.workspace_path
+
+
+def config_relative_cli_path(
+    config_path: str | Path,
+    invocation_path: str | Path,
+) -> str:
+    """Express a CLI path relative to the config file that will store it."""
+    config_dir = Path(config_path).resolve().parent
+    return os.path.relpath(Path(invocation_path).resolve(), start=config_dir)
 
 
 def query_args(
@@ -73,6 +83,7 @@ def freshness_snapshot_arg(
 
 
 __all__ = [
+    "config_relative_cli_path",
     "ensure_config_workspace",
     "freshness_snapshot_arg",
     "investigation_args",

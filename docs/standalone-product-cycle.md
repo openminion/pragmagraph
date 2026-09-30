@@ -208,7 +208,7 @@ making that backend active or canonical.
 
 ## MCP client setup
 
-Generate portable stdio snippets for MCP-capable clients:
+Generate machine-local stdio setup for MCP-capable clients:
 
 ```bash
 pragmagraph mcp-config \
@@ -224,8 +224,10 @@ The generated snippets point clients at `pragmagraph-server serve-stdio`. The
 server exposes deterministic structural tools and read-only `pragma://...`
 resources over one loaded snapshot or explicit root. It does not expose
 summarization, intent inference, or memory-writing tools. The JSON payload also
-lists supported clients and setup next steps so a receiver can paste the right
-stdio config without reading server internals.
+lists Claude Desktop, Cursor, Codex, Claude Code, and Hermes setup records.
+Supplied source paths are normalized to machine-local absolute paths so a
+receiver can use the generated config or registration command without relying
+on the client's working directory.
 `mcp-config-smoke` validates the generated stdio command and client snippets
 without starting a client or probing a user machine.
 

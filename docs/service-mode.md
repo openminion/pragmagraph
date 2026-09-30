@@ -118,16 +118,19 @@ service `status` payload alongside capabilities and snapshot statistics.
 Listing and reading resources reuse the already-loaded service state and never
 trigger refresh or semantic inference.
 
-Generate portable MCP client snippets:
+Generate machine-local MCP client setup records:
 
 ```bash
 pragmagraph mcp-config --snapshot .pragmagraph/snapshot.json --json
 ```
 
-The payload names supported clients, includes the exact
-`pragmagraph-server serve-stdio` command, and carries setup next steps. Replace
-placeholder paths before sharing it with a client config file. The command does
-not start a server or probe a client install.
+The payload covers Claude Desktop, Cursor, Codex, Claude Code, and Hermes. It
+includes either a client config object or an exact local registration command,
+plus the shared `pragmagraph-server serve-stdio` command. Supplied snapshot and
+root paths are normalized to absolute paths so clients can launch the server
+from another working directory. The generated setup is machine-local; replace
+placeholder paths when no source path was supplied. The command does not start
+a server or probe a client install.
 
 Validate the generated snippets without starting a client:
 
@@ -135,8 +138,14 @@ Validate the generated snippets without starting a client:
 pragmagraph mcp-config-smoke --snapshot .pragmagraph/snapshot.json --json
 ```
 
-The smoke payload checks the generated stdio command shape and client config
-objects only. It does not launch Claude, Cursor, or any other MCP client.
+The smoke payload checks the generated stdio command shape, client config
+objects, and registration commands only. It does not launch an MCP client.
+
+Client setup references:
+
+- [Codex MCP setup](https://developers.openai.com/learn/docs-mcp)
+- [Model Context Protocol introduction](https://modelcontextprotocol.io/docs/2026-07-28/getting-started/intro)
+- [Hermes MCP setup](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/mcp.md)
 
 ## Boundary
 

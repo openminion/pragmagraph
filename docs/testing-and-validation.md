@@ -35,7 +35,9 @@ Expected outcome:
 1. the command exits successfully,
 2. it returns JSON,
 3. the smoke output reports the stable package contract fields,
-4. the quickstart output reports a workspace, local store, and visual artifact.
+4. the quickstart output reports a workspace, local store, and visual artifact,
+5. the indexed snapshot contains facts from the invocation repository rather
+   than from the generated `.pragmagraph` directory.
 
 ## Package validation gates
 
@@ -73,4 +75,5 @@ make release-check
 ```
 
 That command runs the package release smoke that builds artifacts, checks the
-wheel, and verifies the documented standalone install and quickstart paths.
+wheel, installs it into a clean environment, and runs the documented default
+`pragmagraph quickstart . --json` command from a fixture repository.

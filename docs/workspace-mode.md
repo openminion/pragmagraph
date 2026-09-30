@@ -46,8 +46,8 @@ repeatable demos:
 schema_version = "pragmagraph.workspace_config.v1alpha1"
 label = "demo"
 namespace = "demo"
-root_path = "."
-workspace_path = ".pragmagraph/workspace"
+root_path = ".."
+workspace_path = "workspace"
 git_identity_mode = "name_email_hash"
 store_path = "graph.sqlite"
 
@@ -58,7 +58,10 @@ query = "RuntimeGraph"
 
 Relative paths are resolved from the config file directory. The config records
 local execution defaults only; it does not create a background operator or
-hosted runtime.
+hosted runtime. CLI config-authoring commands translate paths from the caller's
+working directory into that config-relative form, so the default
+`.pragmagraph/workspace.toml` continues to target the repository where the
+command ran.
 
 The current screen values are `search`, `result_detail`, `neighborhood`,
 `path`, `provider_status`, and `project_health`. `project_health` uses the

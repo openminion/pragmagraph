@@ -14,7 +14,10 @@ from pragmagraph.investigate import INVESTIGATION_PRESETS
 from pragmagraph.storage import SQLiteGraphStore, load_snapshot
 from pragmagraph.ui.preview import serve_ui_preview, write_ui_preview
 from pragmagraph.ui.preview_types import UiPreviewRequest
-from pragmagraph.workspace.cli_resolution import ensure_config_workspace
+from pragmagraph.workspace.cli_resolution import (
+    config_relative_cli_path,
+    ensure_config_workspace,
+)
 from pragmagraph.workspace import (
     DEFAULT_STORE_FILE,
     DEFAULT_UI_QUERY,
@@ -113,7 +116,7 @@ def _register_quickstart_command(subparsers: argparse._SubParsersAction) -> None
     parser.add_argument("root", nargs="?", default=".")
     parser.add_argument("--config", default=DEFAULT_WORKSPACE_CONFIG)
     parser.add_argument("--workspace", default=DEFAULT_WORKSPACE_DIR)
-    parser.add_argument("--store", default=DEFAULT_STORE_FILE)
+    parser.add_argument("--store")
     parser.add_argument("--label", default="quickstart")
     parser.add_argument("--namespace", default="default")
     parser.add_argument(
@@ -232,13 +235,17 @@ def _ensure_quickstart_config(
 ) -> bool:
     if config_path.exists() and not args.overwrite_config:
         return False
+    default_store = str(Path(DEFAULT_WORKSPACE_CONFIG).parent / DEFAULT_STORE_FILE)
     config = build_workspace_config(
-        args.root,
-        workspace_path=args.workspace,
+        config_relative_cli_path(config_path, args.root),
+        workspace_path=config_relative_cli_path(config_path, args.workspace),
         label=args.label,
         namespace=args.namespace,
         git_identity_mode=args.git_identity_mode,
-        store_path=args.store,
+        store_path=config_relative_cli_path(
+            config_path,
+            args.store or default_store,
+        ),
         ui_screen=args.screen,
         ui_query=args.query,
     )

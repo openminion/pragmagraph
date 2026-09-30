@@ -20,7 +20,8 @@ def test_release_check_is_package_local() -> None:
     assert "_ensure_graphfakos_wheel" in release_check
     assert "_assert_quickstart_payload" in release_check
     assert "quickstart-repo" in release_check
-    assert "quickstart-artifact.json" in release_check
+    assert ".pragmagraph/workspace.toml" in release_check
+    assert '"graph.sqlite"' in release_check
     assert "graphfakos-*.whl" in release_check
     assert '"service-mode.md"' in release_check
     assert '"ui-contracts.md"' in release_check

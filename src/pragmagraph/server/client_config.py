@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from pathlib import Path
 
 
 @dataclass(frozen=True, slots=True)
@@ -13,11 +14,13 @@ class McpClientConfig:
     command: str
     args: tuple[str, ...]
     config: dict[str, object]
+    install_command: tuple[str, ...] = ()
     notes: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, object]:
         payload = asdict(self)
         payload["args"] = list(self.args)
+        payload["install_command"] = list(self.install_command)
         payload["notes"] = list(self.notes)
         return payload
 
@@ -29,7 +32,7 @@ def build_mcp_client_config(
     root: str = "",
     namespace: str = "default",
 ) -> McpClientConfig:
-    """Build a portable MCP client snippet for one supported client family."""
+    """Build a machine-local MCP setup record for one supported client family."""
     args = _server_args(snapshot=snapshot, root=root, namespace=namespace)
     if client == "claude_desktop":
         return McpClientConfig(
@@ -44,7 +47,7 @@ def build_mcp_client_config(
                     }
                 }
             },
-            notes=("replace placeholder paths before use",),
+            notes=("generated paths are machine-local",),
         )
     if client == "cursor":
         return McpClientConfig(
@@ -59,7 +62,64 @@ def build_mcp_client_config(
                     }
                 }
             },
-            notes=("paste into an MCP config surface that supports stdio servers",),
+            notes=(
+                "generated paths are machine-local",
+                "paste into an MCP config surface that supports stdio servers",
+            ),
+        )
+    if client == "codex":
+        return McpClientConfig(
+            client=client,
+            command="pragmagraph-server",
+            args=args,
+            config={},
+            install_command=(
+                "codex",
+                "mcp",
+                "add",
+                "pragmagraph",
+                "--",
+                "pragmagraph-server",
+                *args,
+            ),
+            notes=("generated paths are machine-local",),
+        )
+    if client == "claude_code":
+        return McpClientConfig(
+            client=client,
+            command="pragmagraph-server",
+            args=args,
+            config={},
+            install_command=(
+                "claude",
+                "mcp",
+                "add",
+                "--scope",
+                "local",
+                "pragmagraph",
+                "--",
+                "pragmagraph-server",
+                *args,
+            ),
+            notes=("generated paths are machine-local",),
+        )
+    if client == "hermes":
+        return McpClientConfig(
+            client=client,
+            command="pragmagraph-server",
+            args=args,
+            config={
+                "mcp_servers": {
+                    "pragmagraph": {
+                        "command": "pragmagraph-server",
+                        "args": list(args),
+                    }
+                }
+            },
+            notes=(
+                "generated paths are machine-local",
+                "paste into the Hermes config.yaml MCP servers section",
+            ),
         )
     raise ValueError(f"unsupported MCP client {client!r}")
 
@@ -71,7 +131,7 @@ def build_mcp_doctor_payload(
     namespace: str = "default",
 ) -> dict[str, object]:
     """Return user-facing MCP setup facts and generated client snippets."""
-    clients = ("claude_desktop", "cursor")
+    clients = ("claude_desktop", "cursor", "codex", "claude_code", "hermes")
     return {
         "schema_version": "pragmagraph.mcp_client_setup.v1alpha1",
         "server": "pragmagraph-server",
@@ -104,6 +164,7 @@ def build_mcp_doctor_payload(
         ],
         "next_steps": [
             "replace placeholder paths when present",
+            "keep generated path values on the machine that hosts the server",
             "install pragmagraph in the same Python environment used by the client",
             "paste the matching stdio config into the MCP client settings",
         ],
@@ -137,7 +198,10 @@ def build_mcp_config_smoke_payload(
             if not isinstance(client, dict):
                 diagnostics.append("client_config_not_object")
                 continue
+            install_command = client.get("install_command")
             config = client.get("config")
+            if install_command and _install_command_uses_stdio_command(install_command):
+                continue
             if not _config_uses_stdio_command(config):
                 diagnostics.append(f"{client.get('client', 'unknown')}_missing_command")
     return {
@@ -158,16 +222,22 @@ def _server_args(
     namespace: str,
 ) -> tuple[str, ...]:
     if snapshot:
-        return ("serve-stdio", "--snapshot", snapshot)
+        return ("serve-stdio", "--snapshot", str(Path(snapshot).resolve()))
     if root:
-        return ("serve-stdio", "--root", root, "--namespace", namespace)
+        return (
+            "serve-stdio",
+            "--root",
+            str(Path(root).resolve()),
+            "--namespace",
+            namespace,
+        )
     return ("serve-stdio", "--snapshot", "<snapshot.json>")
 
 
 def _config_uses_stdio_command(config: object) -> bool:
     if not isinstance(config, dict):
         return False
-    servers = config.get("mcpServers")
+    servers = config.get("mcpServers", config.get("mcp_servers"))
     if not isinstance(servers, dict):
         return False
     pragmagraph = servers.get("pragmagraph")
@@ -177,6 +247,15 @@ def _config_uses_stdio_command(config: object) -> bool:
         and isinstance(pragmagraph.get("args"), list)
         and pragmagraph.get("args", [])[:1] == ["serve-stdio"]
     )
+
+
+def _install_command_uses_stdio_command(command: object) -> bool:
+    if not isinstance(command, list):
+        return False
+    for index, token in enumerate(command):
+        if token == "pragmagraph-server":
+            return command[index + 1 : index + 2] == ["serve-stdio"]
+    return False
 
 
 __all__ = [
