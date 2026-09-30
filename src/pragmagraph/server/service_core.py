@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, is_dataclass
-from typing import Any, Mapping
+from typing import Mapping
 
 from pragmagraph.server.tools import SUPPORTED_TOOL_NAMES
 
@@ -70,16 +69,6 @@ RESPONSE_PAYLOAD_KEYS: Mapping[str, tuple[str, ...]] = {
 }
 
 
-def to_json_dict(obj: Any) -> Any:
-    if obj is None:
-        return None
-    if hasattr(obj, "model_dump"):
-        return obj.model_dump(mode="json")
-    if is_dataclass(obj):
-        return asdict(obj)
-    return obj
-
-
 def assert_request_keys_subset(tool_name: str, payload_keys: set[str]) -> None:
     if tool_name not in REQUEST_PAYLOAD_KEYS:
         raise ValueError(
@@ -118,5 +107,4 @@ __all__ = [
     "RESPONSE_PAYLOAD_KEYS",
     "assert_request_keys_subset",
     "canonical_response_keys",
-    "to_json_dict",
 ]
