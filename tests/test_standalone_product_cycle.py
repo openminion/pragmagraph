@@ -5,9 +5,15 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from pragmagraph.adapters import index_path
 from pragmagraph.portability import inspect_graph_pack
 from pragmagraph.storage import SQLiteGraphStore, load_snapshot, save_snapshot
+from pragmagraph.server.client_config import (
+    _config_uses_stdio_command,
+    build_mcp_client_config,
+)
 from pragmagraph.ui import UiPreviewRequest, build_delta_review_payload
 
 from .package_paths import build_fixture_repo
@@ -24,12 +30,16 @@ def _repo(tmp_path: Path, *, extra: str = "") -> Path:
     )
 
 
-def _run_cli_json(*args: object) -> dict[str, object]:
+def _run_cli_json(
+    *args: object,
+    cwd: Path | None = None,
+) -> dict[str, object]:
     result = subprocess.run(
         [sys.executable, "-m", "pragmagraph", *(str(arg) for arg in args), "--json"],
         check=True,
         capture_output=True,
         text=True,
+        cwd=cwd,
     )
     return json.loads(result.stdout)
 
@@ -278,6 +288,22 @@ def test_quickstart_creates_workspace_store_and_visual_investigation(
     ]
 
 
+def test_quickstart_default_command_indexes_the_invocation_repository(
+    tmp_path: Path,
+) -> None:
+    root = _repo(tmp_path)
+
+    payload = _run_cli_json("quickstart", ".", cwd=root)
+
+    workspace = root / ".pragmagraph" / "workspace"
+    store = root / ".pragmagraph" / "graph.sqlite"
+    snapshot = load_snapshot(workspace / "snapshot.json")
+    assert payload["quickstart"]["workspace_path"] == str(workspace)
+    assert payload["quickstart"]["store_path"] == str(store)
+    assert any(node.label == "RuntimeGraph" for node in snapshot.nodes)
+    assert not (root / ".pragmagraph/.pragmagraph").exists()
+
+
 def test_delta_review_payload_and_ui_screen_compare_snapshots(tmp_path: Path) -> None:
     before = index_path(_repo(tmp_path), namespace="delta")
     after = index_path(
@@ -432,13 +458,49 @@ def test_storage_backend_catalog_and_mcp_config_are_public_cli_surfaces(
     assert probed_entries["duckdb"]["optional_dependency_available"] in {True, False}
     assert selected["selected"]["backend"] == "json"
     assert mcp["transport"] == "stdio"
-    assert mcp["supported_clients"] == ["claude_desktop", "cursor"]
+    assert mcp["supported_clients"] == [
+        "claude_desktop",
+        "cursor",
+        "codex",
+        "claude_code",
+        "hermes",
+    ]
     assert "paste the matching stdio config" in " ".join(mcp["next_steps"])
     assert mcp_smoke["ok"] is True
     assert mcp_smoke["source"] == "snapshot"
     assert mcp["clients"][0]["config"]["mcpServers"]["pragmagraph"]["command"] == (
         "pragmagraph-server"
     )
+    clients = {client["client"]: client for client in mcp["clients"]}
+    server_args = ["serve-stdio", "--snapshot", str(snapshot_path.resolve())]
+    assert clients["codex"]["install_command"] == [
+        "codex",
+        "mcp",
+        "add",
+        "pragmagraph",
+        "--",
+        "pragmagraph-server",
+        *server_args,
+    ]
+    assert clients["claude_code"]["install_command"] == [
+        "claude",
+        "mcp",
+        "add",
+        "--scope",
+        "local",
+        "pragmagraph",
+        "--",
+        "pragmagraph-server",
+        *server_args,
+    ]
+    assert clients["hermes"]["config"]["mcp_servers"]["pragmagraph"] == {
+        "command": "pragmagraph-server",
+        "args": server_args,
+    }
+    assert _config_uses_stdio_command({"mcpServers": {}}) is False
+    assert _config_uses_stdio_command({"mcp_servers": []}) is False
+    with pytest.raises(ValueError, match="unsupported MCP client"):
+        build_mcp_client_config("unsupported", snapshot=str(snapshot_path))
 
 
 def test_investigation_and_freshness_cli_are_observed_fact_guides(

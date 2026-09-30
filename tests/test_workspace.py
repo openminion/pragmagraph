@@ -17,9 +17,10 @@ from pragmagraph.service import (
     ServiceRequest,
 )
 from pragmagraph.workspace import (
-    load_workspace_config,
     initialize_workspace,
+    load_workspace_config,
     load_workspace_status,
+    resolve_workspace_config_paths,
 )
 from .package_paths import build_fixture_repo
 
@@ -34,12 +35,16 @@ def _repo_root(tmp_path: Path) -> Path:
     )
 
 
-def _run_workspace_cli(*args: object) -> dict[str, object]:
+def _run_workspace_cli(
+    *args: object,
+    cwd: Path | None = None,
+) -> dict[str, object]:
     result = subprocess.run(
         [sys.executable, "-m", "pragmagraph", *(str(arg) for arg in args), "--json"],
         check=True,
         capture_output=True,
         text=True,
+        cwd=cwd,
     )
     return json.loads(result.stdout)
 
@@ -214,6 +219,38 @@ def test_cli_workspace_config_and_demo_ui_flow(tmp_path: Path) -> None:
     assert json.loads(artifact_path.read_text(encoding="utf-8"))["provider_id"] == (
         "pragmagraph"
     )
+
+
+def test_workspace_config_init_resolves_default_and_explicit_cli_paths(
+    tmp_path: Path,
+) -> None:
+    root = _repo_root(tmp_path)
+
+    _run_workspace_cli("workspace-config-init", ".", cwd=root)
+    default_config = root / ".pragmagraph" / "workspace.toml"
+    default_resolved = resolve_workspace_config_paths(default_config)
+
+    assert default_resolved.root_path == root.resolve()
+    assert default_resolved.workspace_path == (root / ".pragmagraph/workspace")
+    assert default_resolved.store_path == (root / ".pragmagraph/graph.sqlite")
+
+    explicit_config = root / "config" / "workspace.toml"
+    _run_workspace_cli(
+        "workspace-config-init",
+        ".",
+        "--out",
+        explicit_config,
+        "--workspace",
+        "custom/workspace",
+        "--store",
+        "custom/graph.sqlite",
+        cwd=root,
+    )
+    explicit_resolved = resolve_workspace_config_paths(explicit_config)
+
+    assert explicit_resolved.root_path == root.resolve()
+    assert explicit_resolved.workspace_path == (root / "custom/workspace")
+    assert explicit_resolved.store_path == (root / "custom/graph.sqlite")
 
 
 def test_cli_workspace_config_drives_refresh_query_store_and_health_ui(

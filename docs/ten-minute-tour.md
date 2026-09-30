@@ -212,7 +212,7 @@ pragmagraph ui-preview \
 
 ## 9. Smoke The MCP Surface
 
-Generate config snippets when you want to wire a client manually:
+Generate machine-local setup records when you want to wire a client manually:
 
 ```bash
 pragmagraph mcp-config --snapshot .pragmagraph/workspace/snapshot.json --json
@@ -225,6 +225,8 @@ Run a short-lived package-owned MCP smoke when you want protocol proof:
 pragmagraph mcp-smoke --config .pragmagraph/workspace.toml --json
 ```
 
-The smoke starts `pragmagraph-server` locally, lists MCP tools, calls
-`pragmagraph_investigate`, and exits. It does not launch Claude, Cursor, or any
-other user client.
+`mcp-config` covers Claude Desktop, Cursor, Codex, Claude Code, and Hermes, and
+normalizes supplied snapshot paths so the generated server command remains
+valid when the client launches from another working directory. `mcp-smoke`
+starts `pragmagraph-server` locally, lists MCP tools, calls
+`pragmagraph_investigate`, and exits. Neither command launches a user client.
