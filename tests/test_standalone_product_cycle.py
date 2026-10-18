@@ -310,6 +310,66 @@ def test_quickstart_default_command_indexes_the_invocation_repository(
     assert not (root / ".pragmagraph/.pragmagraph").exists()
 
 
+@pytest.mark.parametrize("command", ["demo-ui", "workbench"])
+@pytest.mark.parametrize(
+    ("overrides", "screen", "query"),
+    [
+        ([], "investigation", "SavedGraph"),
+        (["--screen", "search"], "search", "SavedGraph"),
+        (["--query", "RuntimeGraph"], "investigation", "RuntimeGraph"),
+        (["--screen", "search", "--query", "RuntimeGraph"], "search", "RuntimeGraph"),
+        (
+            ["--screen", "project_health", "--query", "OtherGraph"],
+            "project_health",
+            "OtherGraph",
+        ),
+        (["--screen", "search", "--query", ""], "search", ""),
+    ],
+)
+def test_visual_cli_overrides_saved_defaults(
+    tmp_path: Path, command: str, overrides: list[str], screen: str, query: str
+) -> None:
+    root = _repo(tmp_path)
+    _run_cli_json("quickstart", ".", "--query", "SavedGraph", cwd=root)
+    config = root / ".pragmagraph/workspace.toml"
+    saved = config.read_bytes()
+    report_path = tmp_path / "report.json"
+
+    payload = _run_cli_json(
+        command,
+        "--config",
+        config,
+        "--html-out",
+        tmp_path / "preview.html",
+        "--report-out",
+        report_path,
+        *overrides,
+        cwd=tmp_path,
+    )
+
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert payload["screen"] == screen
+    assert report["request"]["query"] == query
+    assert config.read_bytes() == saved
+
+
+@pytest.mark.parametrize("command", ["demo-ui", "workbench", "ui-preview"])
+def test_visual_cli_keeps_defaults_without_config(tmp_path: Path, command: str) -> None:
+    report_path = tmp_path / "report.json"
+    payload = _run_cli_json(
+        command,
+        "--html-out",
+        tmp_path / "preview.html",
+        "--report-out",
+        report_path,
+        cwd=tmp_path,
+    )
+
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert payload["screen"] == "search"
+    assert report["request"]["query"] == "RuntimeGraph"
+
+
 @pytest.mark.parametrize("command", ["quickstart", "workbench"])
 def test_repeated_workbench_commands_refresh_snapshot_and_store(
     tmp_path: Path, command: str
