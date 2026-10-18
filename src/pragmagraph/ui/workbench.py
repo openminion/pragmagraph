@@ -21,6 +21,7 @@ from pragmagraph.workspace.cli_resolution import (
 from pragmagraph.workspace import (
     DEFAULT_STORE_FILE,
     DEFAULT_UI_QUERY,
+    DEFAULT_UI_SCREEN,
     DEFAULT_WORKSPACE_CONFIG,
     DEFAULT_WORKSPACE_DIR,
     SUPPORTED_UI_SCREENS,
@@ -55,9 +56,8 @@ def _register_workbench_command(subparsers: argparse._SubParsersAction) -> None:
     parser.add_argument(
         "--screen",
         choices=tuple(sorted(SUPPORTED_UI_SCREENS)),
-        default="search",
     )
-    parser.add_argument("--query", default="")
+    parser.add_argument("--query")
     parser.add_argument("--html-out", default="pragmagraph-workbench.html")
     parser.add_argument("--artifact-out", default="")
     parser.add_argument("--embed-out", default="")
@@ -147,14 +147,14 @@ def _workbench_request(args: argparse.Namespace) -> UiPreviewRequest:
     workspace = args.workspace
     snapshot = args.snapshot
     store_path = args.store
-    screen = args.screen
-    query_text = args.query
+    screen = args.screen or DEFAULT_UI_SCREEN
+    query_text = DEFAULT_UI_QUERY if args.query is None else args.query
     if args.config:
         resolved = resolve_workspace_config_paths(args.config)
         workspace = str(ensure_config_workspace(args.config))
         store_path = store_path or str(resolved.store_path)
-        screen = resolved.config.ui_screen if args.screen == "search" else args.screen
-        query_text = args.query or resolved.config.ui_query
+        screen = args.screen or resolved.config.ui_screen
+        query_text = resolved.config.ui_query if args.query is None else args.query
     elif args.root:
         result = initialize_workspace(
             label="workbench",
@@ -184,7 +184,7 @@ def _workbench_request(args: argparse.Namespace) -> UiPreviewRequest:
         graph_pack_path=args.graph_pack,
         snapshot_out=args.snapshot_out,
         store_out=args.store_out,
-        query=query_text or "RuntimeGraph",
+        query=query_text,
         investigation_preset=args.preset,
         max_results=args.max_results,
         node_id=args.node_id,

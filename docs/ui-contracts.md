@@ -100,6 +100,20 @@ materializes files.
 
 ## Local Visual UI
 
+For a saved workspace, `demo-ui` and `workbench` use the configured screen and
+query unless explicitly overridden. Overrides apply only to that invocation;
+they do not rewrite the config. For example, open search even when the saved
+screen is `investigation`:
+
+```bash
+pragmagraph demo-ui --config .pragmagraph/workspace.toml \
+  --screen search --query RuntimeGraph --serve --open
+```
+
+Use `--query ""` to clear the saved query for that invocation. Without a config
+or explicit overrides, both commands keep the `search` screen and `RuntimeGraph`
+query defaults.
+
 Use the package-local browser preview to inspect one snapshot or workspace
 through the GraphFakos-backed third-brain viewer without starting an OpenMinion
 workbench:

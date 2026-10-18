@@ -22,9 +22,10 @@ from pragmagraph.ui.preview import serve_ui_preview, write_ui_preview
 from pragmagraph.ui.preview_inputs import snapshot_for_request
 from pragmagraph.ui.preview_types import UiPreviewRequest
 from pragmagraph.workspace import (
+    DEFAULT_UI_QUERY,
+    DEFAULT_UI_SCREEN,
     SUPPORTED_UI_SCREENS,
     initialize_workspace,
-    load_workspace_config,
     resolve_workspace_config_paths,
 )
 from pragmagraph.workspace.cli_resolution import ensure_config_workspace
@@ -72,14 +73,13 @@ def run_ui_command(args: argparse.Namespace) -> dict[str, object]:
         return _run_preview(request, args)
     workspace = _ensure_demo_workspace(args)
     store_path = None
+    screen = args.screen or DEFAULT_UI_SCREEN
+    query_text = DEFAULT_UI_QUERY if args.query is None else args.query
     if args.config:
-        config = load_workspace_config(args.config)
-        store_path = str(resolve_workspace_config_paths(args.config).store_path)
-        screen = config.ui_screen if args.screen == "search" else args.screen
-        query_text = config.ui_query if args.query == "RuntimeGraph" else args.query
-    else:
-        screen = args.screen
-        query_text = args.query
+        resolved = resolve_workspace_config_paths(args.config)
+        store_path = str(resolved.store_path)
+        screen = args.screen or resolved.config.ui_screen
+        query_text = resolved.config.ui_query if args.query is None else args.query
     request = UiPreviewRequest(
         screen=screen,
         workspace=str(workspace) if workspace is not None else "",
@@ -156,9 +156,8 @@ def _register_demo_ui_command(subparsers: argparse._SubParsersAction) -> None:
     parser.add_argument(
         "--screen",
         choices=tuple(sorted(SUPPORTED_UI_SCREENS)),
-        default="search",
     )
-    parser.add_argument("--query", default="RuntimeGraph")
+    parser.add_argument("--query")
     parser.add_argument("--html-out", default="pragmagraph-demo.html")
     parser.add_argument("--artifact-out", default="")
     parser.add_argument("--report-out", default="")
