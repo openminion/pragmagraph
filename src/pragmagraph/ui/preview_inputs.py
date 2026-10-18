@@ -7,7 +7,13 @@ from pathlib import Path
 from graphfakos import GraphFakosRequest
 from graphfakos.ui import render_provider_path
 
-from pragmagraph.models import GraphEdge, GraphNode, GraphSnapshot, SourceRef
+from pragmagraph.models import (
+    GraphEdge,
+    GraphNode,
+    GraphSnapshot,
+    PragmaGraphError,
+    SourceRef,
+)
 from pragmagraph.service import LocalQueryService
 from pragmagraph.storage import load_snapshot
 from pragmagraph.storage.backends import SQLiteGraphStore
@@ -161,7 +167,13 @@ def snapshot_for_request(request: UiPreviewRequest) -> GraphSnapshot:
         return load_snapshot(metadata.paths.snapshot_path)
     if request.snapshot:
         return load_snapshot(request.snapshot)
-    if request.store_path and Path(request.store_path).exists():
+    if request.store_path:
+        if not Path(request.store_path).exists():
+            raise PragmaGraphError(
+                "store file not found",
+                code="STORE_NOT_FOUND",
+                details={"path": request.store_path},
+            )
         return SQLiteGraphStore(request.store_path).export_snapshot()
     return demo_snapshot()
 

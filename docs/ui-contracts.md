@@ -100,6 +100,13 @@ materializes files.
 
 ## Local Visual UI
 
+When no workspace, snapshot, or store is selected, previews use the built-in
+demo graph. An explicitly selected primary store must exist: a missing store
+raises `PragmaGraphError` with code `STORE_NOT_FOUND` and its path in `details`,
+without creating a database or substituting demo facts. This also applies to
+`doctor --store-only`. A store supplied alongside a workspace or snapshot is
+auxiliary; its absence does not prevent viewing the canonical snapshot.
+
 For a saved workspace, `demo-ui` and `workbench` use the configured screen and
 query unless explicitly overridden. Overrides apply only to that invocation;
 they do not rewrite the config. For example, open search even when the saved

@@ -100,6 +100,83 @@ def test_ui_preview_exports_match_sophiagraph_local_visual_pattern() -> None:
     assert "PragmaGraph Observed Source Graph" in rendered.html
 
 
+@pytest.mark.parametrize("mode", ["render", "write", "server"])
+def test_ui_preview_rejects_missing_primary_store(tmp_path, mode) -> None:
+    from pragmagraph.models import PragmaGraphError
+    from pragmagraph.ui import UiPreviewRequest, render_ui_preview, write_ui_preview
+    from pragmagraph.ui.preview_inputs import render_server_preview_path
+
+    store_path = tmp_path / "missing" / "graph.sqlite"
+    output_path = tmp_path / "preview.html"
+    request = UiPreviewRequest(store_path=str(store_path), output_path=str(output_path))
+
+    with pytest.raises(PragmaGraphError) as error:
+        if mode == "render":
+            render_ui_preview(request)
+        elif mode == "write":
+            write_ui_preview(request)
+        else:
+            render_server_preview_path(request, "/search", {})
+
+    assert error.value.code == "STORE_NOT_FOUND"
+    assert error.value.details == {"path": str(store_path)}
+    assert not store_path.parent.exists()
+    assert not output_path.exists()
+
+
+def test_ui_preview_missing_auxiliary_store_keeps_snapshot_facts(tmp_path) -> None:
+    from pragmagraph.models import GraphSnapshot
+    from pragmagraph.storage import save_snapshot
+    from pragmagraph.ui import UiPreviewRequest, render_ui_preview
+
+    snapshot_path = tmp_path / "snapshot.json"
+    store_path = tmp_path / "missing" / "graph.sqlite"
+    save_snapshot(
+        GraphSnapshot(namespace="empty-project", root_path="."), snapshot_path
+    )
+
+    rendered = render_ui_preview(
+        UiPreviewRequest(snapshot=str(snapshot_path), store_path=str(store_path))
+    )
+
+    assert rendered.node_count == 0
+    assert rendered.edge_count == 0
+    assert not store_path.parent.exists()
+
+
+def test_ui_preview_renders_empty_primary_store_without_demo_facts(tmp_path) -> None:
+    from pragmagraph.models import GraphSnapshot
+    from pragmagraph.storage import SQLiteGraphStore
+    from pragmagraph.ui import UiPreviewRequest, render_ui_preview
+
+    store_path = tmp_path / "empty.sqlite"
+    SQLiteGraphStore.from_snapshot(
+        GraphSnapshot(namespace="empty-project", root_path="."), store_path
+    )
+
+    rendered = render_ui_preview(UiPreviewRequest(store_path=str(store_path)))
+
+    assert rendered.node_count == 0
+    assert rendered.edge_count == 0
+
+
+@pytest.mark.parametrize(
+    ("command", "store_flag"),
+    [("ui-preview", "--store"), ("workbench", "--store"), ("doctor", "--store-only")],
+)
+def test_visual_commands_reject_missing_primary_store(
+    tmp_path, monkeypatch, command, store_flag
+) -> None:
+    from pragmagraph.__main__ import main
+    from pragmagraph.models import PragmaGraphError
+
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(PragmaGraphError, match="store file not found"):
+        main([command, store_flag, "missing.sqlite", "--json"])
+
+    assert list(tmp_path.iterdir()) == []
+
+
 def test_ui_investigation_preview_carries_guided_payload(tmp_path) -> None:
     from pragmagraph.adapters import index_path
     from pragmagraph.storage import save_snapshot
