@@ -165,9 +165,28 @@ when present, and the canonical snapshot hash.
 
 ## 7. Refresh Explicitly
 
+To refresh the snapshot and its SQLite search store together and regenerate the
+visual workbench, rerun:
+
+```bash
+pragmagraph quickstart . --json
+```
+
+An existing config is preserved and remains authoritative for the source root
+and output paths. Refresh reuses unchanged extraction-cache entries; the store
+receives the refreshed snapshot through its atomic delta-update operation.
+Use `--overwrite-config` only when you intend to replace the saved settings.
+
+For the lower-level snapshot-only refresh, run:
+
 ```bash
 pragmagraph workspace-refresh --config .pragmagraph/workspace.toml --json
 ```
+
+If you also query a materialized store, synchronize it after that snapshot-only
+refresh with `pragmagraph store-import --config .pragmagraph/workspace.toml --json`.
+`workbench --config .pragmagraph/workspace.toml` also synchronizes the store with
+the existing workspace snapshot, without reindexing source files.
 
 PragmaGraph does not install watchers, git hooks, background daemons, or hosted
 runtime behavior. Refresh remains explicit and reproducible.

@@ -166,7 +166,7 @@ def _workbench_request(args: argparse.Namespace) -> UiPreviewRequest:
         workspace = result.workspace.paths.workspace_path
         store_path = store_path or str(Path(workspace) / "graph.sqlite")
     if workspace and store_path:
-        _ensure_workbench_store(workspace, store_path)
+        _materialize_workbench_store(workspace, store_path)
     return UiPreviewRequest(
         screen=screen,
         workspace=workspace,
@@ -198,9 +198,16 @@ def _run_quickstart_command(args: argparse.Namespace) -> dict[str, object]:
     config_path = Path(args.config)
     config_written = _ensure_quickstart_config(args, config_path)
     resolved = resolve_workspace_config_paths(config_path)
-    workspace_path = ensure_config_workspace(config_path)
+    initialized = initialize_workspace(
+        label=resolved.config.label,
+        root_path=resolved.root_path,
+        workspace_path=resolved.workspace_path,
+        namespace=resolved.config.namespace,
+        git_identity_mode=resolved.config.git_identity_mode,
+    )
+    workspace_path = initialized.workspace.paths.workspace_path
     store_path = str(resolved.store_path)
-    _ensure_workbench_store(str(workspace_path), store_path)
+    _materialize_workbench_store(workspace_path, store_path)
     request = UiPreviewRequest(
         screen=resolved.config.ui_screen,
         workspace=str(workspace_path),
@@ -331,12 +338,14 @@ def _demo_visual_command(
     return command
 
 
-def _ensure_workbench_store(workspace: str, store_path: str) -> None:
+def _materialize_workbench_store(workspace: str, store_path: str) -> None:
     target = Path(store_path)
-    if target.exists():
-        return
     metadata = load_workspace_metadata(workspace)
-    SQLiteGraphStore.from_snapshot(load_snapshot(metadata.paths.snapshot_path), target)
+    snapshot = load_snapshot(metadata.paths.snapshot_path)
+    if target.exists():
+        SQLiteGraphStore(target).apply_snapshot_delta(snapshot)
+    else:
+        SQLiteGraphStore.from_snapshot(snapshot, target)
 
 
 def _workbench_next_commands(request: UiPreviewRequest) -> dict[str, list[str]]:
