@@ -9,6 +9,8 @@ import pytest
 
 from pragmagraph.models import PragmaGraphError, QueryRequest
 from pragmagraph.query import query
+from pragmagraph.refresh import load_manifest
+from pragmagraph.storage import load_snapshot
 from pragmagraph.service import (
     LocalQueryService,
     METHOD_QUERY,
@@ -20,6 +22,7 @@ from pragmagraph.workspace import (
     initialize_workspace,
     load_workspace_config,
     load_workspace_status,
+    refresh_workspace,
     resolve_workspace_config_paths,
 )
 from .package_paths import build_fixture_repo
@@ -108,6 +111,38 @@ def test_workspace_refresh_and_service_reuse_persisted_state(tmp_path: Path) -> 
     status = load_workspace_status(workspace)
     assert status.refresh_status is not None
     assert status.refresh_status.changed_path_count >= 1
+
+
+def test_in_repo_workspace_refresh_only_tracks_source_changes(tmp_path: Path) -> None:
+    root = _repo_root(tmp_path)
+    workspace = root / ".pragmagraph" / "workspace"
+    initialized = initialize_workspace(
+        label="demo", root_path=root, workspace_path=workspace
+    )
+    paths = initialized.workspace.paths
+    snapshot = load_snapshot(paths.snapshot_path)
+    assert not any(
+        ".pragmagraph" in Path(node.source_ref.path).parts for node in snapshot.nodes
+    )
+    assert {entry.path for entry in load_manifest(paths.manifest_path).entries} == {
+        "README.md",
+        "src/app.py",
+    }
+
+    unchanged = refresh_workspace(workspace).operation.result
+    assert unchanged.changed_paths == ()
+    assert unchanged.work.parsed_path_count == 0
+    assert unchanged.work.reused_path_count == 2
+
+    (root / "src" / "app.py").write_text("class UpdatedGraph:\n    pass\n")
+    changed = refresh_workspace(workspace).operation.result
+    assert changed.changed_paths == ("src/app.py",)
+    assert changed.work.parsed_path_count == 1
+    assert changed.work.reused_path_count == 1
+    latest = load_snapshot(paths.snapshot_path)
+    assert query(latest, QueryRequest(query="UpdatedGraph")).hits
+    assert not query(latest, QueryRequest(query="RuntimeGraph")).hits
+    assert refresh_workspace(workspace).operation.result.changed_paths == ()
 
 
 def test_cli_workspace_commands_and_workspace_service(tmp_path: Path) -> None:
