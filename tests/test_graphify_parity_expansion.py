@@ -19,8 +19,8 @@ from pragmagraph.contracts import (
 )
 from pragmagraph.models import QueryRequest
 from pragmagraph.query import query
-from pragmagraph.refresh import refresh_snapshot
-from pragmagraph.security import ScopePolicy
+from pragmagraph.refresh import build_manifest, refresh_snapshot
+from pragmagraph.security import DEFAULT_IGNORES, ScopePolicy
 
 from .package_paths import build_fixture_repo, contract_path, fixture_repo
 
@@ -95,6 +95,31 @@ def test_expanded_indexer_extracts_python_markdown_and_config_facts(
         item.reason == "unresolved_markdown_reference" for item in snapshot.omitted
     )
     assert any(item.reason == "unresolved_local_import" for item in snapshot.omitted)
+
+
+def test_workspace_artifacts_are_excluded_unless_explicitly_requested(
+    tmp_path: Path,
+) -> None:
+    generated_path = ".pragmagraph/workspace/snapshot.json"
+    root = build_fixture_repo(
+        tmp_path,
+        files={"src/app.py": "class App: pass\n", generated_path: '{"nodes": []}'},
+    )
+    snapshot = index_path(root)
+    assert not any(node.source_ref.path == generated_path for node in snapshot.nodes)
+    assert any(
+        item.reason == "ignored_name" and item.item_id == generated_path
+        for item in snapshot.omitted
+    )
+    assert {entry.path for entry in build_manifest(root).entries} == {"src/app.py"}
+
+    policy = ScopePolicy(ignore_names=DEFAULT_IGNORES - {".pragmagraph"})
+    included = index_path(root, policy=policy)
+    assert any(node.source_ref.path == generated_path for node in included.nodes)
+    assert {entry.path for entry in build_manifest(root, policy=policy).entries} == {
+        "src/app.py",
+        generated_path,
+    }
 
 
 def test_query_hits_include_score_explanations(tmp_path: Path) -> None:

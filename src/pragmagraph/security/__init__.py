@@ -13,6 +13,7 @@ DEFAULT_IGNORES = frozenset(
     {
         ".git",
         ".mypy_cache",
+        ".pragmagraph",
         ".pytest_cache",
         ".ruff_cache",
         ".venv",

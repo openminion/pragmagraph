@@ -87,6 +87,14 @@ non-canonical; `snapshot.json` remains the portable truth. Status output
 reports whether the cache is present, and refresh output reports parsed versus
 reused paths.
 
+The default indexing policy excludes `.pragmagraph` directories, so generated
+workspace files, snapshots, and caches do not become source facts or trigger
+further refresh work. This applies to both full indexing and incremental
+refresh, even without a `.gitignore` file. When using workspace helpers, keep
+custom output directories outside the source root. Direct indexing and refresh
+callers can configure exclusions with `ScopePolicy`, or opt into indexing
+`.pragmagraph` by supplying a policy whose `ignore_names` omits that entry.
+
 ## Boundary
 
 Workspace mode stays inside the current PragmaGraph contract:
