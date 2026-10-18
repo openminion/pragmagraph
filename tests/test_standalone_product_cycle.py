@@ -8,8 +8,14 @@ from pathlib import Path
 import pytest
 
 from pragmagraph.adapters import index_path
+from pragmagraph.models import QueryRequest
 from pragmagraph.portability import inspect_graph_pack
-from pragmagraph.storage import SQLiteGraphStore, load_snapshot, save_snapshot
+from pragmagraph.storage import (
+    SQLiteGraphStore,
+    load_snapshot,
+    save_snapshot,
+    stable_dumps,
+)
 from pragmagraph.server.client_config import (
     _config_uses_stdio_command,
     build_mcp_client_config,
@@ -302,6 +308,82 @@ def test_quickstart_default_command_indexes_the_invocation_repository(
     assert payload["quickstart"]["store_path"] == str(store)
     assert any(node.label == "RuntimeGraph" for node in snapshot.nodes)
     assert not (root / ".pragmagraph/.pragmagraph").exists()
+
+
+@pytest.mark.parametrize("command", ["quickstart", "workbench"])
+def test_repeated_workbench_commands_refresh_snapshot_and_store(
+    tmp_path: Path, command: str
+) -> None:
+    root = _repo(tmp_path)
+    workspace = root / ".pragmagraph" / "workspace"
+    store_path = root / ".pragmagraph" / "graph.sqlite"
+    args = (
+        ("quickstart", ".")
+        if command == "quickstart"
+        else (
+            "workbench",
+            "--root",
+            ".",
+            "--workspace",
+            workspace,
+            "--store",
+            store_path,
+        )
+    )
+    _run_cli_json(*args, "--html-out", tmp_path / "view.html", cwd=root)
+    store = SQLiteGraphStore(store_path)
+    assert store.query(QueryRequest(query="RuntimeGraph")).hits
+    (root / "src/app.py").write_text(
+        "class UpdatedGraph:\n    pass\n", encoding="utf-8"
+    )
+
+    payload = _run_cli_json(*args, "--html-out", tmp_path / "view.html", cwd=root)
+    snapshot = load_snapshot(workspace / "snapshot.json")
+    assert any(node.label == "UpdatedGraph" for node in snapshot.nodes)
+    assert not any(node.label == "RuntimeGraph" for node in snapshot.nodes)
+    assert store.query(QueryRequest(query="UpdatedGraph")).hits
+    assert not store.query(QueryRequest(query="RuntimeGraph")).hits
+    assert stable_dumps(store.export_snapshot()) == stable_dumps(snapshot)
+    if command == "quickstart":
+        assert payload["quickstart"]["config_written"] is False
+
+    _run_cli_json(*args, "--html-out", tmp_path / "view.html", cwd=root)
+    assert stable_dumps(load_snapshot(workspace / "snapshot.json")) == stable_dumps(
+        snapshot
+    )
+    assert stable_dumps(store.export_snapshot()) == stable_dumps(snapshot)
+
+
+def test_config_workbench_syncs_store_without_reindexing_source(tmp_path: Path) -> None:
+    root = _repo(tmp_path)
+    config = root / ".pragmagraph/workspace.toml"
+    snapshot_path = root / ".pragmagraph/workspace/snapshot.json"
+    _run_cli_json("quickstart", ".", cwd=root)
+    config_contents = config.read_bytes()
+    source = root / "src/app.py"
+    source.write_text("class RefreshedGraph:\n    pass\n", encoding="utf-8")
+    _run_cli_json("workspace-refresh", "--config", config, cwd=tmp_path)
+    snapshot_contents = snapshot_path.read_bytes()
+    source.write_text("class UnrefreshedGraph:\n    pass\n", encoding="utf-8")
+
+    _run_cli_json(
+        "workbench",
+        "--config",
+        config,
+        "--html-out",
+        tmp_path / "view.html",
+        cwd=tmp_path,
+    )
+
+    store = SQLiteGraphStore(root / ".pragmagraph/graph.sqlite")
+    assert store.query(QueryRequest(query="RefreshedGraph")).hits
+    assert not store.query(QueryRequest(query="RuntimeGraph")).hits
+    assert not store.query(QueryRequest(query="UnrefreshedGraph")).hits
+    assert snapshot_path.read_bytes() == snapshot_contents
+    assert config.read_bytes() == config_contents
+    assert stable_dumps(store.export_snapshot()) == stable_dumps(
+        load_snapshot(snapshot_path)
+    )
 
 
 def test_delta_review_payload_and_ui_screen_compare_snapshots(tmp_path: Path) -> None:
