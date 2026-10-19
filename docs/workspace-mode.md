@@ -56,6 +56,10 @@ screen = "project_health"
 query = "RuntimeGraph"
 ```
 
+An omitted `ui.query` defaults to `RuntimeGraph`. An explicitly saved
+`query = ""` stays empty when the config is reloaded; it is not replaced with
+the demo query.
+
 Relative paths are resolved from the config file directory. The config records
 local execution defaults only; it does not create a background operator or
 hosted runtime. CLI config-authoring commands translate paths from the caller's
