@@ -121,6 +121,13 @@ Use `--query ""` to clear the saved query for that invocation. Without a config
 or explicit overrides, both commands keep the `search` screen and `RuntimeGraph`
 query defaults.
 
+`doctor` follows the same query precedence: an explicit `--query` overrides
+the saved query, and `--query ""` requests an empty query without rewriting
+settings. If neither a config nor a query is supplied, it uses `RuntimeGraph`.
+The evidence JSON and exported agent context record the query actually used.
+An empty query returns the existing `empty_query` diagnostic, not a match-all
+search or a search for the demo term.
+
 Use the package-local browser preview to inspect one snapshot or workspace
 through the GraphFakos-backed third-brain viewer without starting an OpenMinion
 workbench:

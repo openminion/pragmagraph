@@ -19,13 +19,31 @@ from pragmagraph.service import (
     ServiceRequest,
 )
 from pragmagraph.workspace import (
+    WorkspaceConfig,
     initialize_workspace,
     load_workspace_config,
     load_workspace_status,
     refresh_workspace,
     resolve_workspace_config_paths,
+    save_workspace_config,
 )
 from .package_paths import build_fixture_repo
+
+
+@pytest.mark.parametrize("query_text", ["", "RuntimeGraph", "OtherGraph"])
+def test_workspace_config_query_round_trip(tmp_path, query_text):
+    config = WorkspaceConfig(root_path=".", ui_query=query_text)
+    assert WorkspaceConfig.from_dict(config.to_dict()) == config
+    path = save_workspace_config(config, tmp_path / "workspace.toml")
+    assert load_workspace_config(path) == config
+
+
+@pytest.mark.parametrize("ui", [{}, {"query": None}])
+def test_workspace_config_missing_query_uses_default(ui):
+    assert (
+        WorkspaceConfig.from_dict({"root_path": ".", "ui": ui}).ui_query
+        == "RuntimeGraph"
+    )
 
 
 def _repo_root(tmp_path: Path) -> Path:

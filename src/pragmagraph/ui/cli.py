@@ -186,7 +186,7 @@ def _register_doctor_command(subparsers: argparse._SubParsersAction) -> None:
     source.add_argument("--snapshot")
     source.add_argument("--store-only")
     parser.add_argument("--store")
-    parser.add_argument("--query", default="")
+    parser.add_argument("--query")
     parser.add_argument("--evidence-out", default="")
     parser.add_argument("--agent-context-out", default="")
     add_json_flag(parser)
@@ -216,45 +216,23 @@ def _run_doctor_command(args: argparse.Namespace) -> dict[str, object]:
 
 
 def _doctor_request(args: argparse.Namespace) -> UiPreviewRequest:
+    workspace = args.workspace
+    store_path = args.store_only
+    query_text = DEFAULT_UI_QUERY if args.query is None else args.query
     if args.config:
         resolved = resolve_workspace_config_paths(args.config)
-        return UiPreviewRequest(
-            screen="evidence",
-            workspace=str(ensure_config_workspace(args.config)),
-            store_path=str(resolved.store_path),
-            query=args.query or resolved.config.ui_query or "RuntimeGraph",
-            evidence_path=args.evidence_out,
-            agent_context_path=args.agent_context_out,
-        )
-    if args.workspace:
-        return UiPreviewRequest(
-            screen="evidence",
-            workspace=args.workspace,
-            store_path=args.store,
-            query=args.query or "RuntimeGraph",
-            evidence_path=args.evidence_out,
-            agent_context_path=args.agent_context_out,
-        )
-    if args.snapshot:
-        return UiPreviewRequest(
-            screen="evidence",
-            snapshot=args.snapshot,
-            store_path=args.store,
-            query=args.query or "RuntimeGraph",
-            evidence_path=args.evidence_out,
-            agent_context_path=args.agent_context_out,
-        )
-    if args.store_only:
-        return UiPreviewRequest(
-            screen="evidence",
-            store_path=args.store_only,
-            query=args.query or "RuntimeGraph",
-            evidence_path=args.evidence_out,
-            agent_context_path=args.agent_context_out,
-        )
+        workspace = str(ensure_config_workspace(args.config))
+        store_path = str(resolved.store_path)
+        if args.query is None:
+            query_text = resolved.config.ui_query
+    elif args.workspace or args.snapshot:
+        store_path = args.store
     return UiPreviewRequest(
         screen="evidence",
-        query=args.query or "RuntimeGraph",
+        workspace=workspace,
+        snapshot=args.snapshot,
+        store_path=store_path,
+        query=query_text,
         evidence_path=args.evidence_out,
         agent_context_path=args.agent_context_out,
     )

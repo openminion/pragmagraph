@@ -5,9 +5,20 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
+from pragmagraph.__main__ import main
 from pragmagraph.adapters import index_path
-from pragmagraph.storage import SQLiteGraphStore, save_snapshot
+from pragmagraph.models import QueryRequest
+from pragmagraph.query import query
+from pragmagraph.storage import SQLiteGraphStore, load_snapshot, save_snapshot
 from pragmagraph.ui import UiPreviewRequest, build_evidence_payload
+from pragmagraph.ui.preview_inputs import demo_snapshot
+from pragmagraph.workspace import (
+    WorkspaceConfig,
+    initialize_workspace,
+    save_workspace_config,
+)
 
 from .package_paths import build_fixture_repo
 
@@ -95,3 +106,75 @@ def test_doctor_command_writes_evidence_and_agent_context(tmp_path: Path) -> Non
     assert payload["agent_context_output_path"] == str(context_path)
     assert evidence["search_explanation"]["mode"] == "materialized_store"
     assert "PragmaGraph Agent Context" in context
+
+
+@pytest.mark.parametrize("source", ["demo", "snapshot", "store", "workspace"])
+@pytest.mark.parametrize("requested_query", [None, "", "NoMatch"])
+def test_doctor_query_defaults_and_overrides(tmp_path, capsys, source, requested_query):
+    snapshot = demo_snapshot() if source == "demo" else _fixture_snapshot(tmp_path)
+    args = ["doctor", "--json"]
+    if source == "snapshot":
+        path = save_snapshot(snapshot, tmp_path / "snapshot.json")
+        args.extend(["--snapshot", str(path)])
+    elif source == "store":
+        path = tmp_path / "graph.sqlite"
+        SQLiteGraphStore.from_snapshot(snapshot, path)
+        args.extend(["--store-only", str(path)])
+    elif source == "workspace":
+        path = tmp_path / "workspace"
+        initialize_workspace(
+            label="test", root_path=snapshot.root_path, workspace_path=path
+        )
+        snapshot = load_snapshot(path / "snapshot.json")
+        args.extend(["--workspace", str(path)])
+    if requested_query is not None:
+        args.extend(["--query", requested_query])
+
+    assert main(args) == 0
+    evidence = json.loads(capsys.readouterr().out)["evidence"]
+    expected = "RuntimeGraph" if requested_query is None else requested_query
+
+    assert evidence["query"] == expected
+    assert evidence["agent_context"]["query"] == expected
+    assert (
+        evidence["query_result"]["hits"]
+        == query(snapshot, QueryRequest(query=expected, max_results=5)).to_dict()[
+            "hits"
+        ]
+    )
+
+
+@pytest.mark.parametrize("saved_query", ["RuntimeGraph", ""])
+@pytest.mark.parametrize("requested_query", [None, "", "NoMatch"])
+def test_doctor_config_query_is_overridden_only_when_explicit(
+    tmp_path, capsys, saved_query, requested_query
+):
+    snapshot = _fixture_snapshot(tmp_path)
+    workspace = tmp_path / "workspace"
+    config_path = save_workspace_config(
+        WorkspaceConfig(
+            root_path=snapshot.root_path,
+            workspace_path=str(workspace),
+            ui_query=saved_query,
+        ),
+        tmp_path / "workspace.toml",
+    )
+    original_config = config_path.read_bytes()
+    args = ["doctor", "--config", str(config_path), "--json"]
+    if requested_query is not None:
+        args.extend(["--query", requested_query])
+
+    assert main(args) == 0
+    evidence = json.loads(capsys.readouterr().out)["evidence"]
+    expected = saved_query if requested_query is None else requested_query
+
+    assert evidence["query"] == expected
+    assert evidence["agent_context"]["query"] == expected
+    assert (
+        evidence["query_result"]["hits"]
+        == query(
+            load_snapshot(workspace / "snapshot.json"),
+            QueryRequest(query=expected, max_results=5),
+        ).to_dict()["hits"]
+    )
+    assert config_path.read_bytes() == original_config

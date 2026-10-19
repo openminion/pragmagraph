@@ -105,6 +105,7 @@ class WorkspaceConfig:
                 "workspace config ui section must be an object",
                 code="INVALID_WORKSPACE_CONFIG",
             )
+        query = ui.get("query")
         return cls(
             schema_version=str(
                 payload.get("schema_version", "") or WORKSPACE_CONFIG_SCHEMA_VERSION
@@ -120,7 +121,7 @@ class WorkspaceConfig:
             ),
             store_path=str(payload.get("store_path", "") or DEFAULT_STORE_FILE),
             ui_screen=str(ui.get("screen", "") or DEFAULT_UI_SCREEN),
-            ui_query=str(ui.get("query", "") or DEFAULT_UI_QUERY),
+            ui_query=DEFAULT_UI_QUERY if query is None else str(query),
         )
 
 
